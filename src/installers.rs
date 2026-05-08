@@ -3,7 +3,6 @@ use crate::core::run_command;
 use anyhow::Result;
 use colored::*;
 use dialoguer::Confirm;
-use log::info;
 
 #[derive(Debug, Clone)]
 pub struct Tool {
@@ -118,7 +117,7 @@ impl<'a> Installer<'a> {
                 println!("   {}", self.t("install.docker.relog").yellow());
                 println!("   {}", "newgrp docker".dimmed());
             },
-            Err(e) => {
+            Err(_e) => {
                 println!("   {}", self.tv("install.failed", &[("tool", "Docker")]).red());
                 println!("\n   {}", self.t("install.manual_command").dimmed());
                 println!("   https://docs.docker.com/engine/install/");
@@ -236,7 +235,7 @@ impl<'a> Installer<'a> {
                         println!("\n   {}", self.t("install.ollama_hint").dimmed());
                     }
                 }
-                Err(e) => {
+                Err(_e) => {
                     println!("   {}", self.tv("install.failed", &[("tool", &tool.name)]).red());
                     println!("\n   {}", self.t("install.manual_command").dimmed());
                     println!("   {}", cmd.cyan());

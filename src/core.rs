@@ -1,6 +1,34 @@
 use anyhow::{Context, Result};
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+
+#[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
+pub struct OllamaModel {
+    pub name: String,
+    pub model: String,
+    pub modified_at: Option<String>,
+    pub size: Option<u64>,
+    #[serde(default)]
+    pub details: Option<ModelDetails>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
+pub struct ModelDetails {
+    #[serde(default)]
+    pub family: Option<String>,
+    #[serde(default)]
+    pub parameter_size: Option<String>,
+    #[serde(default)]
+    pub quantization_level: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OllamaTagsResponse {
+    models: Vec<OllamaModel>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HardwareInfo {
@@ -21,6 +49,7 @@ impl HardwareInfo {
         !self.gpus.is_empty()
     }
 
+    #[allow(dead_code)]
     pub fn can_run_on_gpu(&self, model_size_gb: f64) -> bool {
         self.total_vram_mb as f64 / 1024.0 >= model_size_gb + 0.5
     }
@@ -77,6 +106,7 @@ fn detect_gpus() -> Result<Vec<GpuInfo>> {
     Ok(vec![])
 }
 
+#[allow(dead_code)]
 pub fn detect_tool(name: &str) -> bool {
     which::which(name).is_ok()
 }
@@ -130,6 +160,7 @@ pub fn estimate_tokens_code(loc: u32) -> u64 {
     (loc as u64) * 8 // ~8 tokens par ligne de code
 }
 
+#[allow(dead_code)]
 pub fn estimate_chunks(tokens: u64, chunk_size: u64) -> u64 {
     (tokens + chunk_size - 1) / chunk_size
 }
@@ -205,4 +236,89 @@ pub fn run_benchmark() -> Result<()> {
     println!("Fonctionnalité de benchmark à implémenter");
     println!("Cette fonctionnalité nécessite qu'Ollama soit installé et en cours d'exécution");
     Ok(())
+}
+
+/// Récupère les modèles disponibles localement via l'API Ollama
+pub fn fetch_local_models(base_url: &str) -> Result<Vec<OllamaModel>> {
+    let url = format!("{}/api/tags", base_url.trim_end_matches('/'));
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .context("Erreur création client HTTP")?;
+    
+    let resp = client
+        .get(&url)
+        .send()
+        .context("Impossible de contacter Ollama. Vérifiez qu'il est lancé.")?;
+    
+    let resp = resp
+        .error_for_status()
+        .context("Réponse HTTP invalide de l'API Ollama")?;
+    
+    let data: OllamaTagsResponse = resp
+        .json()
+        .context("Parsing JSON /api/tags échoué")?;
+    
+    Ok(data.models)
+}
+
+/// Vérifie si Ollama est lancé et retourne l'URL de base
+pub fn detect_ollama_url() -> Option<String> {
+    let urls = [
+        "http://localhost:11434",
+        "http://127.0.0.1:11434",
+    ];
+    
+    for url in &urls {
+        if let Ok(resp) = reqwest::blocking::get(format!("{}/api/tags", url)) {
+            if resp.status().is_success() {
+                return Some(url.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Trouve le meilleur modèle local correspondant à un usage
+pub fn pick_best_local_model(
+    models: &[OllamaModel],
+    usage_type: &str,
+    preferred_size: u32,
+) -> Option<OllamaModel> {
+    let preferred = match usage_type {
+        "code" => vec!["qwen2.5-coder", "codellama", "deepseek-coder", "starcoder"],
+        "book" => vec!["qwen2.5", "mistral", "llama3", "mixtral"],
+        "agents" => vec!["qwen2.5", "phi3", "gemma"],
+        _ => vec!["qwen2.5", "mistral", "llama3"],
+    };
+
+    models
+        .iter()
+        .filter(|m| {
+            let name = m.name.to_lowercase();
+            preferred.iter().any(|p| name.contains(p))
+        })
+        .max_by(|a, b| {
+            // Privilégier la taille la plus proche
+            let size_a = extract_size(&a.name);
+            let size_b = extract_size(&b.name);
+            
+            let diff_a = (size_a as i64 - preferred_size as i64).abs();
+            let diff_b = (size_b as i64 - preferred_size as i64).abs();
+            
+            diff_a.cmp(&diff_b).then(size_b.cmp(&size_a))
+        })
+        .cloned()
+}
+
+fn extract_size(model_name: &str) -> u32 {
+    // Extraire "7b", "14b", etc.
+    for part in model_name.split([':', '-', '/']) {
+        if let Some(size) = part.strip_suffix('b') {
+            if let Ok(n) = size.parse::<u32>() {
+                return n;
+            }
+        }
+    }
+    0
 }

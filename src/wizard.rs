@@ -1,9 +1,9 @@
 use crate::config::{self, I18n, UsageSpec, get_available_languages, detect_system_language};
-use crate::core::{self, detect_hardware, HardwareInfo};
+use crate::core::{self, detect_hardware, HardwareInfo, run_command};
 use crate::installers::Installer;
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Select, Input};
+use dialoguer::{Select, Input, Confirm};
 
 pub fn run_wizard() -> Result<()> {
     println!("{}", "═".repeat(50).cyan());
@@ -22,12 +22,11 @@ pub fn run_wizard() -> Result<()> {
 
     let (usage_key, usage_spec) = launch_usage_wizard(&i18n)?;
     explain_usage(&usage_key, &usage_spec, &hardware, &i18n)?;
-    
-    let (model_size, use_gpu) = core::recommend_model_size(&usage_spec.params.r#type, &hardware);
-    install_model_if_needed(&i18n, model_size, use_gpu)?;
-    
-    println!("\n{}", i18n.t("app.goodbye").bold().green());
-    Ok(())
+
+    let (model_size, _use_gpu) = core::recommend_model_size(&usage_spec.params.r#type, &hardware);
+    let usage_type = &usage_spec.params.r#type;
+    let model_name = format!("qwen2.5:{}b", model_size);
+    install_model_if_needed(&i18n, model_size, usage_type, &model_name)?;
 
     println!("\n{}", i18n.t("app.goodbye").bold().green());
     Ok(())
@@ -140,6 +139,16 @@ fn launch_usage_wizard(i18n: &I18n) -> Result<(String, UsageSpec)> {
     Ok((key, spec))
 }
 
+fn format_duration(minutes: f64) -> String {
+    if minutes >= 120.0 {
+        format!("{:.0}h{:02.0}min", minutes / 60.0, minutes % 60.0)
+    } else if minutes >= 1.0 {
+        format!("{:.0}min", minutes)
+    } else {
+        format!("{:.0}s", minutes * 60.0)
+    }
+}
+
 fn explain_usage(
     usage_key: &str,
     spec: &UsageSpec,
@@ -192,21 +201,12 @@ fn explain_usage(
             let tps = core::get_performance(model_size, use_gpu);
             let (min_time, max_time) = core::estimate_time_minutes(tokens, tps);
 
-            println!("  📊 {}: {}", 
-                i18n.t_with_vars("estimation.tokens", &[("tokens", &format_number(tokens))]),
-                format_number(tokens)
-            );
-            println!("  📚 {}: {}", 
-                i18n.t_with_vars("estimation.chunks", &[("chunks", &chunks.to_string())]),
-                chunks
-            );
-            println!("  ⏱️  {}: {:.1} - {:.1} min", 
-                i18n.t_with_vars("estimation.time_range", &[
-                    ("min", &format!("{:.1}", min_time)),
-                    ("max", &format!("{:.1}", max_time))
-                ]),
-                min_time, max_time
-            );
+            println!("  {}", i18n.t_with_vars("estimation.tokens", &[("tokens", &format_number(tokens))]));
+            println!("  {}", i18n.t_with_vars("estimation.chunks", &[("chunks", &chunks.to_string())]));
+            println!("  {}", i18n.t_with_vars("estimation.time_range", &[
+                ("min", &format_duration(min_time)),
+                ("max", &format_duration(max_time))
+            ]));
 
             if model_size < 14 {
                 println!("\n  {}", i18n.t("estimation.warning").yellow());
@@ -222,17 +222,11 @@ fn explain_usage(
             let tps = core::get_performance(model_size, use_gpu);
             let (min_time, max_time) = core::estimate_time_minutes(tokens, tps);
 
-            println!("  📊 {}: {}", 
-                i18n.t_with_vars("estimation.tokens", &[("tokens", &format_number(tokens))]),
-                format_number(tokens)
-            );
-            println!("  ⏱️  {}: {:.1} - {:.1} min", 
-                i18n.t_with_vars("estimation.time_range", &[
-                    ("min", &format!("{:.1}", min_time)),
-                    ("max", &format!("{:.1}", max_time))
-                ]),
-                min_time, max_time
-            );
+            println!("  {}", i18n.t_with_vars("estimation.tokens", &[("tokens", &format_number(tokens))]));
+            println!("  {}", i18n.t_with_vars("estimation.time_range", &[
+                ("min", &format_duration(min_time)),
+                ("max", &format_duration(max_time))
+            ]));
         }
         _ => {
             println!("💡 Usage général - performance adaptative");
@@ -242,28 +236,45 @@ fn explain_usage(
     Ok(())
 }
 
-fn install_model_if_needed(i18n: &I18n, model_size: u32, use_gpu: bool) -> Result<()> {
-    let model_name = format!("qwen2.5:{}b", model_size);
-    
+fn install_model_if_needed(i18n: &I18n, preferred_size: u32, usage_type: &str, model_name: &str) -> Result<()> {
+    // Ajouter au début pour utiliser i18n :
+    let _ = i18n; // ou l'utiliser dans un println! plus bas
     println!("\n{}", "─".repeat(40).dimmed());
-    println!("{}", "📥 Installation du modèle".bold());
+    println!("{}", "📥 Modèle Ollama".bold());
     println!("{}", "─".repeat(40).dimmed());
     
-    // Vérifier si le modèle est déjà téléchargé
-    let check = format!("ollama list 2>/dev/null | grep -q '{}'", model_name);
-    let installed = run_command(&check).is_ok();
+    // Vérifier si Ollama est lancé
+    let ollama_url = match core::detect_ollama_url() {
+        Some(url) => url,
+        None => {
+            println!("   ⚠️  Ollama n'est pas lancé. Lancez-le avec : ollama serve");
+            println!("   Puis téléchargez un modèle avec : ollama pull {}", model_name);
+            return Ok(());
+        }
+    };
     
-    if installed {
-        println!("   ✅ Modèle {} déjà installé", model_name.green());
+    // Récupérer les modèles locaux
+    let local_models = match core::fetch_local_models(&ollama_url) {
+        Ok(models) => models,
+        Err(_) => {
+            println!("   ⚠️  Impossible de contacter l'API Ollama");
+            return Ok(());
+        }
+    };
+    
+    // Chercher un modèle existant qui correspond
+    if let Some(existing) = core::pick_best_local_model(&local_models, usage_type, preferred_size) {
+        println!("   ✅ Modèle existant : {}", existing.name.green().bold());
+        println!("   Taille : {}", format_bytes(existing.size.unwrap_or(0)));
         return Ok(());
     }
     
+    // Aucun modèle trouvé, proposer le téléchargement
+    println!("   Aucun modèle {}B trouvé localement.", preferred_size);
     println!("   Modèle recommandé : {}", model_name.cyan().bold());
-    println!("   Taille : ~{} Go", if use_gpu { model_size * 2 } else { model_size });
     println!();
-    println!("   ⚠️  Le téléchargement peut prendre plusieurs minutes");
-    println!("   selon votre connexion internet.");
-    println!();
+    println!("   ⚠️  Le téléchargement peut prendre plusieurs minutes.");
+    println!("   Taille estimée : ~{} Go", preferred_size * 2);
     
     let confirm = Confirm::new()
         .with_prompt(format!("   Télécharger {} ?", model_name))
@@ -278,16 +289,26 @@ fn install_model_if_needed(i18n: &I18n, model_size: u32, use_gpu: bool) -> Resul
             Ok((stdout, stderr)) => {
                 if !stdout.is_empty() { println!("{}", stdout); }
                 if !stderr.is_empty() { println!("{}", stderr.dimmed()); }
-                println!("   ✅ {} installé avec succès !", model_name.green());
+                println!("   ✅ {} installé !", model_name.green().bold());
             }
             Err(e) => {
                 println!("   ❌ Erreur : {}", e);
-                println!("   Lancez manuellement : ollama pull {}", model_name);
+                println!("   Lancez : ollama pull {}", model_name);
             }
         }
     }
     
     Ok(())
+}
+
+fn format_bytes(bytes: u64) -> String {
+    if bytes >= 1_073_741_824 {
+        format!("{:.1} Go", bytes as f64 / 1_073_741_824.0)
+    } else if bytes >= 1_048_576 {
+        format!("{:.1} Mo", bytes as f64 / 1_048_576.0)
+    } else {
+        format!("{} o", bytes)
+    }
 }
 
 fn format_number(n: u64) -> String {

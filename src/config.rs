@@ -286,15 +286,6 @@ pub fn load_i18n(lang_code: &str) -> Result<I18n> {
     })
 }
 
-// Fonctions de traduction (compatibilité)
-pub fn translate(i18n: &I18n, key: &str) -> String {
-    i18n.t(key)
-}
-
-pub fn translate_with_vars(i18n: &I18n, key: &str, vars: &[(&str, &str)]) -> String {
-    i18n.t_with_vars(key, vars)
-}
-
 // Chargement usages.yaml (inchangé)
 pub fn load_usages() -> UsagesConfig {
     let path = config_dir().join("usages.yaml");

@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum WzllamaError {
     #[error("Template {file} invalide: {message}")]
     InvalidTemplate { file: String, message: String },
