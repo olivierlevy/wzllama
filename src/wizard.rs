@@ -22,6 +22,12 @@ pub fn run_wizard() -> Result<()> {
 
     let (usage_key, usage_spec) = launch_usage_wizard(&i18n)?;
     explain_usage(&usage_key, &usage_spec, &hardware, &i18n)?;
+    
+    let (model_size, use_gpu) = core::recommend_model_size(&usage_spec.params.r#type, &hardware);
+    install_model_if_needed(&i18n, model_size, use_gpu)?;
+    
+    println!("\n{}", i18n.t("app.goodbye").bold().green());
+    Ok(())
 
     println!("\n{}", i18n.t("app.goodbye").bold().green());
     Ok(())
@@ -233,6 +239,54 @@ fn explain_usage(
         }
     }
 
+    Ok(())
+}
+
+fn install_model_if_needed(i18n: &I18n, model_size: u32, use_gpu: bool) -> Result<()> {
+    let model_name = format!("qwen2.5:{}b", model_size);
+    
+    println!("\n{}", "─".repeat(40).dimmed());
+    println!("{}", "📥 Installation du modèle".bold());
+    println!("{}", "─".repeat(40).dimmed());
+    
+    // Vérifier si le modèle est déjà téléchargé
+    let check = format!("ollama list 2>/dev/null | grep -q '{}'", model_name);
+    let installed = run_command(&check).is_ok();
+    
+    if installed {
+        println!("   ✅ Modèle {} déjà installé", model_name.green());
+        return Ok(());
+    }
+    
+    println!("   Modèle recommandé : {}", model_name.cyan().bold());
+    println!("   Taille : ~{} Go", if use_gpu { model_size * 2 } else { model_size });
+    println!();
+    println!("   ⚠️  Le téléchargement peut prendre plusieurs minutes");
+    println!("   selon votre connexion internet.");
+    println!();
+    
+    let confirm = Confirm::new()
+        .with_prompt(format!("   Télécharger {} ?", model_name))
+        .default(true)
+        .interact()?;
+    
+    if confirm {
+        let cmd = format!("ollama pull {}", model_name);
+        println!("\n📥 {}", cmd.cyan());
+        
+        match run_command(&cmd) {
+            Ok((stdout, stderr)) => {
+                if !stdout.is_empty() { println!("{}", stdout); }
+                if !stderr.is_empty() { println!("{}", stderr.dimmed()); }
+                println!("   ✅ {} installé avec succès !", model_name.green());
+            }
+            Err(e) => {
+                println!("   ❌ Erreur : {}", e);
+                println!("   Lancez manuellement : ollama pull {}", model_name);
+            }
+        }
+    }
+    
     Ok(())
 }
 
