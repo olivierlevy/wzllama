@@ -1,0 +1,29 @@
+# Configuration par défaut de wzllama
+version: "0.1.0"
+language: "auto"  # auto, en, fr, de, es
+
+# Profil de l'utilisateur (rempli par le wizard)
+profile:
+  usage_type: null
+  weight_profile: "default"
+
+# État d'installation
+installation:
+  ollama: "not_checked"
+  open_webui: "not_checked"
+  hermes_agent: "not_checked"
+  openclaw: "not_checked"
+
+# Paramètres de performance
+performance:
+  tokens_per_second:
+    3b_gpu: 30.0
+    3b_cpu: 8.0
+    7b_gpu: 20.0
+    7b_cpu: 5.0
+    14b_gpu: 12.0
+    14b_cpu: 2.0
+    32b_gpu: 8.0
+    32b_cpu: 1.0
+    70b_gpu: 4.0
+    70b_cpu: 0.5

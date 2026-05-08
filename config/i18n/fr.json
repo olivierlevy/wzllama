@@ -1,0 +1,83 @@
+{
+  "_language": {
+    "code": "fr",
+    "name": "Français",
+    "name_en": "French",
+    "direction": "ltr"
+  },
+  "app.title": "wzllama - Assistant de configuration IA locale",
+  "app.welcome": "Bienvenue dans wzllama ! Configurons votre stack IA locale.",
+  "app.goodbye": "Merci d'utiliser wzllama ! Bon prompting !",
+  
+  "menu.language.choice": "Choose your language / Choisissez votre langue / Wählen Sie Ihre Sprache / Elija su idioma:",
+  "menu.language.selected": "Langue définie sur Français",
+  
+  "menu.main.title": "Menu Principal",
+  "menu.main.install": "Installer les outils manquants",
+  "menu.main.wizard": "Lancer l'assistant d'usage",
+  "menu.main.check": "Vérifier le système et les outils",
+  "menu.main.exit": "Quitter",
+  
+  "menu.usage.title": "Que voulez-vous faire ?",
+  "menu.usage.subtitle": "Sélectionnez votre cas d'usage principal :",
+  "menu.usage.sorted_by": "Trié par pertinence pour votre profil",
+  
+  "usage.big_book.label": "Gros livre / Document long",
+  "usage.big_book.description": "Analyser, résumer ou travailler avec de longs textes",
+  "usage.big_code.label": "Grand codebase / Gros projets",
+  "usage.big_code.description": "Travailler avec des dépôts, refactoring, analyse de code",
+  "usage.fast_agents.label": "Agents rapides / Tâches courtes",
+  "usage.fast_agents.description": "Interactions rapides, petits contextes, chatbots",
+  "usage.mixed.label": "Mixte / Usage général",
+  "usage.mixed.description": "Usage polyvalent : code, écriture, recherche",
+  "usage.creative_writing.label": "Écriture créative",
+  "usage.creative_writing.description": "Histoires, poésie, scripts, contenu créatif",
+  "usage.code_review.label": "Revue de code et analyse",
+  "usage.code_review.description": "Réviser des pull requests, analyser des diffs",
+  
+  "system.detecting": "Détection de votre matériel...",
+  "system.os": "Système d'exploitation",
+  "system.ram": "RAM",
+  "system.gpu": "GPU",
+  "system.no_gpu": "Aucun GPU détecté (mode CPU uniquement)",
+  "system.vram": "VRAM",
+  
+  "install.checking": "Vérification de {tool}...",
+  "install.found": "{tool} est déjà installé ✓",
+  "install.not_found": "{tool} n'est pas installé ✗",
+  "install.proposal": "Voulez-vous installer {tool} ?",
+  "install.command": "La commande suivante sera exécutée :",
+  "install.confirm": "Continuer ?",
+  "install.success": "{tool} installé avec succès ✓",
+  "install.failed": "Échec de l'installation de {tool}",
+  "install.manual_command": "Vous pouvez exécuter manuellement cette commande :",
+  
+  "model.selection": "Sélection du modèle pour votre usage",
+  "model.recommended": "Modèle recommandé : {model}",
+  "model.size": "Taille : {size}B paramètres",
+  "model.vram_only": "Peut tourner entièrement en VRAM (rapide)",
+  "model.ram_needed": "Utilisera la RAM système (plus lent, ~{gb} Go nécessaires)",
+  "model.context": "Contexte recommandé : {tokens} tokens",
+  
+  "estimation.title": "Estimation du temps et des ressources",
+  "estimation.tokens": "Tokens estimés : {tokens}",
+  "estimation.chunks": "Nombre de morceaux/pages nécessaires : {chunks}",
+  "estimation.time_range": "Temps estimé : entre {min} et {max} minutes",
+  "estimation.warning": "⚠ Votre matériel pourrait avoir des difficultés avec cette tâche",
+  
+  "error.template_invalid": "Le template {file} est invalide. Utilisation des valeurs par défaut.",
+  "error.missing_key": "Clé manquante : {key} dans {file}",
+  "error.network": "Erreur réseau. Vérifiez votre connexion.",
+  "error.permission": "Permission refusée. Essayez avec les droits appropriés.",
+  
+  "validation.passed": "✓ Tous les templates sont valides",
+  "validation.failed": "✗ Échec de la validation des templates",
+  "validation.errors_found": "{count} erreur(s) trouvée(s)",
+  
+  "benchmark.running": "Exécution du benchmark...",
+  "benchmark.result": "{model} : {tps} tokens/seconde",
+  "benchmark.saved": "Résultats du benchmark sauvegardés",
+  
+  "reset.backup": "Sauvegarde des templates existants en .bak...",
+  "reset.restored": "Templates restaurés aux valeurs par défaut"
+}

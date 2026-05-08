@@ -1,0 +1,68 @@
+# Wizard d'usages - Configuration des scénarios d'utilisation
+usages:
+  big_book:
+    weights:
+      default: 0.7
+      writer: 0.9
+      researcher: 0.8
+    i18n_key: "usage.big_book.label"
+    description_key: "usage.big_book.description"
+    params:
+      type: "book"
+      pages_per_chunk: 20
+      context_tokens: 8192
+
+  big_code:
+    weights:
+      default: 0.6
+      developer: 0.9
+      devops: 0.7
+    i18n_key: "usage.big_code.label"
+    description_key: "usage.big_code.description"
+    params:
+      type: "code"
+      loc_per_chunk: 500
+      context_tokens: 4096
+
+  fast_agents:
+    weights:
+      default: 0.9
+      automator: 1.0
+    i18n_key: "usage.fast_agents.label"
+    description_key: "usage.fast_agents.description"
+    params:
+      type: "agents"
+      max_tokens_per_call: 1024
+      context_tokens: 2048
+
+  mixed:
+    weights:
+      default: 0.3
+      generalist: 0.5
+    i18n_key: "usage.mixed.label"
+    description_key: "usage.mixed.description"
+    params:
+      type: "mixed"
+      context_tokens: 4096
+
+  creative_writing:
+    weights:
+      default: 0.4
+      writer: 0.8
+    i18n_key: "usage.creative_writing.label"
+    description_key: "usage.creative_writing.description"
+    params:
+      type: "book"
+      pages_per_chunk: 10
+      context_tokens: 4096
+
+  code_review:
+    weights:
+      default: 0.5
+      developer: 0.8
+    i18n_key: "usage.code_review.label"
+    description_key: "usage.code_review.description"
+    params:
+      type: "code"
+      loc_per_chunk: 1000
+      context_tokens: 8192
