@@ -176,13 +176,21 @@ impl<'a> Installer<'a> {
         println!("\n🔍 {}", tool.name.bold());
 
         if tool.name == "Open WebUI" {
-            if run_command("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok() {
-                let is_running = run_command("docker ps --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+            // Vérifier si le conteneur existe (peu importe son état)
+            let exists = run_command("sudo docker ps -a --format '{{.Names}}' 2>/dev/null")
+                .map(|(stdout, _)| stdout.contains("open-webui"))
+                .unwrap_or(false);
+            
+            if exists {
+                let is_running = run_command("sudo docker ps --format '{{.Names}}' 2>/dev/null")
+                    .map(|(stdout, _)| stdout.contains("open-webui"))
+                    .unwrap_or(false);
+                
                 if is_running {
                     println!("   {}", self.tv("install.already_running", &[("tool", &tool.name)]).green());
                 } else {
                     println!("   {}", self.tv("install.container_stopped", &[("tool", &tool.name)]).yellow());
-                    println!("   {}", self.t("install.docker_start_hint").dimmed());
+                    println!("   {}", "sudo docker start open-webui".dimmed());
                 }
                 return Ok(());
             }
