@@ -1,226 +1,256 @@
 use crate::config::I18n;
-use crate::core::{detect_tool, run_command};
+use crate::core::run_command;
 use anyhow::Result;
 use colored::*;
 use dialoguer::Confirm;
 use log::info;
 
+#[derive(Debug, Clone)]
+pub struct Tool {
+    pub name: String,
+    pub detect_cmd: String,
+    pub install_cmd: Option<String>,
+}
+
 pub struct Installer<'a> {
     i18n: &'a I18n,
     interactive: bool,
-    shell: String,
 }
 
 impl<'a> Installer<'a> {
     pub fn new(i18n: &'a I18n, interactive: bool) -> Self {
-        let shell = detect_shell();
-        Self { i18n, interactive, shell }
+        Self { i18n, interactive }
     }
 
-    pub fn check_and_install(&self, tool: &str) -> Result<()> {
-        println!("{}", self.i18n.t_with_vars("install.checking", &[("tool", tool)]));
+    pub fn install_all_tools(&self) -> Result<()> {
+        println!("\n{}", "═".repeat(50).cyan());
+        println!("{}", self.t("install.title").bold());
+        println!("{}", "═".repeat(50).cyan());
 
-        if detect_tool(tool) {
-            println!("  {} {}", self.i18n.t_with_vars("install.found", &[("tool", tool)]), "✓".green());
+        self.check_and_install_docker()?;
+
+        let tools = self.get_all_tools();
+        for tool in &tools {
+            self.check_and_install(tool)?;
+        }
+
+        Ok(())
+    }
+
+    fn t(&self, key: &str) -> String {
+        self.i18n.t(key)
+    }
+
+    fn tv(&self, key: &str, vars: &[(&str, &str)]) -> String {
+        self.i18n.t_with_vars(key, vars)
+    }
+
+    fn check_and_install_docker(&self) -> Result<()> {
+        println!("\n🔍 {}", "Docker".bold());
+        
+        if self.is_installed("docker") {
+            println!("   {}", self.t("install.docker.installed").green());
+            
+            if run_command("docker info 2>/dev/null").is_ok() {
+                println!("   {}", self.t("install.docker.running").green());
+            } else {
+                println!("   {}", self.t("install.docker.stopped").yellow());
+                
+                // Proposer de démarrer le daemon
+                if self.interactive {
+                    let confirm = Confirm::new()
+                        .with_prompt("   Démarrer le daemon Docker ?")
+                        .default(true)
+                        .interact()?;
+                    
+                    if confirm {
+                        if run_command("sudo systemctl start docker").is_ok() {
+                            println!("   ✅ Daemon Docker démarré");
+                        } else {
+                            println!("   {}", self.t("install.docker.start_hint").dimmed());
+                        }
+                    }
+                } else {
+                    println!("   {}", self.t("install.docker.start_hint").dimmed());
+                }
+            }
             return Ok(());
         }
 
-        println!("  {} {}", self.i18n.t_with_vars("install.not_found", &[("tool", tool)]), "✗".red());
+        println!("   {}", self.t("install.docker.not_installed").red());
 
         if !self.interactive {
             return Ok(());
         }
 
-        // Vérification spéciale pour open-webui
-        if tool == "open-webui" {
-            if let Some(pip_cmd) = self.find_pip_command() {
-                println!("  ✓ pip trouvé : {}", pip_cmd.green());
-            } else {
-                println!("  ⚠️  pip n'est pas installé !");
-                println!("  Installez d'abord Python et pip :");
-                if cfg!(target_os = "linux") {
-                    println!("    sudo apt install python3-pip  (Debian/Ubuntu)");
-                    println!("    sudo dnf install python3-pip  (Fedora)");
+        let confirm = Confirm::new()
+            .with_prompt(self.t("install.docker.confirm"))
+            .default(true)
+            .interact()?;
+
+        if confirm {
+            self.install_docker()?;
+        } else {
+            println!("   {}", self.tv("install.docker.required", &[("tool", "Open WebUI")]).yellow());
+        }
+
+        Ok(())
+    }
+
+    fn install_docker(&self) -> Result<()> {
+        let pkg_manager = detect_package_manager();
+        let relog = self.t("install.docker.relog");
+        
+        let cmd = match pkg_manager.as_str() {
+            "pacman" => format!("sudo pacman -S --noconfirm docker && sudo systemctl enable --now docker && sudo usermod -aG docker $USER && echo '{}'", relog),
+            "apt" => format!("sudo apt install -y docker.io && sudo systemctl enable --now docker && sudo usermod -aG docker $USER && echo '{}'", relog),
+            "dnf" => format!("sudo dnf install -y docker && sudo systemctl enable --now docker && sudo usermod -aG docker $USER && echo '{}'", relog),
+            _ => "echo 'https://docs.docker.com/engine/install/'".to_string(),
+        };
+
+        println!("\n{}", self.tv("install.installing", &[("tool", "Docker")]));
+        println!("   {}", cmd.cyan());
+
+        match run_command(&cmd) {
+            Ok(_) => {
+                println!("   {}", self.tv("install.success", &[("tool", "Docker")]).green());
+                // ICI :
+                println!("   {}", self.t("install.docker.relog").yellow());
+                println!("   {}", "newgrp docker".dimmed());
+            },
+            Err(e) => {
+                println!("   {}", self.tv("install.failed", &[("tool", "Docker")]).red());
+                println!("\n   {}", self.t("install.manual_command").dimmed());
+                println!("   https://docs.docker.com/engine/install/");
+            }
+        }
+
+        Ok(())
+    }
+
+    fn get_all_tools(&self) -> Vec<Tool> {
+        // Vérifier si docker fonctionne sans sudo
+        let docker_cmd = if run_command("docker info 2>/dev/null").is_ok() {
+            "docker"
+        } else if run_command("sudo docker info 2>/dev/null").is_ok() {
+            "sudo docker"
+        } else {
+            "docker"  // on tente quand même
+        };
+
+        let open_webui_cmd = format!(
+            "{} run -d -p 3000:8080 \
+            --add-host=host.docker.internal:host-gateway \
+            -v open-webui:/app/backend/data \
+            --name open-webui \
+            --restart always \
+            ghcr.io/open-webui/open-webui:main",
+            docker_cmd
+        );
+
+        vec![
+            Tool {
+                name: "Ollama".to_string(),
+                detect_cmd: "ollama".to_string(),
+                install_cmd: Some("curl -fsSL https://ollama.com/install.sh | sh".to_string()),
+            },
+            Tool {
+                name: "Open WebUI".to_string(),
+                detect_cmd: "docker".to_string(),
+                install_cmd: Some(open_webui_cmd),
+            },
+            Tool {
+                name: "OpenClaw".to_string(),
+                detect_cmd: "openclaw".to_string(),
+                install_cmd: Some("npm install -g openclaw".to_string()),
+            },
+        ]
+    }
+
+    fn is_installed(&self, cmd: &str) -> bool {
+        let check = format!("command -v {} 2>/dev/null", cmd);
+        run_command(&check).is_ok()
+    }
+
+    fn check_and_install(&self, tool: &Tool) -> Result<()> {
+        println!("\n🔍 {}", tool.name.bold());
+
+        if tool.name == "Open WebUI" {
+            if run_command("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok() {
+                let is_running = run_command("docker ps --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+                if is_running {
+                    println!("   {}", self.tv("install.already_running", &[("tool", &tool.name)]).green());
+                } else {
+                    println!("   {}", self.tv("install.container_stopped", &[("tool", &tool.name)]).yellow());
+                    println!("   {}", self.t("install.docker_start_hint").dimmed());
                 }
                 return Ok(());
             }
-        }
-
-        println!("\n{}", self.i18n.t_with_vars("install.proposal", &[("tool", tool)]));
-
-        let install_cmd = match tool {
-            "ollama" => self.get_ollama_cmd(),
-            "open-webui" => self.get_open_webui_cmd(),
-            "hermes" => self.get_hermes_cmd(),
-            "openclaw" => self.get_openclaw_cmd(),
-            _ => {
-                println!("Pas de commande pour {}", tool);
-                return Ok(());
-            }
-        };
-
-        println!("\n{}", self.i18n.t("install.command"));
-        println!("  {}", install_cmd.cyan());
-        
-        if !self.shell.is_empty() {
-            println!("  (Shell détecté : {})", self.shell.dimmed());
-        }
-
-        let confirm_text = self.i18n.t("install.confirm");
-        let confirm = Confirm::new()
-            .with_prompt(confirm_text)
-            .default(false)
-            .interact()?;
-
-        if !confirm {
-            println!("{}", "Installation annulée.".yellow());
+        } else if self.is_installed(&tool.detect_cmd) {
+            println!("   {}", self.tv("install.already_installed", &[("tool", &tool.name)]).green());
             return Ok(());
         }
 
-        println!("{}", self.i18n.t_with_vars("install.installing", &[("tool", tool)]));
-        
-        match run_command(&install_cmd) {
-            Ok((stdout, stderr)) => {
-                if !stdout.is_empty() { 
-                    println!("{}", stdout); 
-                }
-                if !stderr.is_empty() && !stderr.contains("warning") {
-                    eprintln!("{}", stderr.dimmed());
-                }
-                println!("{} {} ✓", 
-                    self.i18n.t_with_vars("install.success", &[("tool", tool)]), 
-                    "".green()
-                );
-                info!("{} installé avec succès", tool);
-                Ok(())
-            }
-            Err(e) => {
-                println!("{} {} ✗", 
-                    self.i18n.t_with_vars("install.failed", &[("tool", tool)]), 
-                    "".red()
-                );
-                println!("\n{}", e.to_string().yellow());
-                
-                // Instructions adaptées au shell
-                println!("\n🔧 {}", "Pour installer manuellement :".bold());
-                
-                if self.shell.contains("fish") {
-                    println!("  Avec Fish :");
-                    println!("  {}", self.get_fish_alternative(tool).cyan());
-                } else {
-                    println!("  {}", install_cmd.cyan());
-                }
-                
-                if tool == "open-webui" {
-                    println!("\n💡 {}", "Alternative : installation via Docker".dimmed());
-                    println!("  docker run -d -p 3000:8080 --name open-webui ghcr.io/open-webui/open-webui:main");
-                }
-                
-                Ok(())
-            }
+        println!("   {}", self.tv("install.not_installed", &[("tool", &tool.name)]).red());
+
+        if !self.interactive {
+            return Ok(());
         }
-    }
 
-    fn find_pip_command(&self) -> Option<String> {
-        // Pour Fish, utiliser une syntaxe compatible
-        let candidates = if self.shell.contains("fish") {
-            vec![
-                "pip3",
-                "pip",
-                "python3 -m pip",
-                "python -m pip",
-            ]
-        } else {
-            vec![
-                "pip3",
-                "pip",
-                "python3 -m pip",
-            ]
-        };
+        let confirm = Confirm::new()
+            .with_prompt(format!("   {}", self.tv("install.confirm_tool", &[("tool", &tool.name)])))
+            .default(true)
+            .interact()?;
 
-        for cmd in &candidates {
-            let check_cmd = if self.shell.contains("fish") {
-                format!("command -v {} 2>/dev/null", cmd.split_whitespace().next().unwrap_or(cmd))
-            } else {
-                format!("command -v {} 2>/dev/null", cmd.split_whitespace().next().unwrap_or(cmd))
-            };
-            
-            if let Ok((stdout, _)) = run_command(&check_cmd) {
-                if !stdout.trim().is_empty() {
-                    return Some(cmd.to_string());
+        if !confirm {
+            println!("   {}", self.tv("install.skipped", &[("tool", &tool.name)]).dimmed());
+            return Ok(());
+        }
+
+        if let Some(cmd) = &tool.install_cmd {
+            println!("\n{}", self.tv("install.installing", &[("tool", &tool.name)]).bold().cyan());
+            println!("   {}", cmd.cyan());
+
+            match run_command(cmd) {
+                Ok((stdout, stderr)) => {
+                    if !stdout.is_empty() {
+                        println!("{}", stdout);
+                    }
+                    if !stderr.is_empty() {
+                        println!("{}", stderr.dimmed());
+                    }
+                    println!("   {}", self.tv("install.success", &[("tool", &tool.name)]).green());
+                    
+                    if tool.name == "Open WebUI" {
+                        println!("\n   {}", self.tv("install.open_webui_url", &[("tool", &tool.name)]).bold());
+                    }
+                    if tool.name == "Ollama" {
+                        println!("\n   {}", self.t("install.ollama_hint").dimmed());
+                    }
+                }
+                Err(e) => {
+                    println!("   {}", self.tv("install.failed", &[("tool", &tool.name)]).red());
+                    println!("\n   {}", self.t("install.manual_command").dimmed());
+                    println!("   {}", cmd.cyan());
                 }
             }
         }
-        
-        None
-    }
 
-    fn get_ollama_cmd(&self) -> String {
-        if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
-            "curl -fsSL https://ollama.com/install.sh | sh".to_string()
-        } else if cfg!(target_os = "windows") {
-            r#"powershell -c "iwr -useb https://ollama.com/install.ps1 | iex""#.to_string()
-        } else {
-            "echo 'OS non supporté'".to_string()
-        }
-    }
-
-    fn get_open_webui_cmd(&self) -> String {
-        if self.shell.contains("fish") {
-            "pip3 install open-webui; or pip install open-webui; or python3 -m pip install open-webui".to_string()
-        } else {
-            "pip3 install open-webui 2>/dev/null || pip install open-webui 2>/dev/null || python3 -m pip install open-webui".to_string()
-        }
-    }
-
-    fn get_hermes_cmd(&self) -> String {
-        "echo 'Installation de Hermes Agent (à définir)'".to_string()
-    }
-
-    fn get_openclaw_cmd(&self) -> String {
-        "npm install -g openclaw".to_string()
-    }
-    
-    fn get_fish_alternative(&self, tool: &str) -> String {
-        match tool {
-            "open-webui" => {
-                "python3 -m pip install --user open-webui".to_string()
-            }
-            "ollama" => {
-                "curl -fsSL https://ollama.com/install.sh | sh".to_string()
-            }
-            _ => "Commande non disponible pour Fish".to_string()
-        }
+        Ok(())
     }
 }
 
-// Fonction pour détecter le shell - CORRIGÉE
-fn detect_shell() -> String {
-    // Vérifier la variable SHELL
-    if let Ok(shell) = std::env::var("SHELL") {
-        if shell.contains("fish") {
-            return "fish".to_string();
-        }
-        if shell.contains("zsh") {
-            return "zsh".to_string();
-        }
-        if shell.contains("bash") {
-            return "bash".to_string();
-        }
-        return shell;  // Retourner tel quel si pas reconnu
-    }
-    
-    // Vérifier le processus parent (correction)
-    let parent_pid = std::process::id().saturating_sub(1);  // Évite underflow
-    if parent_pid > 0 {
-        let proc_path = format!("/proc/{}/comm", parent_pid);
-        if let Ok(comm) = std::fs::read_to_string(&proc_path) {
-            let comm = comm.trim().to_lowercase();
-            if comm.contains("fish") { return "fish".to_string(); }
-            if comm.contains("zsh") { return "zsh".to_string(); }
-            if comm.contains("bash") { return "bash".to_string(); }
+fn detect_package_manager() -> String {
+    for (cmd, name) in &[
+        ("pacman", "pacman"),
+        ("apt", "apt"),
+        ("dnf", "dnf"),
+        ("zypper", "zypper"),
+        ("brew", "brew"),
+    ] {
+        if run_command(&format!("command -v {}", cmd)).is_ok() {
+            return name.to_string();
         }
     }
-    
     "unknown".to_string()
 }

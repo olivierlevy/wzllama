@@ -95,15 +95,8 @@ fn display_hardware(hardware: &HardwareInfo, i18n: &I18n) {
 }
 
 fn install_tools_if_needed(i18n: &I18n) -> Result<()> {
-    println!("\n{}", "─".repeat(40).dimmed());
-    println!("{}", "Vérification des outils".bold());
-    println!("{}", "─".repeat(40).dimmed());
-
     let installer = Installer::new(i18n, true);
-    for tool in &["ollama", "open-webui", "hermes", "openclaw"] {
-        installer.check_and_install(tool)?;
-    }
-    Ok(())
+    installer.install_all_tools()
 }
 
 fn launch_usage_wizard(i18n: &I18n) -> Result<(String, UsageSpec)> {
