@@ -311,7 +311,7 @@ pub fn pick_best_local_model(
         .cloned()
 }
 
-fn extract_size(model_name: &str) -> u32 {
+pub fn extract_size(model_name: &str) -> u32 {
     // Extraire "7b", "14b", etc.
     for part in model_name.split([':', '-', '/']) {
         if let Some(size) = part.strip_suffix('b') {
@@ -321,4 +321,130 @@ fn extract_size(model_name: &str) -> u32 {
         }
     }
     0
+}
+
+/// Score basé uniquement sur les métadonnées, sans nom en dur
+pub fn score_model_dynamic(
+    model: &OllamaModel,
+    usage_type: &str,
+    hardware: &HardwareInfo,
+) -> f32 {
+    let name = model.name.to_lowercase();
+    let size = extract_size(&model.name);
+
+    // Exclure les modèles cloud/remote
+    if size == 0 && (name.contains("cloud") || name.contains("remote")) {
+        return 0.0;
+    }
+
+    let available_ram = if hardware.has_gpu() {
+        hardware.total_vram_mb as f64 / 1024.0
+    } else {
+        hardware.ram_gb
+    };
+
+    let mut score: f32 = 0.2; // base
+
+    // 1. Taille adaptée à la RAM/VRAM disponible
+    let size_score = if (size as f64 * 2.0) <= available_ram {
+        if (size as f64 * 2.0) <= available_ram * 0.3 {
+            0.4 // très très confortable (< 30% RAM)
+        } else if (size as f64 * 2.0) <= available_ram * 0.5 {
+            0.25 // confortable
+        } else {
+            0.1 // ça passe
+        }
+    } else {
+        -1.0 // éliminé
+    };
+    score += size_score;
+    if score < 0.0 { return 0.0; }
+
+    // 2. Taille adaptée à l'usage
+    match usage_type {
+        "agents" => {
+            if size <= 7 { score += 0.2; } // petit = rapide
+            else if size <= 14 { score += 0.1; }
+        }
+        "book" | "code" => {
+            if size >= 32 { score += 0.3; } // grand = qualitatif
+            else if size >= 14 { score += 0.2; }
+            else if size >= 7 { score += 0.05; }
+        }
+        _ => {
+            if size >= 14 { score += 0.15; }
+            else if size >= 7 { score += 0.1; }
+        }
+    }
+
+    // 3. Famille : bonus selon mot-clés dans le nom/famille
+    let family_hints = model
+        .details
+        .as_ref()
+        .and_then(|d| d.family.as_deref())
+        .unwrap_or("");
+    
+    // Mots-clés positifs (indépendants de la famille)
+    let positive_keywords = ["instruct", "chat", "latest"];
+    for kw in &positive_keywords {
+        if name.contains(kw) || family_hints.contains(kw) {
+            score += 0.05;
+        }
+    }
+    
+    // Mots-clés par usage (score bonus)
+    let usage_keywords: &[&str] = match usage_type {
+        "code" => &["code", "coder", "dev", "program"],
+        "book" => &["writer", "story", "text", "prose", "large"],
+        "agents" => &["small", "fast", "light", "mini", "tiny"],
+        _ => &[],
+    };
+    for kw in usage_keywords {
+        if name.contains(kw) || family_hints.contains(kw) {
+            score += 0.1;
+        }
+    }
+
+    // 4. Quantization : Q4 = bon compromis, Q8 = meilleure qualité
+    let quant = model
+        .details
+        .as_ref()
+        .and_then(|d| d.quantization_level.as_deref())
+        .unwrap_or("");
+    if quant.contains("Q4") { score += 0.05; }
+    if quant.contains("Q8") || quant.contains("F16") { score += 0.1; }
+
+    // 5. Modifié récemment = maintenu
+    if model.modified_at.is_some() {
+        score += 0.05;
+    }
+
+    score.min(1.0).max(0.0)
+}
+
+/// Trie TOUS les modèles locaux par pertinence pour un usage
+pub fn rank_local_models(
+    models: &[OllamaModel],
+    usage_type: &str,
+    hardware: &HardwareInfo,
+    limit: usize,
+) -> Vec<(OllamaModel, f32)> {
+    let mut scored: Vec<(OllamaModel, f32)> = models
+        .iter()
+        .filter(|m| {
+            let name = m.name.to_lowercase();
+            let size = extract_size(&m.name);
+            // Exclure les modèles cloud (taille 0 + mot-clé cloud/remote)
+            !(size == 0 && (name.contains("cloud") || name.contains("remote")))
+        })
+        .map(|m| {
+            let score = score_model_dynamic(m, usage_type, hardware);
+            (m.clone(), score)
+        })
+        .filter(|(_, s)| *s > 0.0)
+        .collect();
+
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    scored.truncate(limit);
+    scored
 }

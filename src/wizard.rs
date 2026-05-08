@@ -1,9 +1,9 @@
 use crate::config::{self, I18n, UsageSpec, get_available_languages, detect_system_language};
-use crate::core::{self, detect_hardware, HardwareInfo, run_command};
+use crate::core::{self, detect_hardware, HardwareInfo};
 use crate::installers::Installer;
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Select, Input, Confirm};
+use dialoguer::{Select, Input};
 
 pub fn run_wizard() -> Result<()> {
     println!("{}", "═".repeat(50).cyan());
@@ -23,10 +23,8 @@ pub fn run_wizard() -> Result<()> {
     let (usage_key, usage_spec) = launch_usage_wizard(&i18n)?;
     explain_usage(&usage_key, &usage_spec, &hardware, &i18n)?;
 
-    let (model_size, _use_gpu) = core::recommend_model_size(&usage_spec.params.r#type, &hardware);
-    let usage_type = &usage_spec.params.r#type;
-    let model_name = format!("qwen2.5:{}b", model_size);
-    install_model_if_needed(&i18n, model_size, usage_type, &model_name)?;
+    let _usage_type = &usage_spec.params.r#type;
+    install_model_if_needed(&i18n, &hardware, _usage_type)?;
 
     println!("\n{}", i18n.t("app.goodbye").bold().green());
     Ok(())
@@ -150,7 +148,7 @@ fn format_duration(minutes: f64) -> String {
 }
 
 fn explain_usage(
-    usage_key: &str,
+    _usage_key: &str,
     spec: &UsageSpec,
     hardware: &HardwareInfo,
     i18n: &I18n,
@@ -160,28 +158,10 @@ fn explain_usage(
     println!("{}", "─".repeat(40).dimmed());
 
     let usage_type = &spec.params.r#type;
-    let (model_size, use_gpu) = core::recommend_model_size(usage_type, hardware);
-
     let usage_label = i18n.t(&spec.i18n_key);
     println!("\n📋 {} : {} (type : {})", "Usage".bold(), usage_label, usage_type.italic());
-    let _ = usage_key;
 
-    println!("\n{}: qwen2.5:{}b",
-        i18n.t_with_vars("model.recommended", &[("model", "qwen2.5")]),
-        model_size
-    );
-    println!("{}: {}B", 
-        i18n.t_with_vars("model.size", &[("size", &model_size.to_string())]),
-        model_size
-    );
-
-    if use_gpu {
-        println!("✅ {}", i18n.t("model.vram_only").green());
-    } else {
-        let ram_needed = (model_size as f64) * 2.0;
-        println!("⚠️  {}", i18n.t_with_vars("model.ram_needed", &[("gb", &format!("{:.0}", ram_needed))]).yellow());
-    }
-
+    // Estimation
     println!("\n{}", "─".repeat(40).dimmed());
     println!("{}", i18n.t("estimation.title").bold());
     println!("{}", "─".repeat(40).dimmed());
@@ -189,115 +169,119 @@ fn explain_usage(
     match usage_type.as_str() {
         "book" => {
             let pages: u32 = Input::new()
-                .with_prompt("Nombre de pages de votre document")
+                .with_prompt("Nombre de pages")
                 .default(100)
                 .interact()?;
-
             let tokens = core::estimate_tokens_book(pages);
             let chunks = if let Some(cpp) = spec.params.pages_per_chunk {
                 (pages + cpp - 1) / cpp
             } else { 1 };
-
-            let tps = core::get_performance(model_size, use_gpu);
+            let tps = core::get_performance(14, true); // moyenne
             let (min_time, max_time) = core::estimate_time_minutes(tokens, tps);
-
             println!("  {}", i18n.t_with_vars("estimation.tokens", &[("tokens", &format_number(tokens))]));
             println!("  {}", i18n.t_with_vars("estimation.chunks", &[("chunks", &chunks.to_string())]));
             println!("  {}", i18n.t_with_vars("estimation.time_range", &[
                 ("min", &format_duration(min_time)),
                 ("max", &format_duration(max_time))
             ]));
-
-            if model_size < 14 {
-                println!("\n  {}", i18n.t("estimation.warning").yellow());
-            }
         }
         "code" => {
             let loc: u32 = Input::new()
-                .with_prompt("Nombre de lignes de code (approximatif)")
+                .with_prompt("Lignes de code")
                 .default(10000)
                 .interact()?;
-
             let tokens = core::estimate_tokens_code(loc);
-            let tps = core::get_performance(model_size, use_gpu);
+            let tps = core::get_performance(14, true);
             let (min_time, max_time) = core::estimate_time_minutes(tokens, tps);
-
             println!("  {}", i18n.t_with_vars("estimation.tokens", &[("tokens", &format_number(tokens))]));
             println!("  {}", i18n.t_with_vars("estimation.time_range", &[
                 ("min", &format_duration(min_time)),
                 ("max", &format_duration(max_time))
             ]));
         }
-        _ => {
-            println!("💡 Usage général - performance adaptative");
-        }
+        _ => println!("💡 Usage général"),
     }
 
     Ok(())
 }
 
-fn install_model_if_needed(i18n: &I18n, preferred_size: u32, usage_type: &str, model_name: &str) -> Result<()> {
-    // Ajouter au début pour utiliser i18n :
-    let _ = i18n; // ou l'utiliser dans un println! plus bas
+fn install_model_if_needed(
+    i18n: &I18n,
+    hardware: &HardwareInfo,
+    usage_type: &str,
+) -> Result<()> {
     println!("\n{}", "─".repeat(40).dimmed());
     println!("{}", "📥 Modèle Ollama".bold());
     println!("{}", "─".repeat(40).dimmed());
-    
+
     // Vérifier si Ollama est lancé
     let ollama_url = match core::detect_ollama_url() {
         Some(url) => url,
         None => {
-            println!("   ⚠️  Ollama n'est pas lancé. Lancez-le avec : ollama serve");
-            println!("   Puis téléchargez un modèle avec : ollama pull {}", model_name);
+            println!("   ⚠️  {}", i18n.t("install.ollama.not_running"));
             return Ok(());
         }
     };
-    
+
     // Récupérer les modèles locaux
     let local_models = match core::fetch_local_models(&ollama_url) {
         Ok(models) => models,
         Err(_) => {
-            println!("   ⚠️  Impossible de contacter l'API Ollama");
+            println!("   ⚠️  {}", i18n.t("install.ollama.api_error"));
             return Ok(());
         }
     };
-    
-    // Chercher un modèle existant qui correspond
-    if let Some(existing) = core::pick_best_local_model(&local_models, usage_type, preferred_size) {
-        println!("   ✅ Modèle existant : {}", existing.name.green().bold());
-        println!("   Taille : {}", format_bytes(existing.size.unwrap_or(0)));
+
+    if local_models.is_empty() {
+        println!("   📭 {}", i18n.t("install.ollama.no_models"));
+        println!("   💡 {}\n", i18n.t("install.ollama.pull_hint"));
         return Ok(());
     }
-    
-    // Aucun modèle trouvé, proposer le téléchargement
-    println!("   Aucun modèle {}B trouvé localement.", preferred_size);
-    println!("   Modèle recommandé : {}", model_name.cyan().bold());
-    println!();
-    println!("   ⚠️  Le téléchargement peut prendre plusieurs minutes.");
-    println!("   Taille estimée : ~{} Go", preferred_size * 2);
-    
-    let confirm = Confirm::new()
-        .with_prompt(format!("   Télécharger {} ?", model_name))
-        .default(true)
-        .interact()?;
-    
-    if confirm {
-        let cmd = format!("ollama pull {}", model_name);
-        println!("\n📥 {}", cmd.cyan());
-        
-        match run_command(&cmd) {
-            Ok((stdout, stderr)) => {
-                if !stdout.is_empty() { println!("{}", stdout); }
-                if !stderr.is_empty() { println!("{}", stderr.dimmed()); }
-                println!("   ✅ {} installé !", model_name.green().bold());
-            }
-            Err(e) => {
-                println!("   ❌ Erreur : {}", e);
-                println!("   Lancez : ollama pull {}", model_name);
-            }
-        }
+
+    // Classer les modèles locaux par pertinence
+    let ranked = core::rank_local_models(&local_models, usage_type, hardware, 8);
+
+    if ranked.is_empty() {
+        println!("   ⚠️  {}", i18n.t("install.ollama.no_compatible"));
+        return Ok(());
     }
+
+    println!("\n📊 {} :\n", i18n.t("install.ollama.recommended"));
     
+    let items: Vec<String> = ranked.iter().map(|(m, score)| {
+        let size_str = m.details.as_ref()
+            .and_then(|d| d.parameter_size.as_deref())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("{}B", core::extract_size(&m.name)));
+        format!(
+            "{} ({} - {:.0}%)",
+            m.name.bold(),
+            size_str,
+            score * 100.0
+        )
+    }).collect();
+
+    let selection = Select::new()
+        .with_prompt(i18n.t("install.ollama.choose"))
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    let (chosen, _) = &ranked[selection];
+    
+    println!("\n✅ {} : {}", i18n.t("install.ollama.selected"), chosen.name.green().bold());
+    println!("   📏 {} : {}", i18n.t("install.ollama.size"), 
+        chosen.details.as_ref()
+            .and_then(|d| d.parameter_size.as_deref())
+            .unwrap_or("?"));
+    println!("   🏷️  {} : {}", i18n.t("install.ollama.family"),
+        chosen.details.as_ref()
+            .and_then(|d| d.family.as_deref())
+            .unwrap_or("inconnue"));
+    
+    // Proposer d'autres modèles à télécharger
+    println!("\n💡 {} : ollama pull <nom_du_modèle>", i18n.t("install.ollama.pull_other"));
+
     Ok(())
 }
 
