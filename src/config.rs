@@ -44,7 +44,8 @@ impl I18n {
     }
     
     pub fn t_with_vars(&self, key: &str, vars: &[(&str, &str)]) -> String {
-        let mut text = self.t(key);
+        let base_text = self.map.get(key).cloned().unwrap_or_else(|| key.to_string());
+        let mut text = base_text;
         for (var, value) in vars {
             text = text.replace(&format!("{{{}}}", var), value);
         }
