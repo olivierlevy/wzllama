@@ -17,10 +17,11 @@ impl Tool for HermesTool {
 
     fn install(&self) -> Result<()> { shell::run("pip install hermes-agent")?; Ok(()) }
 
+    // Le binaire s'appelle "hermes"
     fn launch(&self, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         match model {
-            Some(m) => println!("hermes-agent --model ollama/{}", m),
-            None => println!("hermes-agent"),
+            Some(m) => println!("hermes --model ollama/{}", m),
+            None => println!("hermes"),
         }
         Ok(())
     }

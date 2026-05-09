@@ -17,10 +17,11 @@ impl Tool for PiTool {
 
     fn install(&self) -> Result<()> { shell::run("npm install -g pi-agent")?; Ok(()) }
 
+    // Le binaire s'appelle "pi"
     fn launch(&self, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         match model {
-            Some(m) => println!("pi-agent --model ollama/{}", m),
-            None => println!("pi-agent"),
+            Some(m) => println!("pi --model ollama/{}", m),
+            None => println!("pi"),
         }
         Ok(())
     }

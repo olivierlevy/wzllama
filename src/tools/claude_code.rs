@@ -21,8 +21,8 @@ impl Tool for ClaudeCodeTool {
         println!("export ANTHROPIC_BASE_URL=http://localhost:11434/v1");
         println!("export ANTHROPIC_API_KEY=ollama");
         match model {
-            Some(m) => println!("claude-code --model {}", m),
-            None => println!("claude-code"),
+            Some(m) => println!("claude --model {}", m),
+            None => println!("claude"),
         }
         Ok(())
     }
