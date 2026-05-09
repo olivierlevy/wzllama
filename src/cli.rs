@@ -1,5 +1,9 @@
 use clap::{Parser, Subcommand};
 use anyhow::Result;
+// Imports des modules
+use crate::wizard;
+use crate::config;
+use crate::core::ollama_api;
 
 #[derive(Parser)]
 #[command(name = "wzllama", about = "Assistant IA locale", version = "0.2.0")]
@@ -36,7 +40,7 @@ impl Cli {
             }
             Command::Wizard => wizard::run(),
             Command::Validate => config::templates::validate_all(),
-            Command::Bench => core::ollama_api::run_benchmark(),
+            Command::Bench => ollama_api::run_benchmark(),
             Command::ResetTemplates => config::templates::reset_all(),
             Command::CheckI18n => config::i18n::check_integrity(),
         }

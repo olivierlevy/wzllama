@@ -10,7 +10,9 @@ pub mod menu_models;
 pub mod menu_tools;
 
 use anyhow::Result;
+use colored::Colorize;
 use crate::config::{I18n, WzllamaState};
+use crate::display;
 use crate::core::HardwareInfo;
 
 pub fn run() -> Result<()> {

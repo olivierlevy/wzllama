@@ -116,3 +116,30 @@ pub fn set_last_usage(usage: &str, state: &mut WzllamaState) {
     state.last_usage = Some(usage.to_string());
     let _ = save(state);
 }
+
+
+impl WzllamaState {
+    pub fn load() -> Self {
+        load()
+    }
+    
+    pub fn save(&self) -> Result<()> {
+        save(self)
+    }
+    
+    pub fn set_last_model(&mut self, model: &str) {
+        set_last_model(model, self);
+    }
+    
+    pub fn set_last_usage(&mut self, usage: &str) {
+        set_last_usage(usage, self);
+    }
+    
+    pub fn set_last_tool(&mut self, tool: &str) {
+        set_last_tool(tool, self);
+    }
+    
+    pub fn set_last_fleet(&mut self, fleet: &str) {
+        set_last_fleet(fleet, self);
+    }
+}
