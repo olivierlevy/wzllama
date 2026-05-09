@@ -89,6 +89,15 @@
   "fleet.edit.keep": "Garder tel quel",
   "fleet.edit.new_role": "Nouveau rôle",
   "fleet.edit.new_prompt": "Nouveau prompt",
+  
+  "fleet.orchestrator": "Orchestrateur",
+  "fleet.reflexion": "Réflexion",
+  "fleet.experts_max": "Experts max",
+  "fleet.type_reflexion": "réflexion",
+  "fleet.type_expert": "expert",
+  "fleet.install_gateway": "🔧 Installation du gateway OpenClaw :",
+  "fleet.install_gateway_now": "Installer le gateway maintenant ?",
+  "fleet.gateway_installed": "✅ Gateway installé",
 
   "fleet.template.orchestrator_code": "Tu es un architecte logiciel en chef.",
   "fleet.template.orchestrator_generic": "Tu es un coordinateur de projet.",
