@@ -534,14 +534,22 @@ fn create_agent_fleet(
     // Orchestrateur
     if keep_orch {
         println!("\n🎯 {}", i18n.t("fleet.creating_orchestrator"));
-        if create_single_agent(
+        match create_single_agent(
             &fleet.orchestrator.model,
             orchestrator_name,
             fleet.orchestrator.num_ctx,
             0.7,
             &fleet.orchestrator.system_prompt,
-        ).is_ok() {
-            created.push((orchestrator_name.to_string(), "🎯".to_string()));
+        ) {
+            Ok(true) => {
+                created.push((orchestrator_name.to_string(), "🎯".to_string()));
+            }
+            Ok(false) => {
+                println!("   ⚠️  Échec création orchestrateur");
+            }
+            Err(e) => {
+                println!("   ❌ Erreur : {}", e);
+            }
         }
     }
     
@@ -549,14 +557,10 @@ fn create_agent_fleet(
     for agent in &fleet.reflexion_agents {
         if agent.enabled {
             println!("\n🧠 {}", agent.role);
-            if create_single_agent(
-                &agent.model,
-                &agent.name,
-                agent.num_ctx,
-                agent.temperature,
-                &agent.system_prompt,
-            ).is_ok() {
-                created.push((agent.name.clone(), "🧠".to_string()));
+            match create_single_agent(&agent.model, &agent.name, agent.num_ctx, agent.temperature, &agent.system_prompt) {
+                Ok(true) => { created.push((agent.name.clone(), "🧠".to_string())); }
+                Ok(false) => { println!("   ⚠️  Échec création {}", agent.name); }
+                Err(e) => { println!("   ❌ Erreur : {}", e); }
             }
         }
     }
@@ -565,14 +569,10 @@ fn create_agent_fleet(
     for agent in &fleet.expert_agents {
         if agent.enabled {
             println!("\n🤖 {}", agent.role);
-            if create_single_agent(
-                &agent.model,
-                &agent.name,
-                agent.num_ctx,
-                agent.temperature,
-                &agent.system_prompt,
-            ).is_ok() {
-                created.push((agent.name.clone(), "🤖".to_string()));
+            match create_single_agent(&agent.model, &agent.name, agent.num_ctx, agent.temperature, &agent.system_prompt) {
+                Ok(true) => { created.push((agent.name.clone(), "🤖".to_string())); }
+                Ok(false) => { println!("   ⚠️  Échec création {}", agent.name); }
+                Err(e) => { println!("   ❌ Erreur : {}", e); }
             }
         }
     }
@@ -686,10 +686,17 @@ fn create_single_agent(
     num_ctx: u32,
     temperature: f32,
     system_prompt: &str,
-) -> Result<()> {
+) -> Result<bool> {  // Retourne true si créé avec succès
+    // Vérifier si déjà existant
+    let check = format!("ollama list 2>/dev/null | grep -q {}", name);
+    if core::run_command(&check).is_ok() {
+        println!("   ✅ {} déjà existant", name.cyan());
+        return Ok(true);
+    }
+    
     // Vérifier si le modèle de base est disponible
-    let installed = core::run_command(&format!("ollama list 2>/dev/null | grep -q {}", model)).is_ok();
-    if !installed {
+    let check_model = format!("ollama list 2>/dev/null | grep -q {}", model);
+    if !core::run_command(&check_model).is_ok() {
         println!("   ⬇️  Téléchargement de {}...", model);
         core::run_command(&format!("ollama pull {}", model))?;
     }
@@ -703,17 +710,28 @@ fn create_single_agent(
     std::fs::write(&tmp_file, &modelfile)?;
     
     let create_cmd = format!("ollama create {} -f {}", name, tmp_file);
+    println!("   ⚙️  {}", create_cmd.dimmed());
     
     match core::run_command(&create_cmd) {
-        Ok(_) => {
-            println!("   ✅ {} créé", name.cyan());
+        Ok((stdout, stderr)) => {
+            if !stdout.is_empty() { println!("{}", stdout); }
+            if !stderr.is_empty() { eprintln!("{}", stderr.dimmed()); }
+            
+            // Vérifier que le modèle a bien été créé
+            let verify = format!("ollama list 2>/dev/null | grep -q {}", name);
+            if core::run_command(&verify).is_ok() {
+                println!("   ✅ {} créé", name.cyan());
+                Ok(true)
+            } else {
+                println!("   ❌ {} - échec de création", name.red());
+                Ok(false)
+            }
         }
         Err(e) => {
             println!("   ❌ Erreur : {}", e);
+            Ok(false)
         }
     }
-    
-    Ok(())
 }
 
 
