@@ -589,3 +589,136 @@ pub fn reset_templates() -> Result<()> {
 
     Ok(())
 }
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct WzllamaState {
+    pub installed: InstalledTools,
+    pub fleets: HashMap<String, FleetState>,
+    pub last_model: Option<String>,
+    pub last_usage: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct InstalledTools {
+    pub docker: bool,
+    pub ollama: bool,
+    pub open_webui: bool,
+    pub openclaw: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FleetState {
+    pub profile: String,
+    pub orchestrator: String,
+    pub agents: Vec<String>,
+    pub openclaw_installed: bool,
+}
+
+pub fn state_file() -> PathBuf {
+    wzllama_dir().join("state.json")
+}
+
+pub fn load_state() -> WzllamaState {
+    let path = state_file();
+    if path.exists() {
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_default())
+            .unwrap_or_default()
+    } else {
+        WzllamaState::default()
+    }
+}
+
+pub fn save_state(state: &WzllamaState) -> Result<()> {
+    let path = state_file();
+    std::fs::write(&path, serde_json::to_string_pretty(state)?)?;
+    Ok(())
+}
+
+pub fn mark_installed(tool: &str, state: &mut WzllamaState) {
+    match tool {
+        "docker" => state.installed.docker = true,
+        "ollama" => state.installed.ollama = true,
+        "Open WebUI" => state.installed.open_webui = true,
+        "openclaw" => state.installed.openclaw = true,
+        _ => {}
+    }
+    let _ = save_state(state);
+}
+
+pub fn add_fleet(profile: &str, orchestrator: &str, agents: Vec<String>, state: &mut WzllamaState) {
+    state.fleets.insert(profile.to_string(), FleetState {
+        profile: profile.to_string(),
+        orchestrator: orchestrator.to_string(),
+        agents,
+        openclaw_installed: false,
+    });
+    let _ = save_state(state);
+}
+
+/// Scanne les dossiers ~/.openclaw-* pour détecter les flottes existantes
+pub fn detect_openclaw_fleets() -> HashMap<String, FleetState> {
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    let mut fleets = HashMap::new();
+    
+    if let Ok(entries) = std::fs::read_dir(&home) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(dirname) = path.file_name().and_then(|n| n.to_str()) {
+                    if dirname.starts_with(".openclaw-") {
+                        let profile = dirname.strip_prefix(".openclaw-").unwrap_or(dirname);
+                        let config_path = path.join("openclaw.json");
+                        
+                        if config_path.exists() {
+                            if let Ok(content) = std::fs::read_to_string(&config_path) {
+                                if let Ok(config) = serde_json::from_str::<serde_json::Value>(&content) {
+                                    let orchestrator = config["agents"]["defaults"]["model"]["primary"]
+                                        .as_str()
+                                        .map(|s| s.strip_prefix("ollama/").unwrap_or(s).to_string())
+                                        .unwrap_or_else(|| "inconnu".to_string());
+                                    
+                                    let agents: Vec<String> = config["agents"]["list"]
+                                        .as_array()
+                                        .map(|arr| {
+                                            arr.iter()
+                                                .filter_map(|a| {
+                                                    a["model"]["primary"].as_str()
+                                                        .map(|s| s.strip_prefix("ollama/").unwrap_or(s).to_string())
+                                                })
+                                                .collect()
+                                        })
+                                        .unwrap_or_default();
+                                    
+                                    // Vérifier si le service systemd existe
+                                    let installed = std::process::Command::new("systemctl")
+                                        .args(["--user", "is-enabled", &format!("openclaw-gateway-{}.service", profile)])
+                                        .output()
+                                        .map(|o| o.status.success())
+                                        .unwrap_or(false);
+                                    
+                                    fleets.insert(profile.to_string(), FleetState {
+                                        profile: profile.to_string(),
+                                        orchestrator,
+                                        agents,
+                                        openclaw_installed: installed,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    fleets
+}
+
+/// Met à jour le state.json avec les flottes détectées
+pub fn sync_fleets() -> WzllamaState {
+    let mut state = load_state();
+    let detected = detect_openclaw_fleets();
+    state.fleets = detected;
+    let _ = save_state(&state);
+    state
+}

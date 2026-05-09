@@ -1,4 +1,4 @@
-use crate::config::I18n;
+use crate::config::{self, I18n, WzllamaState};
 use crate::core::run_command;
 use anyhow::Result;
 use colored::*;
@@ -14,14 +14,15 @@ pub struct Tool {
 pub struct Installer<'a> {
     i18n: &'a I18n,
     interactive: bool,
+    state: &'a mut WzllamaState,
 }
 
 impl<'a> Installer<'a> {
-    pub fn new(i18n: &'a I18n, interactive: bool) -> Self {
-        Self { i18n, interactive }
+    pub fn new(i18n: &'a I18n, interactive: bool, state: &'a mut WzllamaState) -> Self {
+        Self { i18n, interactive, state }
     }
 
-    pub fn install_all_tools(&self) -> Result<()> {
+    pub fn install_all_tools(&mut self) -> Result<()> {
         println!("\n{}", "═".repeat(50).cyan());
         println!("{}", self.t("install.title").bold());
         println!("{}", "═".repeat(50).cyan());
@@ -44,7 +45,7 @@ impl<'a> Installer<'a> {
         self.i18n.t_with_vars(key, vars)
     }
 
-    fn check_and_install_docker(&self) -> Result<()> {
+    fn check_and_install_docker(&mut self) -> Result<()> {
         println!("\n🔍 {}", "Docker".bold());
         
         if self.is_installed("docker") {
@@ -171,7 +172,7 @@ impl<'a> Installer<'a> {
         run_command(&check).is_ok()
     }
 
-    fn check_and_install(&self, tool: &Tool) -> Result<()> {
+    fn check_and_install(&mut self, tool: &Tool) -> Result<()> {
         println!("\n🔍 {}", tool.name.bold());
 
         if tool.name == "Open WebUI" {
@@ -227,6 +228,8 @@ impl<'a> Installer<'a> {
                         println!("{}", stderr.dimmed());
                     }
                     println!("   {}", self.tv("install.success", &[("tool", &tool.name)]).green());
+                    // Marquer l'état
+                    config::mark_installed(&tool.name, &mut self.state);
                     
                     if tool.name == "Open WebUI" {
                         println!("\n   {}", self.tv("install.open_webui_url", &[("tool", &tool.name)]).bold());

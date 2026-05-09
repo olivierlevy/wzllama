@@ -219,5 +219,6 @@
   "fleet.usage_agents": "🤖 Individual agents:",
   "fleet.usage_webui": "🌐 All agents available in Open WebUI:",
   "fleet.yaml_comment": "Reference file - Use the commands above to launch your agents",
-  "fleet.config_saved": "Reference config saved:"
+  "fleet.config_saved": "Reference config saved:",
+  "fleet.install_gateway": "🔧 Pour installer le gateway en service automatique :"
 }

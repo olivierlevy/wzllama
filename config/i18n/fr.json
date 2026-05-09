@@ -18,6 +18,16 @@
   "menu.usage.title": "Que voulez-vous faire ?",
   "menu.usage.subtitle": "Sélectionnez votre cas d'usage principal :",
   "menu.usage.sorted_by": "Trié par pertinence pour votre profil",
+  "menu.quick_start": "🚀 Démarrage rapide",
+  "menu.quick_start_desc": "Des outils sont déjà configurés.",
+  "menu.full_wizard": "Lancer le wizard complet",
+  "menu.quick_resume": "Reprendre/Relancer les services",
+  "menu.quick_status": "Voir l'état des services",
+  "menu.choose_mode": "Mode",
+  "quick.resuming": "Reprise des services...",
+  "quick.fleets": "🚀 Flottes disponibles :",
+  "quick.relaunch_openclaw": "Relancer la flotte",
+  "quick.status_title": "📊 État des services",
   "usage.big_book.label": "Gros livre / Document long",
   "usage.big_book.description": "Analyser, résumer ou travailler avec de longs textes",
   "usage.big_code.label": "Grand codebase / Gros projets",
@@ -224,5 +234,6 @@
   "fleet.usage_agents": "🤖 Agents individuels :",
   "fleet.usage_webui": "🌐 Tous les agents sont disponibles dans Open WebUI :",
   "fleet.yaml_comment": "Fichier de référence - Utilisez les commandes ci-dessus pour lancer vos agents",
-  "fleet.config_saved": "Configuration de référence sauvegardée :"
+  "fleet.config_saved": "Configuration de référence sauvegardée :",
+  "fleet.install_gateway": "🔧 Pour installer le gateway en service automatique :"
 }

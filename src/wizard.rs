@@ -1,4 +1,4 @@
-use crate::config::{self, I18n, UsageSpec, get_available_languages, detect_system_language};
+use crate::config::{self, I18n, UsageSpec, WzllamaState, detect_system_language, get_available_languages};
 use crate::core::{self, detect_hardware, HardwareInfo, OllamaModel, TaskType};
 use crate::installers::Installer;
 use anyhow::Result;
@@ -13,13 +13,47 @@ pub fn run_wizard() -> Result<()> {
 
     let i18n = select_language()?;
     
+    // Charger l'état et synchroniser les flottes
+    let mut state = config::sync_fleets();
+    
+    // Si des outils sont déjà installés, proposer le mode rapide
+    if state.installed.docker || state.installed.ollama || state.installed.open_webui {
+        println!("\n{}", i18n.t("menu.quick_start").bold());
+        println!("   {}", i18n.t("menu.quick_start_desc"));
+        
+        let items = vec![
+            i18n.t("menu.full_wizard"),
+            i18n.t("menu.quick_resume"),
+            i18n.t("menu.quick_status"),
+        ];
+        
+        let choice = Select::new()
+            .with_prompt(i18n.t("menu.choose_mode"))
+            .items(&items)
+            .default(1)
+            .interact()?;
+        
+        match choice {
+            0 => {} // continuer le wizard normal
+            1 => {
+                quick_resume(&i18n, &state)?;
+                return Ok(());
+            }
+            2 => {
+                quick_status(&i18n, &state)?;
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+    
     println!("\n{}", i18n.t("app.welcome").bold());
 
     println!("\n{}", i18n.t("system.detecting").dimmed());
     let hardware = detect_hardware();
     display_hardware(&hardware, &i18n);
-
-    install_tools_if_needed(&i18n)?;
+    
+    install_tools_if_needed(&i18n, &mut state)?;
 
     let (usage_key, usage_spec) = launch_usage_wizard(&i18n)?;
     explain_usage(&usage_key, &usage_spec, &hardware, &i18n)?;
@@ -79,6 +113,104 @@ fn select_language() -> Result<I18n> {
     Ok(i18n)
 }
 
+fn quick_resume(i18n: &I18n, state: &WzllamaState) -> Result<()> {
+    println!("\n{}", i18n.t("quick.resuming").bold());
+    
+    // Vérifier/Démarrer Docker
+    if state.installed.docker {
+        print!("   Docker : ");
+        if core::run_command("docker info 2>/dev/null").is_ok() {
+            println!("✅");
+        } else {
+            println!("⬆️  Démarrage...");
+            core::run_command("sudo systemctl start docker")?;
+        }
+    }
+    
+    // Vérifier/Démarrer Open WebUI
+    if state.installed.open_webui {
+        print!("   Open WebUI : ");
+        let running = core::run_command("sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+        if running {
+            println!("✅ http://localhost:3000");
+        } else {
+            let exists = core::run_command("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+            if exists {
+                println!("⬆️  Redémarrage...");
+                core::run_command("sudo docker start open-webui")?;
+            }
+        }
+    }
+    
+    // Vérifier Ollama
+    print!("   Ollama : ");
+    if core::detect_ollama_url().is_some() {
+        println!("✅");
+    } else {
+        println!("⚠️  Non lancé");
+    }
+    
+    // Lister les flottes
+    if !state.fleets.is_empty() {
+        println!("\n{}", i18n.t("quick.fleets"));
+        for (name, fleet) in &state.fleets {
+            let gateway_running = core::run_command(
+                &format!("systemctl --user is-active openclaw-gateway-{}.service 2>/dev/null", fleet.profile)
+            ).is_ok();
+            
+            if gateway_running {
+                println!("   ✅ {} : openclaw --profile {}", name.cyan(), fleet.profile.cyan());
+            } else {
+                println!("   ⬆️  {} : systemctl --user start openclaw-gateway-{}.service", name, fleet.profile);
+            }
+        }
+    }
+    
+    // Proposer de relancer OpenClaw
+    for (name, fleet) in &state.fleets {
+        if fleet.openclaw_installed {
+            println!("\n💡 {} {}", i18n.t("quick.relaunch_openclaw"), name.cyan());
+            println!("   openclaw --profile {}", fleet.profile);
+        }
+    }
+    
+    Ok(())
+}
+
+fn quick_status(i18n: &I18n, state: &WzllamaState) -> Result<()> {
+    println!("\n{}", i18n.t("quick.status_title").bold());
+    
+    // Docker
+    let docker_ok = core::run_command("docker info 2>/dev/null").is_ok();
+    println!("   {} Docker", if docker_ok { "✅" } else { "❌" });
+    
+    // Open WebUI
+    let webui_ok = core::run_command("sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+    println!("   {} Open WebUI {}", if webui_ok { "✅" } else { "❌" }, if webui_ok { "http://localhost:3000" } else { "" });
+    
+    // Ollama
+    let ollama_ok = core::detect_ollama_url().is_some();
+    println!("   {} Ollama", if ollama_ok { "✅" } else { "❌" });
+    
+    // Modèles locaux
+    if ollama_ok {
+        if let Ok(models) = core::fetch_local_models("http://localhost:11434") {
+            println!("\n   📊 {} modèles locaux", models.len());
+        }
+    }
+    
+    // Flottes
+    if !state.fleets.is_empty() {
+        println!("\n   🚀 Flottes :");
+        for (name, fleet) in &state.fleets {
+            let status = if fleet.openclaw_installed { "✅" } else { "📄" };
+            println!("      {} {} : openclaw --profile {}", status, name, fleet.profile);
+        }
+    }
+    
+    Ok(())
+}
+
 fn display_hardware(hardware: &HardwareInfo, i18n: &I18n) {
     println!("\n{}", "─".repeat(40).dimmed());
     println!("{}", "Matériel détecté".bold());
@@ -98,8 +230,8 @@ fn display_hardware(hardware: &HardwareInfo, i18n: &I18n) {
     }
 }
 
-fn install_tools_if_needed(i18n: &I18n) -> Result<()> {
-    let installer = Installer::new(i18n, true);
+fn install_tools_if_needed(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
+    let mut installer = Installer::new(i18n, true, state);
     installer.install_all_tools()
 }
 
@@ -661,9 +793,13 @@ fn create_agent_fleet(
     
     let config_path = openclaw_dir.join("openclaw.json");
     std::fs::write(&config_path, &openclaw_config)?;
+
+    println!("\n🔧 {}", i18n.t("fleet.install_gateway"));
+    println!("   openclaw --profile {} gateway install", project_name.cyan());
+    println!("   systemctl --user enable --now openclaw-gateway-{}.service", project_name);
     
     // Instructions
-    println!("\n💡 {}", i18n.t("fleet.usage_hint"));
+    println!("\n {}", i18n.t("fleet.usage_hint"));
     println!();
     println!("   {}", i18n.t("fleet.openclaw_launch"));
     println!("   openclaw --profile {}", project_name.cyan());
