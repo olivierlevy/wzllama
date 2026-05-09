@@ -1,8 +1,9 @@
 mod cli;
 mod config;
 mod core;
+mod display;
 mod error;
-mod installers;
+mod tools;
 mod wizard;
 
 use anyhow::Result;
@@ -10,17 +11,11 @@ use cli::Cli;
 use log::info;
 
 fn main() -> Result<()> {
-    // Initialiser les logs
-    config::init_logging()?;
-    info!("wzllama démarré");
+    config::paths::ensure_dirs()?;
+    config::logging::init()?;
+    info!("wzllama v0.2.0 démarré");
 
-    // S'assurer que les templates utilisateur existent
-    config::ensure_user_templates()?;
-
-    // Parser les arguments CLI
     let cli = Cli::parse_args();
-
-    // Exécuter la commande appropriée
     cli.execute()?;
 
     Ok(())

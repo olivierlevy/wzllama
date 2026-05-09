@@ -1,0 +1,44 @@
+use anyhow::Result;
+use colored::*;
+use dialoguer::{Select, Confirm};
+use crate::config::{self, I18n, WzllamaState};
+use crate::core::HardwareInfo;
+use crate::display;
+use crate::wizard::fleet_creator;
+
+pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
+    let fleets = config::fleets::detect_openclaw_fleets();
+    state.fleets = fleets.clone();
+    let _ = config::state::save(state);
+
+    if fleets.is_empty() {
+        display::warning(&i18n.t("fleet.none_found"));
+        let create = Confirm::new().with_prompt(i18n.t("fleet.create_new")).default(true).interact()?;
+        if create {
+            // Créer une flotte (nécessite un modèle)
+            crate::wizard::menu_models::run(i18n, state, hw)?;
+        }
+        return Ok(());
+    }
+
+    let mut items: Vec<String> = fleets.iter().map(|(name, f)| {
+        let s = if f.openclaw_installed { "✅" } else { "📄" };
+        format!("{} {} ({} agents)", s, name, f.agents.len())
+    }).collect();
+    items.push(i18n.t("fleet.create_new"));
+    items.push(i18n.t("menu.back"));
+
+    let sel = Select::new().with_prompt(i18n.t("fleet.choose")).items(&items).default(0).interact()?;
+
+    if sel == fleets.len() {
+        crate::wizard::menu_models::run(i18n, state, hw)?;
+    } else if sel == fleets.len() + 1 {
+        return Ok(());
+    } else {
+        let (name, _) = fleets.iter().nth(sel).unwrap();
+        state.set_last_fleet(name);
+        println!("\n🦞 {}", i18n.t("fleet.launching"));
+        println!("   openclaw --profile {}", name.cyan());
+    }
+    Ok(())
+}
