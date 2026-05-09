@@ -71,19 +71,13 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
 }
 
 
-fn sync_state_with_reality(state: &mut WzllamaState) {
-    // Docker
-    state.installed.docker = crate::core::shell::is_installed("docker");
-    
-    // Ollama
-    state.installed.ollama = crate::core::shell::is_installed("ollama");
-    
-    // Open WebUI (via conteneur Docker)
-    state.installed.open_webui = crate::core::shell::run(
+
+fn sync_state_with_reality(state: &mut WzllamaState) {    
+    state.installed.docker = shell::is_installed("docker");
+    state.installed.ollama = shell::is_installed("ollama");
+    state.installed.open_webui = shell::run(
         "sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui"
     ).is_ok();
-    
-    // Outils
     state.installed.openclaw = shell::is_installed("openclaw");
     state.installed.claude_code = shell::is_installed("claude");
     state.installed.hermes_agent = shell::is_installed("hermes");

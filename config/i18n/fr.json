@@ -116,17 +116,12 @@
   "cleanup.fleets_deleted": "✅ Flottes supprimées",
   "cleanup.models_deleted": "✅ {count} modèles supprimés",
 
-  "estimator.pages": "Nombre de pages",
-  "estimator.loc": "Lignes de code",
-  "estimation.tokens": "📊 {tokens} tokens estimés",
-  "estimation.time_range": "⏱️  {min} à {max}",
-
-  "usage.big_book.label": "Gros livre",
-  "usage.big_book.description": "Analyser, résumer des longs textes",
-  "usage.big_code.label": "Grand codebase",
-  "usage.big_code.description": "Refactoring, analyse de code",
-  "usage.fast_agents.label": "Agents rapides",
-  "usage.fast_agents.description": "Chatbots, interactions rapides",
-  "usage.mixed.label": "Usage général",
-  "usage.mixed.description": "Code, écriture, recherche"
+  "usage.big_book.label": "📚 Gros livre",
+  "usage.big_book.description": "📝 Analyser, résumer des longs textes",
+  "usage.big_code.label": "💻 Grand codebase",
+  "usage.big_code.description": "🔍 Refactoring, analyse de code",
+  "usage.fast_agents.label": "⚡ Agents rapides",
+  "usage.fast_agents.description": "💬 Chatbots, interactions rapides",
+  "usage.mixed.label": "🎯 Usage général",
+  "usage.mixed.description": "🛠️  Code, écriture, recherche"
 }

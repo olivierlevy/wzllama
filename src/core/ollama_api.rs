@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
+use colored::Colorize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct OllamaModel {
@@ -55,9 +56,11 @@ pub fn get_running_models() -> Vec<String> {
     vec![]
 }
 
-/// Télécharge un modèle
+/// Télécharge un modèle avec affichage de la progression
 pub fn pull_model(model: &str) -> Result<()> {
-    crate::core::shell::run(&format!("ollama pull {}", model))?;
+    println!("📥 Téléchargement de {}...", model.cyan().bold());
+    crate::core::shell::run_live(&format!("ollama pull {}", model))?;
+    println!("   ✅ {} installé !", model.green());
     Ok(())
 }
 

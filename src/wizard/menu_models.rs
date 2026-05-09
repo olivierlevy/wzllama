@@ -16,8 +16,13 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     let mut usage_items: Vec<(&String, &crate::config::templates::UsageSpec)> = usages.usages.iter().collect();
     usage_items.sort_by(|a, b| b.1.weights.get("default").unwrap_or(&0.0).partial_cmp(a.1.weights.get("default").unwrap_or(&0.0)).unwrap_or(std::cmp::Ordering::Equal));
     
-    let items: Vec<String> = usage_items.iter().map(|(_, s)| i18n.t(&s.i18n_key)).collect();
+    let mut items: Vec<String> = usage_items.iter().map(|(_, s)| i18n.t(&s.i18n_key)).collect();
+    items.push(i18n.t("menu.back"));
+    
     let sel = Select::new().with_prompt(i18n.t("menu.usage.choose")).items(&items).default(0).interact()?;
+    
+    if sel == usage_items.len() { return Ok(()); }
+    
     let usage_type = &usage_items[sel].1.params.r#type;
     state.set_last_usage(usage_type);
 
@@ -37,12 +42,16 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         return Ok(());
     }
 
-    let items: Vec<String> = ranked.iter().map(|(m, s)| {
+    let mut model_items: Vec<String> = ranked.iter().map(|(m, s)| {
         let status = if all.iter().any(|(lm, dl)| *dl && lm.name == m.name) { "✅" } else { "⬇️ " };
         format!("{} {} ({} - {:.0}%)", status, m.name.bold(), display::format_size(m.size.unwrap_or(0)), s * 100.0)
     }).collect();
+    model_items.push(i18n.t("menu.back"));
 
-    let sel = Select::new().with_prompt(i18n.t("install.ollama.choose")).items(&items).default(0).interact()?;
+    let sel = Select::new().with_prompt(i18n.t("install.ollama.choose")).items(&model_items).default(0).interact()?;
+    
+    if sel == ranked.len() { return Ok(()); }
+
     let (chosen, _) = &ranked[sel];
 
     // Télécharger si nécessaire

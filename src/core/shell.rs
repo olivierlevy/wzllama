@@ -1,5 +1,59 @@
 use anyhow::{Context, Result};
-use std::process::Command;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
+use std::thread;
+use colored::Colorize;
+
+/// Exécute une commande en affichant sa sortie en temps réel (pour ollama pull)
+pub fn run_live(cmd: &str) -> Result<()> {
+    println!("   ⏳ {}", cmd.dimmed());
+    
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
+    
+    let mut child = if shell.contains("fish") {
+        Command::new("fish").args(["-c", cmd])
+            .stdout(Stdio::piped()).stderr(Stdio::piped())
+            .spawn()?
+    } else {
+        Command::new("sh").args(["-c", cmd])
+            .stdout(Stdio::piped()).stderr(Stdio::piped())
+            .spawn()?
+    };
+
+    // Lire stdout en temps réel
+    if let Some(stdout) = child.stdout.take() {
+        let reader = BufReader::new(stdout);
+        thread::spawn(move || {
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    if !line.trim().is_empty() {
+                        println!("   {}", line.dimmed());
+                    }
+                }
+            }
+        });
+    }
+
+    // Lire stderr en temps réel (ollama pull écrit ses progrès sur stderr)
+    if let Some(stderr) = child.stderr.take() {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                if !line.trim().is_empty() {
+                    // Afficher les barres de progression et messages
+                    println!("   {}", line.dimmed());
+                }
+            }
+        }
+    }
+
+    let status = child.wait()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("Commande échouée avec code {}", status))
+    }
+}
 
 pub fn run(cmd: &str) -> Result<(String, String)> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
