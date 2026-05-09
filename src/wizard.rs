@@ -1,9 +1,10 @@
 use crate::config::{self, I18n, UsageSpec, get_available_languages, detect_system_language};
-use crate::core::{self, detect_hardware, HardwareInfo, OllamaModel};
+use crate::core::{self, detect_hardware, HardwareInfo, OllamaModel, TaskType};
 use crate::installers::Installer;
 use anyhow::Result;
 use colored::*;
 use dialoguer::{Select, Input, Confirm};
+use std::path::PathBuf;
 
 pub fn run_wizard() -> Result<()> {
     println!("{}", "═".repeat(50).cyan());
@@ -221,12 +222,12 @@ fn install_model_if_needed(
     };
 
     // Récupérer le catalogue distant
-    println!("   🔍 Recherche du catalogue en ligne...");
+    println!("   {}", i18n.t("install.ollama.searching"));
     let remote_models = core::fetch_remote_catalog().unwrap_or_default();
     
     if remote_models.is_empty() && local_models.is_empty() {
-        println!("   ⚠️  Aucun modèle trouvé (local ni distant).");
-        println!("   Vérifiez votre connexion internet et Ollama.");
+        println!("   ⚠️  {}", i18n.t("install.ollama.no_models_at_all"));
+        println!("   {}", i18n.t("install.ollama.check_connection"));
         return Ok(());
     }
 
@@ -276,38 +277,69 @@ fn install_model_if_needed(
         .default(0)
         .interact()?;
 
-    let (chosen, downloaded, _) = &ranked[selection];
+    let (chosen, _downloaded, _) = &ranked[selection];
+    
+    let task = TaskType::from_str(usage_type);
+    let config = core::recommend_config_i18n(hardware, &task, chosen, i18n);
+    let custom_name = format!("wzllama-{}", task.to_str());
     
     println!("\n✅ {} : {}", i18n.t("install.ollama.selected"), chosen.name.green().bold());
     println!("   📏 {} : {}", i18n.t("install.ollama.size"), format_size_from_bytes(chosen.size.unwrap_or(0)));
     
-    if *downloaded {
-        println!("   ✅ Déjà installé localement");
-    } else {
-        // Proposer le téléchargement
-        println!("   ⬇️  Modèle à télécharger");
-        let confirm = Confirm::new()
-            .with_prompt(format!("   Télécharger {} ?", chosen.name))
-            .default(true)
-            .interact()?;
-        
-        if confirm {
-            let cmd = format!("ollama pull {}", chosen.name);
-            println!("\n📥 {}", cmd.cyan());
-            match core::run_command(&cmd) {
-                Ok((stdout, stderr)) => {
-                    if !stdout.is_empty() { println!("{}", stdout); }
-                    if !stderr.is_empty() { println!("{}", stderr.dimmed()); }
-                    println!("   ✅ {} installé !", chosen.name.green().bold());
+    // Afficher la configuration recommandée
+    core::display_config_summary_i18n(&config, i18n);
+    
+    // Interaction : que faire maintenant ?
+    println!("\n💡 {}", i18n.t("config.launch_now"));
+    let items = vec![
+        i18n.t("config.launch_option_env"),
+        i18n.t("config.launch_option_create"),
+        i18n.t("config.launch_option_tools"),
+        i18n.t("config.launch_option_fleet"),
+        i18n.t("config.launch_option_quit"),
+    ];
+
+    let launch = Select::new()
+        .with_prompt(i18n.t("config.launch_choose"))
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    match launch {
+        0 => {
+            println!("\n{}", config.env_vars_display().cyan());
+            println!("ollama run {}", chosen.name);
+        }
+        1 => {
+            let custom_name = format!("wzllama-{}", task.to_str());
+            match config.write_and_create(&custom_name) {
+                Ok(cmd) => {
+                    println!("   ⚙️  {}", i18n.t("config.creating"));
+                    match core::run_command(&cmd) {
+                        Ok(_) => {
+                            println!("   {}", i18n.t_with_vars("config.created", &[("name", &custom_name)]));
+                            println!("   {}", i18n.t_with_vars("config.launch", &[("name", &custom_name)]));
+                        }
+                        Err(e) => {
+                            println!("   {}: {}", i18n.t("config.create_error"), e);
+                            println!("   {}", cmd.cyan());
+                        }
+                    }
                 }
                 Err(e) => {
-                    println!("   ❌ Erreur : {}", e);
-                    println!("   Lancez : ollama pull {}", chosen.name);
+                    println!("   {}: {}", i18n.t("config.create_error"), e);
                 }
             }
         }
+        2 => {
+            // Lancer avec les outils installés
+            launch_with_tools(i18n, &custom_name)?;
+        }
+        3 => {
+            create_agent_fleet(i18n, hardware, chosen, &custom_name, usage_type)?;
+        }
+        _ => {}
     }
-
     Ok(())
 }
 
@@ -345,3 +377,564 @@ fn format_number(n: u64) -> String {
     }
     result
 }
+
+fn launch_with_tools(
+    i18n: &I18n,
+    model_name: &str,
+) -> Result<()> {
+    println!("\n{}", "─".repeat(40).dimmed());
+    println!("{}", i18n.t("config.tools.title").bold());
+    println!("{}", "─".repeat(40).dimmed());
+
+    let tools = vec![
+        ("open-webui", "Open WebUI", "http://localhost:3000", true),
+        ("claude-code", "Claude Code", "https://github.com/anthropics/claude-code", false),
+        ("openclaw", "OpenClaw", "https://github.com/openclaw/openclaw", false),
+        ("hermes-agent", "Hermes Agent", "https://github.com/hermes-agent/hermes-agent", false),
+    ];
+
+    let items: Vec<String> = tools.iter().map(|(cmd, name, url, docker)| {
+        let installed = if *docker {
+            // Vérifier le conteneur Docker
+            core::run_command(&format!("sudo docker ps --format '{{{{.Names}}}}' 2>/dev/null | grep -q {}", cmd))
+                .is_ok()
+        } else {
+            core::run_command(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
+        };
+        let status = if installed { "✅" } else { "❌" };
+        format!("{} {} ({})", status, name, url.dimmed())
+    }).collect();
+
+    let selection = Select::new()
+        .with_prompt(i18n.t("config.tools.choose"))
+        .items(&items)
+        .default(0)
+        .interact()?;
+
+    match selection {
+        0 => {
+            println!("\n🌐 {}", i18n.t("config.tools.open_webui"));
+            println!("   http://localhost:3000");
+            println!("   {} {} {}", i18n.t("config.tools.model_available"), model_name.cyan(), i18n.t("config.tools.in_interface"));
+        }
+        1 => {
+            println!("\n💻 {}", i18n.t("config.tools.claude_code"));
+            println!("   export ANTHROPIC_BASE_URL=http://localhost:11434/v1");
+            println!("   export ANTHROPIC_API_KEY=ollama");
+            println!("   claude-code --model {}", model_name.cyan());
+        }
+        2 => {
+            println!("\n🦞 {}", i18n.t("config.tools.openclaw"));
+            println!("   openclaw --model ollama/{}", model_name.cyan());
+        }
+        3 => {
+            println!("\n🤖 {}", i18n.t("config.tools.hermes"));
+            println!("   hermes-agent --model ollama/{}", model_name.cyan());
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn create_agent_fleet(
+    i18n: &I18n,
+    hardware: &HardwareInfo,
+    chosen: &OllamaModel,
+    orchestrator_name: &str,
+    usage_type: &str,
+) -> Result<()> {
+    println!("\n{}", "═".repeat(50).cyan());
+    println!("{}", i18n.t("fleet.title").bold());
+    println!("{}", "═".repeat(50).cyan());
+    
+    let wizard_model = &chosen.model;
+    let mut fleet = get_fleet_templates(usage_type, wizard_model, i18n);
+    
+    // Afficher les ressources
+    let capacity = core::calculate_fleet_capacity(hardware, chosen);
+    
+    println!("\n{}", i18n.t("fleet.resources"));
+    println!("   💾 RAM : {:.1} Go", capacity.ram_total_gb);
+    println!("   🎮 VRAM : {:.1} Go", capacity.vram_total_gb);
+    println!();
+    println!("   🎯 {} (orchestrateur) : {} - {} tokens", 
+        fleet.orchestrator.model.cyan(), 
+        i18n.t("fleet.ctx_long"),
+        fleet.orchestrator.num_ctx);
+    println!("   🧠 {} (réflexion) : {} - {} tokens",
+        wizard_model.cyan(),
+        i18n.t("fleet.ctx_short"),
+        fleet.reflexion_agents.first().map(|a| a.num_ctx).unwrap_or(4096));
+    println!("   🤖 Experts : {} agents max en RAM", capacity.max_experts_ram);
+    println!();
+    
+    // Étape 1 : Éditer l'orchestrateur
+    println!("{}", i18n.t("fleet.step_orchestrator").bold());
+    let keep_orch = Confirm::new()
+        .with_prompt(i18n.t("fleet.keep_orchestrator"))
+        .default(true)
+        .interact()?;
+    
+    if !keep_orch {
+        println!("   {}", i18n.t("fleet.skipping_orchestrator"));
+    }
+    
+    // Étape 2 : Éditer les agents de réflexion
+    println!("\n{}", i18n.t("fleet.step_reflexion").bold());
+    for (i, agent) in fleet.reflexion_agents.iter_mut().enumerate() {
+        edit_agent_template(i18n, agent, i, "réflexion")?;
+    }
+    
+    // Étape 3 : Éditer les agents experts
+    println!("\n{}", i18n.t("fleet.step_experts").bold());
+    for (i, agent) in fleet.expert_agents.iter_mut().enumerate() {
+        edit_agent_template(i18n, agent, i, "expert")?;
+    }
+    
+    // Étape 4 : Ajouter des agents experts personnalisés
+    println!("\n{}", i18n.t("fleet.add_more"));
+    let add_more = Confirm::new()
+        .with_prompt(i18n.t("fleet.add_more_confirm"))
+        .default(false)
+        .interact()?;
+    
+    while add_more {
+        let role: String = Input::new()
+            .with_prompt(i18n.t("fleet.custom_role"))
+            .interact()?;
+        let prompt: String = Input::new()
+            .with_prompt(i18n.t("fleet.custom_prompt"))
+            .interact()?;
+        
+        fleet.expert_agents.push(AgentTemplate {
+            name: format!("wzllama-expert-custom-{}", fleet.expert_agents.len() + 1),
+            role,
+            model: "qwen2.5:3b".into(),
+            num_ctx: 4096,
+            temperature: 0.5,
+            system_prompt: prompt,
+            enabled: true,
+        });
+        
+        let more = Confirm::new()
+            .with_prompt(i18n.t("fleet.add_another"))
+            .default(false)
+            .interact()?;
+        if !more { break; }
+    }
+    
+    // Étape 5 : Création effective
+    println!("\n{}", "═".repeat(50).cyan());
+    println!("{}", i18n.t("fleet.creating_fleet").bold());
+    println!("{}", "═".repeat(50).cyan());
+    
+    let mut created = Vec::new();
+    
+    // Orchestrateur
+    if keep_orch {
+        println!("\n🎯 {}", i18n.t("fleet.creating_orchestrator"));
+        if create_single_agent(
+            &fleet.orchestrator.model,
+            orchestrator_name,
+            fleet.orchestrator.num_ctx,
+            0.7,
+            &fleet.orchestrator.system_prompt,
+        ).is_ok() {
+            created.push((orchestrator_name.to_string(), "🎯".to_string()));
+        }
+    }
+    
+    // Réflexion
+    for agent in &fleet.reflexion_agents {
+        if agent.enabled {
+            println!("\n🧠 {}", agent.role);
+            if create_single_agent(
+                &agent.model,
+                &agent.name,
+                agent.num_ctx,
+                agent.temperature,
+                &agent.system_prompt,
+            ).is_ok() {
+                created.push((agent.name.clone(), "🧠".to_string()));
+            }
+        }
+    }
+    
+    // Experts
+    for agent in &fleet.expert_agents {
+        if agent.enabled {
+            println!("\n🤖 {}", agent.role);
+            if create_single_agent(
+                &agent.model,
+                &agent.name,
+                agent.num_ctx,
+                agent.temperature,
+                &agent.system_prompt,
+            ).is_ok() {
+                created.push((agent.name.clone(), "🤖".to_string()));
+            }
+        }
+    }
+    
+    // Résumé final
+    println!("\n{}", "═".repeat(50).cyan());
+    println!("{}", i18n.t("fleet.summary").bold());
+    println!("{}", "═".repeat(50).cyan());
+    
+    if created.is_empty() {
+        println!("   {}", i18n.t("fleet.nothing_created"));
+        return Ok(());
+    }
+    
+    for (name, emoji) in &created {
+        println!("   {} {}", emoji, name.cyan());
+    }
+
+    // Demander le nom du projet
+    let project_name: String = Input::new()
+        .with_prompt(i18n.t("fleet.project_name"))
+        .default(usage_type.to_string())
+        .interact()?;
+    
+    // Créer le dossier ~/.openclaw-{projet}/
+    let openclaw_dir = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(format!(".openclaw-{}", project_name));
+    std::fs::create_dir_all(&openclaw_dir)?;
+    
+    // Construire le openclaw.json
+    let mut agents_json = String::new();
+    
+    // Orchestrateur
+    agents_json.push_str(&format!(
+        "      {{ \"id\": \"orchestrator\", \"identity\": {{ \"name\": \"{}\" }} }},\n",
+        fleet.orchestrator.system_prompt.lines().next().unwrap_or("Coordinateur")
+    ));
+    
+    // Agents de réflexion
+    for agent in &fleet.reflexion_agents {
+        if agent.enabled {
+            let id = agent.name
+                .strip_prefix("wzllama-reflexion-")
+                .unwrap_or(&agent.name);
+            agents_json.push_str(&format!(
+                "      {{ \"id\": \"{}\", \"model\": {{ \"primary\": \"ollama/{}\" }}, \"identity\": {{ \"name\": \"{}\" }} }},\n",
+                id, agent.name, agent.role
+            ));
+        }
+    }
+    
+    // Agents experts
+    for agent in &fleet.expert_agents {
+        if agent.enabled {
+            let id = agent.name
+                .strip_prefix("wzllama-expert-")
+                .unwrap_or(&agent.name);
+            agents_json.push_str(&format!(
+                "      {{ \"id\": \"{}\", \"model\": {{ \"primary\": \"ollama/{}\" }}, \"identity\": {{ \"name\": \"{}\" }} }},\n",
+                id, agent.name, agent.role
+            ));
+        }
+    }
+    
+    // Enlever la dernière virgule
+    if agents_json.ends_with(",\n") {
+        agents_json.pop(); // \n
+        agents_json.pop(); // ,
+        agents_json.push('\n');
+    }
+    
+    let openclaw_config = format!(r#"{{
+  "gateway": {{
+    "mode": "local"
+  }},
+  "agents": {{
+    "defaults": {{
+      "model": {{ "primary": "ollama/{}" }}
+    }},
+    "list": [
+{}
+    ]
+  }}
+}}"#, orchestrator_name, agents_json);
+    
+    let config_path = openclaw_dir.join("openclaw.json");
+    std::fs::write(&config_path, &openclaw_config)?;
+    
+    // Instructions
+    println!("\n💡 {}", i18n.t("fleet.usage_hint"));
+    println!();
+    println!("   {}", i18n.t("fleet.openclaw_launch"));
+    println!("   openclaw --profile {}", project_name.cyan());
+    println!();
+    println!("   {}", i18n.t("fleet.openclaw_agents"));
+    println!("   agents");
+    println!();
+    println!("   {}", i18n.t("fleet.openclaw_switch"));
+    println!("   /agent style");
+    println!("   /agent plot");
+    println!();
+    println!("   📄 Config : {}", config_path.display().to_string().cyan());
+
+    Ok(())
+}
+
+fn create_single_agent(
+    model: &str,
+    name: &str,
+    num_ctx: u32,
+    temperature: f32,
+    system_prompt: &str,
+) -> Result<()> {
+    // Vérifier si le modèle de base est disponible
+    let installed = core::run_command(&format!("ollama list 2>/dev/null | grep -q {}", model)).is_ok();
+    if !installed {
+        println!("   ⬇️  Téléchargement de {}...", model);
+        core::run_command(&format!("ollama pull {}", model))?;
+    }
+    
+    let modelfile = format!(
+        "FROM {}\nPARAMETER num_ctx {}\nPARAMETER temperature {:.1}\nSYSTEM \"{}\"",
+        model, num_ctx, temperature, system_prompt
+    );
+    
+    let tmp_file = format!("/tmp/wzllama_{}", name);
+    std::fs::write(&tmp_file, &modelfile)?;
+    
+    let create_cmd = format!("ollama create {} -f {}", name, tmp_file);
+    
+    match core::run_command(&create_cmd) {
+        Ok(_) => {
+            println!("   ✅ {} créé", name.cyan());
+        }
+        Err(e) => {
+            println!("   ❌ Erreur : {}", e);
+        }
+    }
+    
+    Ok(())
+}
+
+
+#[derive(Debug, Clone)]
+struct FleetConfig {
+    orchestrator: OrchestratorConfig,
+    reflexion_agents: Vec<AgentTemplate>,
+    expert_agents: Vec<AgentTemplate>,
+}
+
+#[derive(Debug, Clone)]
+struct OrchestratorConfig {
+    model: String,
+    num_ctx: u32,
+    system_prompt: String,
+}
+
+#[derive(Debug, Clone)]
+struct AgentTemplate {
+    name: String,
+    role: String,
+    model: String,
+    num_ctx: u32,
+    temperature: f32,
+    system_prompt: String,
+    enabled: bool,  // l'utilisateur peut décocher
+}
+
+/// Retourne les templates selon le type d'usage
+fn get_fleet_templates(usage_type: &str, wizard_model: &str, i18n: &I18n) -> FleetConfig {
+    match usage_type {
+        "book" => FleetConfig {
+            orchestrator: OrchestratorConfig {
+                model: "qwen2.5:7b".into(),
+                num_ctx: 32768,
+                system_prompt: i18n.t("fleet.template.orchestrator_book"),
+            },
+            reflexion_agents: vec![
+                AgentTemplate {
+                    name: "wzllama-reflexion-style".into(),
+                    role: i18n.t("fleet.template.reflexion_style"),
+                    model: wizard_model.into(),
+                    num_ctx: 8192,
+                    temperature: 0.7,
+                    system_prompt: i18n.t("fleet.template.reflexion_style_prompt"),
+                    enabled: true,
+                },
+                AgentTemplate {
+                    name: "wzllama-reflexion-plot".into(),
+                    role: i18n.t("fleet.template.reflexion_plot"),
+                    model: wizard_model.into(),
+                    num_ctx: 8192,
+                    temperature: 0.5,
+                    system_prompt: i18n.t("fleet.template.reflexion_plot_prompt"),
+                    enabled: true,
+                },
+            ],
+            expert_agents: vec![
+                AgentTemplate {
+                    name: "wzllama-expert-grammar".into(),
+                    role: i18n.t("fleet.template.expert_grammar"),
+                    model: "qwen2.5:3b".into(),
+                    num_ctx: 4096,
+                    temperature: 0.3,
+                    system_prompt: i18n.t("fleet.template.expert_grammar_prompt"),
+                    enabled: true,
+                },
+                AgentTemplate {
+                    name: "wzllama-expert-research".into(),
+                    role: i18n.t("fleet.template.expert_research"),
+                    model: "qwen2.5:3b".into(),
+                    num_ctx: 4096,
+                    temperature: 0.6,
+                    system_prompt: i18n.t("fleet.template.expert_research_prompt"),
+                    enabled: true,
+                },
+                AgentTemplate {
+                    name: "wzllama-expert-dialogue".into(),
+                    role: i18n.t("fleet.template.expert_dialogue"),
+                    model: "qwen2.5:3b".into(),
+                    num_ctx: 4096,
+                    temperature: 0.9,
+                    system_prompt: i18n.t("fleet.template.expert_dialogue_prompt"),
+                    enabled: true,
+                },
+            ],
+        },
+        "code" => FleetConfig {
+            orchestrator: OrchestratorConfig {
+                model: "qwen2.5:7b".into(),
+                num_ctx: 32768,
+                system_prompt: i18n.t("fleet.template.orchestrator_code"),
+            },
+            reflexion_agents: vec![
+                AgentTemplate {
+                    name: "wzllama-reflexion-arch".into(),
+                    role: i18n.t("fleet.template.reflexion_arch"),
+                    model: wizard_model.into(),
+                    num_ctx: 8192,
+                    temperature: 0.3,
+                    system_prompt: i18n.t("fleet.template.reflexion_arch_prompt"),
+                    enabled: true,
+                },
+                AgentTemplate {
+                    name: "wzllama-reflexion-review".into(),
+                    role: i18n.t("fleet.template.reflexion_review"),
+                    model: wizard_model.into(),
+                    num_ctx: 8192,
+                    temperature: 0.4,
+                    system_prompt: i18n.t("fleet.template.reflexion_review_prompt"),
+                    enabled: true,
+                },
+            ],
+            expert_agents: vec![
+                AgentTemplate {
+                    name: "wzllama-expert-lint".into(),
+                    role: i18n.t("fleet.template.expert_lint"),
+                    model: "qwen2.5:1.5b".into(),
+                    num_ctx: 2048,
+                    temperature: 0.1,
+                    system_prompt: i18n.t("fleet.template.expert_lint_prompt"),
+                    enabled: true,
+                },
+                AgentTemplate {
+                    name: "wzllama-expert-doc".into(),
+                    role: i18n.t("fleet.template.expert_doc"),
+                    model: "qwen2.5:3b".into(),
+                    num_ctx: 4096,
+                    temperature: 0.4,
+                    system_prompt: i18n.t("fleet.template.expert_doc_prompt"),
+                    enabled: true,
+                },
+                AgentTemplate {
+                    name: "wzllama-expert-test".into(),
+                    role: i18n.t("fleet.template.expert_test"),
+                    model: "qwen2.5:3b".into(),
+                    num_ctx: 4096,
+                    temperature: 0.5,
+                    system_prompt: i18n.t("fleet.template.expert_test_prompt"),
+                    enabled: true,
+                },
+            ],
+        },
+        _ => FleetConfig {
+            orchestrator: OrchestratorConfig {
+                model: "qwen2.5:7b".into(),
+                num_ctx: 16384,
+                system_prompt: i18n.t("fleet.template.orchestrator_generic"),
+            },
+            reflexion_agents: vec![
+                AgentTemplate {
+                    name: "wzllama-reflexion".into(),
+                    role: i18n.t("fleet.template.reflexion_generic"),
+                    model: wizard_model.into(),
+                    num_ctx: 8192,
+                    temperature: 0.5,
+                    system_prompt: i18n.t("fleet.template.reflexion_generic_prompt"),
+                    enabled: true,
+                },
+            ],
+            expert_agents: vec![
+                AgentTemplate {
+                    name: "wzllama-expert-fast".into(),
+                    role: i18n.t("fleet.template.expert_fast"),
+                    model: "qwen2.5:1.5b".into(),
+                    num_ctx: 2048,
+                    temperature: 0.7,
+                    system_prompt: i18n.t("fleet.template.expert_fast_prompt"),
+                    enabled: true,
+                },
+            ],
+        },
+    }
+}
+
+/// Affiche et permet de modifier un template d'agent
+fn edit_agent_template(
+    i18n: &I18n,
+    template: &mut AgentTemplate,
+    index: usize,
+    agent_type: &str,
+) -> Result<()> {
+    println!("\n{} {}/{} : {}", "─".repeat(40).dimmed(), index + 1, agent_type, template.role.bold());
+    println!("   {}: {}", i18n.t("fleet.edit.model"), template.model.dimmed());
+    println!("   {}: {}", i18n.t("fleet.edit.ctx"), template.num_ctx);
+    
+    let items = vec![
+        format!("{} {}", if template.enabled { "✅" } else { "❌" }, i18n.t("fleet.edit.toggle")),
+        i18n.t("fleet.edit.role"),
+        i18n.t("fleet.edit.system_prompt"),
+        i18n.t("fleet.edit.keep"),
+    ];
+    
+    let selection = Select::new()
+        .with_prompt(i18n.t("fleet.edit.choose"))
+        .items(&items)
+        .default(3)
+        .interact()?;
+    
+    match selection {
+        0 => {
+            template.enabled = !template.enabled;
+            println!("   {} {}", i18n.t("fleet.edit.enabled"), if template.enabled { "✅" } else { "❌" });
+        }
+        1 => {
+            let new_role: String = Input::new()
+                .with_prompt(i18n.t("fleet.edit.new_role"))
+                .default(template.role.clone())
+                .interact()?;
+            template.role = new_role;
+        }
+        2 => {
+            let new_prompt: String = Input::new()
+                .with_prompt(i18n.t("fleet.edit.new_prompt"))
+                .default(template.system_prompt.clone())
+                .interact()?;
+            template.system_prompt = new_prompt;
+        }
+        _ => {}
+    }
+    
+    Ok(())
+}
+

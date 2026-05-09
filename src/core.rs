@@ -1,7 +1,232 @@
 use anyhow::{Context, Result};
+use colored::Colorize;
+use crate::config::I18n;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+
+// ─── TYPES ─────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub enum TaskType {
+    QuickChat,
+    BookWriting,
+    LargeCodeProject,
+    MultiAgent { agent_count: u8 },
+    Rag,
+    Mixed,
+}
+
+impl TaskType {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "agents" => TaskType::MultiAgent { agent_count: 4 },
+            "book" => TaskType::BookWriting,
+            "code" => TaskType::LargeCodeProject,
+            _ => TaskType::Mixed,
+        }
+    }
+    
+    pub fn to_str(&self) -> &str {
+        match self {
+            TaskType::QuickChat => "chat",
+            TaskType::BookWriting => "book",
+            TaskType::LargeCodeProject => "code",
+            TaskType::MultiAgent { .. } => "agents",
+            TaskType::Rag => "rag",
+            TaskType::Mixed => "mixed",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ModelConfig {
+    pub model_name: String,
+    pub num_ctx: u32,
+    pub kv_cache_type: String,
+    pub flash_attention: bool,
+    pub temperature: f32,
+    pub system_prompt: Option<String>,
+}
+
+impl ModelConfig {
+    /// Génère le contenu d'un Modelfile
+    pub fn generate_modelfile(&self) -> String {
+        let mut mf = format!(
+            "FROM {}\nPARAMETER num_ctx {}\nPARAMETER temperature {:.1}\n",
+            self.model_name, self.num_ctx, self.temperature
+        );
+        if let Some(ref prompt) = self.system_prompt {
+            mf.push_str(&format!("SYSTEM \"{}\"\n", prompt));
+        }
+        mf
+    }
+    
+    /// Variables d'environnement pour ollama serve
+    pub fn env_vars(&self) -> Vec<(String, String)> {
+        let mut vars = vec![
+            ("OLLAMA_KV_CACHE_TYPE".to_string(), self.kv_cache_type.clone()),
+            ("OLLAMA_CONTEXT_LENGTH".to_string(), self.num_ctx.to_string()),
+        ];
+        if self.flash_attention {
+            vars.push(("OLLAMA_FLASH_ATTENTION".to_string(), "1".to_string()));
+        }
+        vars
+    }
+    
+    /// Commande pour créer le modèle
+    pub fn create_command(&self, custom_name: &str) -> String {
+        let tmp_file = format!("/tmp/wzllama_modelfile_{}", custom_name);
+        format!(
+            "cat > {} << 'EOF'\n{}EOF\nollama create {} -f {}",
+            tmp_file,
+            self.generate_modelfile(),
+            custom_name,
+            tmp_file
+        )
+    }
+
+
+    /// Commande pour créer le modèle (compatible Fish)
+    pub fn create_command_fish(&self, custom_name: &str) -> Vec<String> {
+        let tmp_file = format!("/tmp/wzllama_modelfile_{}", custom_name);
+        let content = self.generate_modelfile();
+        
+        vec![
+            format!("echo '{}' > {}", content.replace('\'', "'\\''"), tmp_file),
+            format!("ollama create {} -f {}", custom_name, tmp_file),
+        ]
+    }
+
+    /// Écrit le Modelfile et retourne la commande ollama create
+    pub fn write_and_create(&self, custom_name: &str) -> Result<String> {
+        let tmp_file = format!("/tmp/wzllama_modelfile_{}", custom_name);
+        std::fs::write(&tmp_file, self.generate_modelfile())?;
+        Ok(format!("ollama create {} -f {}", custom_name, tmp_file))
+    }
+    
+    /// Variables d'env à afficher
+    pub fn env_vars_display(&self) -> String {
+        self.env_vars()
+            .iter()
+            .map(|(k, v)| format!("export {}={}", k, v))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+}
+
+// ─── RECOMMANDATION ────────────────────────────────
+
+/// Taille VRAM estimée pour un modèle (Go)
+fn estimate_model_vram_gb(model: &OllamaModel) -> f64 {
+    model.size.unwrap_or(0) as f64 / 1_073_741_824.0
+}
+
+/// Recommande une configuration optimale (version i18n)
+pub fn recommend_config_i18n(
+    resources: &HardwareInfo,
+    task: &TaskType,
+    model: &OllamaModel,
+    i18n: &I18n,
+) -> ModelConfig {
+    let vram_gb = resources.total_vram_mb as f64 / 1024.0;
+    let model_size_gb = estimate_model_vram_gb(model);
+    let model_size_b = extract_size(&model.name);
+    
+    let ctx_per_gb: u32 = 8192;
+    let available_for_ctx = (vram_gb - model_size_gb).max(0.5) as u32;
+    let mut max_ctx = available_for_ctx * ctx_per_gb;
+    
+    // Limiter le contexte selon la taille du modèle
+    max_ctx = match model_size_b {
+        0..=3 => max_ctx.min(16384),
+        4..=7 => max_ctx.min(32768),
+        8..=14 => max_ctx.min(49152),
+        _ => max_ctx.min(65536),
+    };
+    
+    let (num_ctx, kv_cache, flash_attn, temp, prompt) = match task {
+        TaskType::QuickChat => (
+            max_ctx.min(8192).max(2048),
+            "f16".to_string(),
+            false,
+            0.8,
+            Some(i18n.t("config.prompt.quick_chat")),
+        ),
+        TaskType::BookWriting => (
+            max_ctx.min(65536).max(8192),
+            "q8_0".to_string(),
+            true,
+            0.7,
+            Some(i18n.t("config.prompt.book_writing")),
+        ),
+        TaskType::LargeCodeProject => (
+            max_ctx.min(32768).max(8192),
+            "q8_0".to_string(),
+            true,
+            0.3,
+            Some(i18n.t("config.prompt.code_project")),
+        ),
+        TaskType::MultiAgent { agent_count } => {
+            let ctx_per_agent = (max_ctx / *agent_count as u32).min(4096);
+            (
+                ctx_per_agent,
+                "q4_0".to_string(),
+                true,
+                0.9,
+                Some(i18n.t_with_vars("config.prompt.multi_agent", &[("count", &agent_count.to_string())])),
+            )
+        },
+        TaskType::Rag => (
+            max_ctx.min(16384).max(4096),
+            "q8_0".to_string(),
+            true,
+            0.5,
+            Some(i18n.t("config.prompt.rag")),
+        ),
+        TaskType::Mixed => (
+            max_ctx.min(16384).max(4096),
+            "q8_0".to_string(),
+            max_ctx > 8192,
+            0.7,
+            None,
+        ),
+    };
+    
+    let (num_ctx, kv_cache, flash_attn) = if num_ctx < 2048 {
+        (2048, "q4_0".to_string(), true)
+    } else {
+        (num_ctx, kv_cache, flash_attn)
+    };
+    
+    ModelConfig {
+        model_name: model.model.clone(),
+        num_ctx,
+        kv_cache_type: kv_cache,
+        flash_attention: flash_attn,
+        temperature: temp,
+        system_prompt: prompt,
+    }
+}
+
+/// Affiche un résumé i18n de la configuration recommandée (sans interaction)
+pub fn display_config_summary_i18n(config: &ModelConfig, i18n: &I18n) {
+    println!("\n   {}", i18n.t("config.title"));
+    println!("   {}", i18n.t_with_vars("config.ctx", &[("ctx", &config.num_ctx.to_string())]));
+    println!("   {}", i18n.t_with_vars("config.kv_cache", &[("kv", &config.kv_cache_type)]));
+    println!("   {}", if config.flash_attention { i18n.t("config.flash_on") } else { i18n.t("config.flash_off") });
+    println!("   {}", i18n.t_with_vars("config.temp", &[("temp", &format!("{:.1}", config.temperature))]));
+    
+    println!("\n   {}", i18n.t("config.env_vars"));
+    for (k, v) in &config.env_vars() {
+        println!("      {}", i18n.t_with_vars("config.export", &[("key", k), ("value", v)]));
+    }
+    
+    println!("\n   {}", i18n.t("config.modelfile"));
+    for line in config.generate_modelfile().lines() {
+        println!("      {}", line.dimmed());
+    }
+}
 
 #[derive(Debug, Deserialize, Clone)]
 #[allow(dead_code)]
@@ -500,4 +725,91 @@ pub fn get_all_available_models(
 
 fn normalize_model_name(name: &str) -> String {
     name.split(':').next().unwrap_or(name).to_lowercase()
+}
+
+#[derive(Debug, Clone)]
+pub enum AgentType {
+    /// Agent expert : petit modèle (1.5-3B), rapide, tourne en RAM/CPU
+    Expert { ram_per_agent_gb: f64 },
+    /// Agent de réflexion : modèle moyen (7-14B), tourne en VRAM/GPU
+    Reflexion { vram_per_agent_gb: f64 },
+}
+
+pub struct FleetCapacity {
+    pub max_experts_ram: u32,
+    pub max_experts_vram: u32,
+    pub max_reflexion: u32,
+    pub ram_used_gb: f64,
+    pub vram_used_gb: f64,
+    pub ram_total_gb: f64,
+    pub vram_total_gb: f64,
+}
+
+/// Calcule la capacité de la flotte selon RAM et VRAM
+pub fn calculate_fleet_capacity(
+    hardware: &HardwareInfo,
+    orchestrator: &OllamaModel,
+) -> FleetCapacity {
+    let vram_gb = hardware.total_vram_mb as f64 / 1024.0;
+    let ram_gb = hardware.ram_gb;
+    let orchestrator_vram = orchestrator.size.unwrap_or(0) as f64 / 1_073_741_824.0;
+    
+    // Agents experts (1.5B) : ~1 Go RAM par agent
+    let expert_ram_gb = 1.0;
+    // Agents experts (3B) : ~2 Go RAM par agent
+    let expert3b_ram_gb = 2.0;
+    // Agents réflexion (7B) : ~4 Go VRAM par agent en Q4
+    let reflexion_vram_gb = 4.0;
+    
+    let vram_remaining = (vram_gb - orchestrator_vram).max(0.0);
+    let ram_available = ram_gb * 0.4; // utiliser max 40% de la RAM système
+    
+    FleetCapacity {
+        max_experts_ram: (ram_available / expert3b_ram_gb) as u32,
+        max_experts_vram: (vram_remaining / expert_ram_gb) as u32,
+        max_reflexion: (vram_remaining / reflexion_vram_gb) as u32,
+        ram_used_gb: 0.0,
+        vram_used_gb: orchestrator_vram,
+        ram_total_gb: ram_gb,
+        vram_total_gb: vram_gb,
+    }
+}
+
+/// Propose les meilleurs modèles pour chaque type d'agent
+pub fn recommend_agent_models(hardware: &HardwareInfo) -> Vec<(AgentType, String, String)> {
+    let vram_gb = hardware.total_vram_mb as f64 / 1024.0;
+    
+    let mut options = Vec::new();
+    
+    // Experts RAM (toujours disponibles)
+    options.push((
+        AgentType::Expert { ram_per_agent_gb: 2.0 },
+        "qwen2.5:3b".to_string(),
+        "Expert 3B - RAM".to_string(),
+    ));
+    options.push((
+        AgentType::Expert { ram_per_agent_gb: 1.0 },
+        "qwen2.5:1.5b".to_string(),
+        "Expert 1.5B - RAM".to_string(),
+    ));
+    
+    // Experts VRAM (si assez de VRAM)
+    if vram_gb >= 8.0 {
+        options.push((
+            AgentType::Expert { ram_per_agent_gb: 2.0 },
+            "qwen2.5:3b".to_string(),
+            "Expert 3B - VRAM (rapide)".to_string(),
+        ));
+    }
+    
+    // Réflexion VRAM (si assez de VRAM)
+    if vram_gb >= 12.0 {
+        options.push((
+            AgentType::Reflexion { vram_per_agent_gb: 4.0 },
+            "qwen2.5:7b".to_string(),
+            "Réflexion 7B - VRAM".to_string(),
+        ));
+    }
+    
+    options
 }
