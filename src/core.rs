@@ -448,3 +448,56 @@ pub fn rank_local_models(
     scored.truncate(limit);
     scored
 }
+
+/// Récupère tous les modèles disponibles sur le registry officiel Ollama
+pub fn fetch_remote_catalog() -> Result<Vec<OllamaModel>> {
+    let url = "https://ollama.com/api/tags";
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .context("Erreur création client HTTP")?;
+    
+    let resp = client
+        .get(url)
+        .send()
+        .context("Impossible de contacter le catalogue Ollama")?;
+    
+    let resp = resp
+        .error_for_status()
+        .context("Réponse HTTP invalide du catalogue")?;
+    
+    let data: OllamaTagsResponse = resp
+        .json()
+        .context("Parsing JSON catalogue échoué")?;
+    
+    Ok(data.models)
+}
+
+/// Fusionne modèles locaux + distants, en évitant les doublons
+pub fn get_all_available_models(
+    local: &[OllamaModel],
+    remote: &[OllamaModel],
+) -> Vec<(OllamaModel, bool)> {
+    // (modèle, déjà_téléchargé)
+    let mut seen: std::collections::HashSet<String> = local.iter()
+        .map(|m| normalize_model_name(&m.name))
+        .collect();
+    
+    let mut all: Vec<(OllamaModel, bool)> = local.iter()
+        .map(|m| (m.clone(), true))
+        .collect();
+    
+    for m in remote {
+        let normalized = normalize_model_name(&m.name);
+        if !seen.contains(&normalized) {
+            all.push((m.clone(), false));
+            seen.insert(normalized);
+        }
+    }
+    
+    all
+}
+
+fn normalize_model_name(name: &str) -> String {
+    name.split(':').next().unwrap_or(name).to_lowercase()
+}

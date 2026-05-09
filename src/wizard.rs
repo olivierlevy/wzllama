@@ -1,9 +1,9 @@
 use crate::config::{self, I18n, UsageSpec, get_available_languages, detect_system_language};
-use crate::core::{self, detect_hardware, HardwareInfo};
+use crate::core::{self, detect_hardware, HardwareInfo, OllamaModel};
 use crate::installers::Installer;
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Select, Input};
+use dialoguer::{Select, Input, Confirm};
 
 pub fn run_wizard() -> Result<()> {
     println!("{}", "═".repeat(50).cyan());
@@ -150,7 +150,7 @@ fn format_duration(minutes: f64) -> String {
 fn explain_usage(
     _usage_key: &str,
     spec: &UsageSpec,
-    hardware: &HardwareInfo,
+    _hardware: &HardwareInfo,
     i18n: &I18n,
 ) -> Result<()> {
     println!("\n{}", "─".repeat(40).dimmed());
@@ -214,32 +214,42 @@ fn install_model_if_needed(
     println!("{}", "📥 Modèle Ollama".bold());
     println!("{}", "─".repeat(40).dimmed());
 
-    // Vérifier si Ollama est lancé
-    let ollama_url = match core::detect_ollama_url() {
-        Some(url) => url,
-        None => {
-            println!("   ⚠️  {}", i18n.t("install.ollama.not_running"));
-            return Ok(());
-        }
-    };
-
     // Récupérer les modèles locaux
-    let local_models = match core::fetch_local_models(&ollama_url) {
-        Ok(models) => models,
-        Err(_) => {
-            println!("   ⚠️  {}", i18n.t("install.ollama.api_error"));
-            return Ok(());
-        }
+    let local_models = match core::detect_ollama_url() {
+        Some(url) => core::fetch_local_models(&url).unwrap_or_default(),
+        None => vec![],
     };
 
-    if local_models.is_empty() {
-        println!("   📭 {}", i18n.t("install.ollama.no_models"));
-        println!("   💡 {}\n", i18n.t("install.ollama.pull_hint"));
+    // Récupérer le catalogue distant
+    println!("   🔍 Recherche du catalogue en ligne...");
+    let remote_models = core::fetch_remote_catalog().unwrap_or_default();
+    
+    if remote_models.is_empty() && local_models.is_empty() {
+        println!("   ⚠️  Aucun modèle trouvé (local ni distant).");
+        println!("   Vérifiez votre connexion internet et Ollama.");
         return Ok(());
     }
 
-    // Classer les modèles locaux par pertinence
-    let ranked = core::rank_local_models(&local_models, usage_type, hardware, 8);
+    // Fusionner
+    let all_models = core::get_all_available_models(&local_models, &remote_models);
+    
+    // Classer par pertinence
+    let scored: Vec<(OllamaModel, bool, f32)> = all_models.iter()
+        .filter(|(m, _)| {
+            let size = core::extract_size(&m.name);
+            // Filtrer les modèles trop gros (> VRAM * 2) et les cloud
+            size > 0 && !m.name.to_lowercase().contains("cloud")
+        })
+        .map(|(m, downloaded)| {
+            let score = core::score_model_dynamic(m, usage_type, hardware);
+            (m.clone(), *downloaded, score)
+        })
+        .filter(|(_, _, s)| *s > 0.0)
+        .collect();
+
+    let mut ranked = scored;
+    ranked.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+    ranked.truncate(15);
 
     if ranked.is_empty() {
         println!("   ⚠️  {}", i18n.t("install.ollama.no_compatible"));
@@ -248,13 +258,12 @@ fn install_model_if_needed(
 
     println!("\n📊 {} :\n", i18n.t("install.ollama.recommended"));
     
-    let items: Vec<String> = ranked.iter().map(|(m, score)| {
-        let size_str = m.details.as_ref()
-            .and_then(|d| d.parameter_size.as_deref())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| format!("{}B", core::extract_size(&m.name)));
+    let items: Vec<String> = ranked.iter().map(|(m, downloaded, score)| {
+        let status = if *downloaded { "✅" } else { "⬇️ " };
+        let size_str = format_size_from_bytes(m.size.unwrap_or(0));
         format!(
-            "{} ({} - {:.0}%)",
+            "{} {} ({} - {:.0}%)",
+            status,
             m.name.bold(),
             size_str,
             score * 100.0
@@ -267,22 +276,51 @@ fn install_model_if_needed(
         .default(0)
         .interact()?;
 
-    let (chosen, _) = &ranked[selection];
+    let (chosen, downloaded, _) = &ranked[selection];
     
     println!("\n✅ {} : {}", i18n.t("install.ollama.selected"), chosen.name.green().bold());
-    println!("   📏 {} : {}", i18n.t("install.ollama.size"), 
-        chosen.details.as_ref()
-            .and_then(|d| d.parameter_size.as_deref())
-            .unwrap_or("?"));
-    println!("   🏷️  {} : {}", i18n.t("install.ollama.family"),
-        chosen.details.as_ref()
-            .and_then(|d| d.family.as_deref())
-            .unwrap_or("inconnue"));
+    println!("   📏 {} : {}", i18n.t("install.ollama.size"), format_size_from_bytes(chosen.size.unwrap_or(0)));
     
-    // Proposer d'autres modèles à télécharger
-    println!("\n💡 {} : ollama pull <nom_du_modèle>", i18n.t("install.ollama.pull_other"));
+    if *downloaded {
+        println!("   ✅ Déjà installé localement");
+    } else {
+        // Proposer le téléchargement
+        println!("   ⬇️  Modèle à télécharger");
+        let confirm = Confirm::new()
+            .with_prompt(format!("   Télécharger {} ?", chosen.name))
+            .default(true)
+            .interact()?;
+        
+        if confirm {
+            let cmd = format!("ollama pull {}", chosen.name);
+            println!("\n📥 {}", cmd.cyan());
+            match core::run_command(&cmd) {
+                Ok((stdout, stderr)) => {
+                    if !stdout.is_empty() { println!("{}", stdout); }
+                    if !stderr.is_empty() { println!("{}", stderr.dimmed()); }
+                    println!("   ✅ {} installé !", chosen.name.green().bold());
+                }
+                Err(e) => {
+                    println!("   ❌ Erreur : {}", e);
+                    println!("   Lancez : ollama pull {}", chosen.name);
+                }
+            }
+        }
+    }
 
     Ok(())
+}
+
+fn format_size_from_bytes(bytes: u64) -> String {
+    if bytes >= 1_073_741_824 {
+        format!("{:.1} Go", bytes as f64 / 1_073_741_824.0)
+    } else if bytes >= 1_048_576 {
+        format!("{:.1} Mo", bytes as f64 / 1_048_576.0)
+    } else if bytes == 0 {
+        "?".to_string()
+    } else {
+        format!("{} o", bytes)
+    }
 }
 
 fn format_bytes(bytes: u64) -> String {
