@@ -55,7 +55,7 @@ pub fn run(
 
     // Création des agents
     display::section(&i18n.t("fleet.creating_fleet"));
-    let mut created_agents: Vec<(String, String)> = vec![];
+    let mut agents_data: Vec<(String, String, String, u32, f32, String)> = vec![];
 
     for agent in fleet.reflexion_agents.iter().chain(fleet.expert_agents.iter()) {
         if agent.enabled {
@@ -66,19 +66,29 @@ pub fn run(
             );
             if ollama_api::create_model(&agent.name, &modelfile).is_ok() {
                 println!("   ✅ {}", agent.name.cyan());
-                created_agents.push((agent.name.clone(), agent.role.clone()));
+                agents_data.push((
+                    agent.name.clone(),
+                    agent.role.clone(),
+                    agent.model.clone(),
+                    agent.num_ctx,
+                    agent.temperature,
+                    agent.system_prompt.clone(),
+                ));
             }
         }
     }
 
-    if created_agents.is_empty() {
+    if agents_data.is_empty() {
         display::warning(&i18n.t("fleet.nothing_created"));
         return Ok(());
     }
 
-    // Déléguer la création openclaw.json à OpenClawTool
-    let project_name = OpenClawTool::create_fleet_config(
-        i18n, usage_type, orchestrator_name, &created_agents,
+    // Déléguer à OpenClaw
+    let project_name = OpenClawTool::create_fleet(
+        i18n,
+        usage_type,
+        orchestrator_name,
+        &agents_data,
     )?;
 
     println!("\n🦞 {}", i18n.t("fleet.openclaw_launch"));

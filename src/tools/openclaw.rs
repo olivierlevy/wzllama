@@ -1,10 +1,8 @@
 use anyhow::Result;
-use std::path::PathBuf;
 use colored::*;
-use dialoguer::{Confirm, Input};
-use crate::config::{self, I18n, WzllamaState};
-use crate::core::{shell, ollama_api, ollama_models};
-use crate::display;
+use dialoguer::{Input};
+use crate::config::{I18n, WzllamaState};
+use crate::core::shell;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct OpenClawTool;
@@ -16,84 +14,98 @@ impl Tool for OpenClawTool {
     fn supports_fleets(&self) -> bool { true }
 
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("openclaw") { ToolStatus::Installed }
-        else { ToolStatus::NotInstalled { install_cmd: "npm install -g openclaw".into() } }
+        if shell::is_installed("openclaw") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled { install_cmd: "npm install -g openclaw".into() }
+        }
     }
 
     fn install(&self) -> Result<()> {
         shell::run("npm install -g openclaw")?;
         Ok(())
     }
-
     fn launch(&self, _state: &WzllamaState, _model: Option<&str>, fleet: Option<&str>) -> Result<()> {
         match fleet {
-            Some(f) => { shell::run(&format!("openclaw --profile {}", f))?; }
-            None => { shell::run("openclaw")?; }
+            Some(f) => println!("openclaw --profile {}", f),
+            None => println!("openclaw"),
         }
         Ok(())
     }
 }
 
+// ─── Création de flotte ────────────────────────────
+
 impl OpenClawTool {
-    /// Génère le openclaw.json et configure le gateway pour une flotte
-    pub fn create_fleet_config(
+    pub fn create_fleet(
         i18n: &I18n,
         usage_type: &str,
         orchestrator_name: &str,
-        agents: &[(String, String)], // (name, role)
+        agents: &[(String, String, String, u32, f32, String)],
     ) -> Result<String> {
-        // Demander le nom du projet
         let project_name: String = Input::new()
             .with_prompt(i18n.t("fleet.project_name"))
             .default(usage_type.to_string())
             .interact()?;
 
-        // Créer le dossier ~/.openclaw-{projet}/
-        let openclaw_dir = dirs::home_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(format!(".openclaw-{}", project_name));
-        std::fs::create_dir_all(&openclaw_dir)?;
+        println!("\n{}", "═".repeat(50).cyan());
+        println!("{}", i18n.t("fleet.commands_to_run").bold());
+        println!("{}", "═".repeat(50).cyan());
+        println!();
+        println!("   {}", i18n.t("fleet.copy_paste"));
+        println!();
 
-        // Construire le JSON des agents
-        let mut agents_json = String::new();
-        for (name, role) in agents {
-            let id = name
-                .strip_prefix("wzllama-reflexion-")
-                .or(name.strip_prefix("wzllama-expert-"))
-                .unwrap_or(name);
+        println!("   # 0. Configurer Ollama comme provider");
+        println!("   openclaw --profile {} config set plugins.entries.ollama.enabled true", project_name);
+        println!("   openclaw --profile {} config set env.OLLAMA_API_KEY 'ollama-local'", project_name);
+        println!();
+        
+        // 1. Gateway
+        println!("   # {}", i18n.t("fleet.step_gateway"));
+        println!("   openclaw --profile {} gateway install --force", project_name);
+        println!("   openclaw --profile {} config set gateway.mode local", project_name);
+        println!();
+        
+        // 2. Orchestrateur
+        println!("   # {}", i18n.t("fleet.step_orch"));
+        println!("   openclaw --profile {} config set agents.defaults.model.primary 'ollama/{}'", project_name, orchestrator_name);
+        println!("   openclaw --profile {} config set agents.defaults.contextTokens 32768", project_name);
+        println!();
+        
+        // 3. Agents
+        let mut agents_json = String::from("[");
+        for (name, role, model, ctx, _temp, _prompt) in agents {
+            let id = role.to_lowercase()
+                .replace(' ', "-")
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '-')
+                .collect::<String>()
+                .trim_matches('-')
+                .to_string();
+            let id = if id.is_empty() { format!("agent-{}", agents_json.len()) } else { id };
+            
             agents_json.push_str(&format!(
-                "      {{ \"id\": \"{}\", \"model\": {{ \"primary\": \"ollama/{}\" }}, \"identity\": {{ \"name\": \"{}\" }} }},\n",
-                id, name, role
+                r#"{{"id":"{}","model":{{"primary":"ollama/{}"}},"contextTokens":{},"identity":{{"name":"{}"}}}},"#,
+                id, name, ctx, role
             ));
         }
-        if agents_json.ends_with(",\n") {
-            agents_json.pop(); agents_json.pop(); agents_json.push('\n');
-        }
+        agents_json.pop(); // enlever la dernière virgule
+        agents_json.push(']');
 
-        let config = format!(r#"{{
-  "gateway": {{ "mode": "local" }},
-  "agents": {{
-    "defaults": {{ "model": {{ "primary": "ollama/{}" }} }},
-    "list": [
-{}
-    ]
-  }}
-}}"#, orchestrator_name, agents_json);
-
-        std::fs::write(openclaw_dir.join("openclaw.json"), &config)?;
-
-        // Installer le gateway systemd
-        println!("\n🔧 {}", i18n.t("fleet.install_gateway"));
-        println!("   openclaw --profile {} gateway install", project_name.cyan());
+        println!("   # {}", i18n.t("fleet.step_agents"));
+        println!("   openclaw --profile {} config set agents.list '{}' --json --merge", project_name, agents_json);
+        println!();
         
-        if Confirm::new()
-            .with_prompt(i18n.t("fleet.install_gateway_now"))
-            .default(true)
-            .interact()?
-        {
-            shell::run(&format!("openclaw --profile {} gateway install --force", project_name))?;
-            println!("   {}", i18n.t("fleet.gateway_installed").green());
-        }
+        // 4. Validation
+        println!("   # {}", i18n.t("fleet.step_validate"));
+        println!("   openclaw --profile {} config set gateway.mode local", project_name);
+        println!("   openclaw --profile {} doctor --fix", project_name);
+        println!("   openclaw --profile {} gateway restart", project_name);
+        println!();
+        println!("   # {}", i18n.t("fleet.step_launch"));
+        println!("   openclaw --profile {}", project_name);
+        
+        println!("\n{}", "═".repeat(50).cyan());
 
         Ok(project_name)
     }
