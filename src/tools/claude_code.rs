@@ -25,16 +25,15 @@ impl Tool for ClaudeCodeTool {
         Ok(())
     }
 
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
-        let cmd = match model {
-            Some(m) => format!("ollama launch claude --model {}", m),
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+        let model = model.or(state.last_model.as_deref());
+        match model {
+            Some(m) => { shell::run_live(&format!("ollama launch claude --model {}", m))?; }
             None => {
                 display::info(&i18n.t("tool.claude_code.no_model"));
-                "ollama launch claude".to_string()
+                let _ = shell::run_live("ollama launch claude");
             }
-        };
-        println!("{}", cmd);
-        // Ne pas exécuter : l'utilisateur doit lancer cette commande interactive dans son terminal
+        }
         Ok(())
     }
 }

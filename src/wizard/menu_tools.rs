@@ -24,19 +24,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             if let Some(t) = tools::get_tool(&tool.id) {
                 println!("   📥 {}", i18n.t("install.run_command"));
                 t.install()?;  // Affiche la commande
-                
-                if Confirm::new()
-                    .with_prompt(i18n.t("install.execute_now"))
-                    .default(true)
-                    .interact()?
-                {
-                    // Exécuter la vraie commande (récupérée depuis status)
-                    if let tools::tool_trait::ToolStatus::NotInstalled { ref install_cmd } = t.status() {
-                        shell::run(install_cmd)?;
-                        display::success(&i18n.t("install.completed"));
-                        crate::config::state::mark_installed(&tool.id, state);
-                    }
-                }
+                crate::config::state::mark_installed(t.id(), state);
             }
         }
 

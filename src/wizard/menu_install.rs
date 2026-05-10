@@ -74,8 +74,53 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
                 }
                 _ => {
                     if let Some(t) = tools::get_tool(id) {
+                        // Vérifier Docker si nécessaire (pour Open WebUI)
+                        if id == "open_webui" {
+                            if !tools::docker::is_running() {
+                                display::warning(&i18n.t("install.docker.stopped"));
+                                if Confirm::new()
+                                    .with_prompt(i18n.t("install.docker.start_now"))
+                                    .default(true)
+                                    .interact()?
+                                {
+                                    tools::docker::start()?;
+                                } else {
+                                    display::warning(&&i18n.t_with_vars("install.docker.required_for", &[("tool", "Open WebUI")]));
+                                    continue;
+                                }
+                            }
+                        }
+                        
                         println!("   📥 {}", i18n.t("install.run_command"));
                         t.install()?; // Affiche la commande
+                        
+                        // VÉRIFIER si l'outil est maintenant installé (même s'il l'était déjà, ou s'il tourne)
+                        match t.status() {
+                            tools::tool_trait::ToolStatus::Installed | tools::tool_trait::ToolStatus::Running => {
+                                crate::config::state::mark_installed(id, state);
+                                display::success(&i18n.t_with_vars("install.already_installed_or_running", &[("tool", &t.name())]));
+                                // Recharger le state pour que les changements soient visibles immédiatement
+                                *state = crate::config::state::load();
+                                continue;
+                            }
+                            tools::tool_trait::ToolStatus::NotInstalled { ref install_cmd } => {
+                                if Confirm::new()
+                                    .with_prompt(i18n.t("install.execute_now"))
+                                    .default(true)
+                                    .interact()?
+                                {
+                                    shell::run_live(install_cmd)?;
+                                    display::success(&i18n.t("install.completed"));
+                                    crate::config::state::mark_installed(id, state);
+                                    println!("\n   {}", i18n.t("install.launch_first_time").dimmed());
+                                    t.launch(i18n, state, None, None)?;
+                                    println!("\n   {}", i18n.t("install.relaunch_wzllama").bold());
+                                    // Recharger le state
+                                    *state = crate::config::state::load();
+                                }
+                            }
+                        }
+                        
                         if Confirm::new()
                             .with_prompt(i18n.t("install.execute_now"))
                             .default(true)

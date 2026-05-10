@@ -77,7 +77,7 @@ pub fn mark_installed(tool: &str, state: &mut WzllamaState) {
     match tool {
         "docker" => state.installed.docker = true,
         "ollama" => state.installed.ollama = true,
-        "Open WebUI" => state.installed.open_webui = true,
+        "open_webui" => state.installed.open_webui = true,
         "openclaw" => state.installed.openclaw = true,
         "claude_code" => state.installed.claude_code = true,
         "hermes_agent" => state.installed.hermes_agent = true,

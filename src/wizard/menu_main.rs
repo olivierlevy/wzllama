@@ -1,9 +1,8 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Select, Confirm};
+use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::{hardware::HardwareInfo, system, ollama_api};
-use crate::tools;
 use crate::display;
 use crate::tools::ollama::OllamaTool;
 use crate::wizard::{menu_cleanup, menu_config, menu_fleets, menu_install, menu_models, menu_tools, setup_models};
