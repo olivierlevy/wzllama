@@ -36,20 +36,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
         if sel == tools.len() { return Ok(()); }
 
         let tool = &tools[sel];
-        let installed = match tool.id() {
-            "ollama" => state.installed.ollama,
-            "open_webui" => state.installed.open_webui,
-            "openclaw" => state.installed.openclaw,
-            "claude_code" => state.installed.claude_code,
-            "hermes_agent" => state.installed.hermes_agent,
-            "opencode" => state.installed.opencode,
-            "codex" => state.installed.codex,
-            "copilot_cli" => state.installed.copilot_cli,
-            "droid" => state.installed.droid,
-            "pi" => state.installed.pi,
-            "pool" => state.installed.pool,
-            _ => false,
-        };
+        let installed = is_installed(tool.id());
 
         if !installed {
             display::info(&i18n.t("cleanup.not_installed"));
@@ -89,6 +76,22 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             }
         }
         config::state::save(state)?;
+    }
+}
+
+fn is_installed(id: &str) -> bool {
+    match id {
+        "ollama" => shell::is_installed("ollama"),
+        "open_webui" => shell::run("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok(),
+        "openclaw" => shell::is_installed("openclaw"),
+        "claude_code" => shell::is_installed("claude"),
+        "hermes_agent" => shell::is_installed("hermes"),
+        "opencode" => shell::is_installed("opencode"),
+        "codex" => shell::is_installed("codex"),
+        "droid" => shell::is_installed("droid"),
+        "pi" => shell::is_installed("pi"),
+        "pool" => shell::is_installed("pool"),
+        _ => false,
     }
 }
 

@@ -69,6 +69,7 @@ impl OllamaTool {
                 let tool = OllamaTool;
                 tool.install()?;
                 display::success(&i18n.t("ollama.installed"));
+                return Ok(());
             }
             return Ok(());
         }
