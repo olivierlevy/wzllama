@@ -21,7 +21,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
         items.push(("docker".into(), format!("Docker {}", if docker_running { "(actif)" } else { "" }), docker_ok, None));
 
         // Outils du registry (tous, y compris ollama et open_webui)
-        for tool in tools::get_available_tools(&state) {
+        for tool in tools::get_available_tools(&state, &i18n) {
             let label = if tool.id == "open_webui" && tool.installed {
                 format!("{} (http://localhost:3000)", tool.name)
             } else {

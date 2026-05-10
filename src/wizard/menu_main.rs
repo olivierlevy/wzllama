@@ -5,6 +5,7 @@ use crate::config::{self, I18n, WzllamaState};
 use crate::core::{hardware::HardwareInfo, system, ollama_api};
 use crate::tools;
 use crate::display;
+use crate::tools::ollama::OllamaTool;
 use crate::wizard::{menu_models, menu_tools, menu_install, menu_fleets, menu_cleanup};
 
 pub fn select_language(state: &mut WzllamaState) -> Result<I18n> {
@@ -70,7 +71,7 @@ pub fn display_hardware(hw: &HardwareInfo, i18n: &I18n) {
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     let mut current_i18n = i18n; // On va peut-être changer de langue en cours de route
-    
+    OllamaTool::ensure_running(i18n)?;
     loop {
         let ram_avail = system::get_available_ram_gb();
         let vram_avail = system::get_available_vram_gb();

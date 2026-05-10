@@ -12,7 +12,7 @@ pub mod droid;
 pub mod pi;
 pub mod pool;
 
-use crate::config::WzllamaState;
+use crate::config::{I18n, WzllamaState};
 use tool_trait::{Tool, ToolStatus};
 
 pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
@@ -35,7 +35,7 @@ pub fn get_tool(id: &str) -> Option<Box<dyn Tool>> {
     get_all_tools().into_iter().find(|t| t.id() == id)
 }
 
-pub fn get_available_tools(state: &WzllamaState) -> Vec<ToolInfo> {
+pub fn get_available_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
     get_all_tools().iter().map(|t| {
         let installed = match t.id() {
             "ollama" => state.installed.ollama,
@@ -54,7 +54,7 @@ pub fn get_available_tools(state: &WzllamaState) -> Vec<ToolInfo> {
         ToolInfo {
             id: t.id().to_string(),
             name: t.name().to_string(),
-            description: t.description().to_string(),
+            description: t.description(i18n),
             installed,
             supports_fleets: t.supports_fleets(),
         }

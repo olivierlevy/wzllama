@@ -8,7 +8,7 @@ use crate::wizard::menu_fleets;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     loop {
-        let tools = tools::get_available_tools(state);
+        let tools = tools::get_available_tools(state, &i18n);
         let mut items: Vec<String> = tools.iter().map(|t| {
             let s = if t.installed { "✅" } else { "📦" };
             format!("{} {} - {}", s, t.name, t.description.dimmed())
@@ -40,7 +40,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         // Lancer l'outil
         if let Some(t) = tools::get_tool(&tool.id) {
             let model = state.last_model.as_deref();
-            t.launch(state, model, None)?;
+            t.launch(i18n, state, model, None)?;
             state.set_last_tool(&tool.id);
         }
     }

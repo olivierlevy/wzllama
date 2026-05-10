@@ -10,7 +10,7 @@ pub struct OpenClawTool;
 impl Tool for OpenClawTool {
     fn id(&self) -> &str { "openclaw" }
     fn name(&self) -> &str { "OpenClaw" }
-    fn description(&self) -> &str { "Assistant IA personnel avec 100+ skills" }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
     fn supports_fleets(&self) -> bool { true }
 
     fn status(&self) -> ToolStatus {
@@ -25,7 +25,7 @@ impl Tool for OpenClawTool {
         shell::run("npm install -g openclaw")?;
         Ok(())
     }
-    fn launch(&self, _state: &WzllamaState, _model: Option<&str>, fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, fleet: Option<&str>) -> Result<()> {
         match fleet {
             Some(f) => println!("openclaw --profile {}", f),
             None => println!("openclaw"),

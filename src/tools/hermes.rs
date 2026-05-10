@@ -1,6 +1,7 @@
 use anyhow::Result;
-use crate::config::WzllamaState;
+use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
+use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct HermesTool;
@@ -8,20 +9,25 @@ pub struct HermesTool;
 impl Tool for HermesTool {
     fn id(&self) -> &str { "hermes_agent" }
     fn name(&self) -> &str { "Hermes Agent" }
-    fn description(&self) -> &str { "Agent IA auto-améliorant de Nous Research" }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.hermes.description") }
 
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("hermes-agent") { ToolStatus::Installed }
-        else { ToolStatus::NotInstalled { install_cmd: "pip install hermes-agent".into() } }
+        if shell::is_installed("hermes") { ToolStatus::Installed }
+        else { ToolStatus::NotInstalled { install_cmd: "curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash".into() } }
     }
 
-    fn install(&self) -> Result<()> { shell::run("pip install hermes-agent")?; Ok(()) }
+    fn install(&self) -> Result<()> {
+        shell::run("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash")?;
+        Ok(())
+    }
 
-    // Le binaire s'appelle "hermes"
-    fn launch(&self, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         match model {
             Some(m) => println!("hermes --model ollama/{}", m),
-            None => println!("hermes"),
+            None => {
+                display::info(&i18n.t("tool.hermes.no_model"));
+                println!("hermes setup");
+            }
         }
         Ok(())
     }

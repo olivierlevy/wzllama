@@ -8,12 +8,14 @@ pub mod menu_install;
 pub mod menu_main;
 pub mod menu_models;
 pub mod menu_tools;
+pub mod cleanup_tools;
+pub mod cleanup_fleets;
+pub mod cleanup_models;
 
 use anyhow::Result;
 use colored::Colorize;
 use crate::config::{I18n, WzllamaState};
 use crate::display;
-use crate::core::HardwareInfo;
 
 pub fn run() -> Result<()> {
     let mut state = WzllamaState::load();

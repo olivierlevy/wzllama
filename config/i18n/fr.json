@@ -44,6 +44,56 @@
   "install.ollama.choose": "Choisissez un modèle :",
   "install.ollama.no_compatible": "Aucun modèle compatible.",
 
+  "ollama.not_installed": "⚠️  Ollama n'est pas installé",
+  "ollama.install_now": "Installer Ollama ?",
+  "ollama.installed": "✅ Ollama installé",
+  "ollama.not_running": "⚠️  Ollama n'est pas lancé",
+  "ollama.start_now": "Démarrer Ollama ?",
+  "ollama.started": "✅ Ollama démarré",
+  "ollama.enable_autostart": "Activer le démarrage automatique au boot ?",
+  "ollama.autostart_enabled": "✅ Démarrage automatique activé",
+  "ollama.uninstall_warning": "⚠️  Cela va supprimer Ollama et TOUS les modèles.",
+  "ollama.uninstall_confirm": "Confirmer la désinstallation ?",
+  "ollama.uninstalling": "🗑️  Désinstallation d'Ollama...",
+  "ollama.service_stopped": "✅ Service arrêté et désactivé",
+  "ollama.service_removed": "✅ Fichier de service supprimé",
+  "ollama.binary_removed": "✅ Binaire supprimé : {path}",
+  "ollama.data_removed": "✅ Données supprimées",
+  "ollama.user_removed": "✅ Utilisateur/groupe supprimés",
+  "ollama.uninstalled": "✅ Ollama désinstallé",
+
+  "tool.ollama.description": "Chat avec un modèle IA local",
+  "tool.ollama.choose_model": "ℹ️  Choisissez un modèle d'abord",
+
+  "tool.claude.description": "Outil de codage d'Anthropic avec sous-agents",
+  "tool.claude_code.no_model": "ℹ️  Lancement sans modèle. Vous pourrez choisir dans Claude Code.",
+
+  "tool.codex.description": "Agent de codage open-source d'OpenAI",
+  "tool.codex.auth": "ℹ️  Authentification nécessaire au premier lancement.",
+
+  "tool.copilot.description": "Agent de codage IA de GitHub pour le terminal",
+  "tool.copilot.auth": "ℹ️  Authentification : gh auth login",
+
+  "tool.droid.description": "Agent de codage de Factory (terminal + IDE)",
+  "tool.droid.xdg": "ℹ️  Nécessite xdg-utils : sudo pacman -S xdg-utils",
+
+  "tool.hermes.description": "Agent IA auto-améliorant de Nous Research",
+  "tool.hermes.no_model": "ℹ️  Premier lancement : exécutez 'hermes setup' pour configurer le fournisseur.",
+
+  "tool.openwebui.description": "Interface web pour vos modèles IA",
+  "tool.openwebui.choose_model": "ℹ️  Choisissez un modèle d'abord",
+
+  "tool.openclaw.description": "Assistant IA personnel avec 100+ skills",
+  "tool.openclaw.choose_model": "ℹ️  Choisissez un modèle d'abord",
+
+  "tool.opencode.description": "Agent de codage open-source d'Anomaly",
+  "tool.opencode.auth": "ℹ️  Authentification nécessaire : opencode auth login",
+
+  "tool.pi.description": "Agent IA minimal avec support plugins" ,
+
+  "tool.pool.description": "Agent de codage de Poolside (https://github.com/poolsideai/pool)",
+
+
   "config.title": "⚙️  Configuration recommandée",
   "config.ctx": "📐 Contexte : {ctx} tokens",
   "config.kv_cache": "💾 Cache KV : {kv}",
@@ -140,6 +190,28 @@
   "cleanup.delete_all_models": "🗑️  Supprimer tous les modèles wzllama",
   "cleanup.fleets_deleted": "✅ Flottes supprimées",
   "cleanup.models_deleted": "✅ {count} modèles supprimés",
+  "cleanup.fleet": "Flotte",
+  "cleanup.model": "Modèle",
+  "cleanup.uninstall_tools": "🗑️  Désinstaller des outils",
+  "cleanup.choose_tool": "Outil à désinstaller :",
+  "cleanup.fleet_deleted": "✅ Flotte '{name}' supprimée",
+  "cleanup.model_deleted": "✅ Modèle '{name}' supprimé",
+  "cleanup.openwebui_manual": "ℹ️  Désinstallation manuelle :",
+  "cleanup.npm_uninstall": "⚠️  Vérifiez la suppression manuelle si nécessaire.",
+  "cleanup.uninstall_confirm": "Désinstaller {tool} ?",
+  "cleanup.uninstalling": "🗑️  Désinstallation...",
+  "cleanup.uninstalled": "✅ {tool} désinstallé",
+  "cleanup.openwebui_uninstalled": "✅ Open WebUI désinstallé",
+  "cleanup.docker_manual": "⚠️  Désinstallation de Docker non prise en charge.",
+  "cleanup.manual_uninstall": "⚠️  Échec. Essayez : sudo npm uninstall -g <paquet>",
+  "cleanup.menu_tools": "🗑️  Désinstaller des outils",
+  "cleanup.menu_fleets": "📂 Supprimer des flottes",
+  "cleanup.menu_models": "🤖 Supprimer des modèles",
+  "cleanup.not_installed": "ℹ️  Cet outil n'est pas installé.",
+  "cleanup.no_fleets": "Aucune flotte à supprimer.",
+  "cleanup.no_models": "Aucun modèle wzllama à supprimer.",
+  "cleanup.choose_fleet": "Flotte à supprimer :",
+  "cleanup.choose_model": "Modèle à supprimer :",
 
   "usage.big_book.label": "📚 Gros livre",
   "usage.big_book.description": "📝 Analyser, résumer des longs textes",

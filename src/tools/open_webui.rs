@@ -1,5 +1,5 @@
 use anyhow::Result;
-use crate::config::WzllamaState;
+use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
@@ -8,7 +8,7 @@ pub struct OpenWebUITool;
 impl Tool for OpenWebUITool {
     fn id(&self) -> &str { "open_webui" }
     fn name(&self) -> &str { "Open WebUI" }
-    fn description(&self) -> &str { "Interface web pour vos modèles IA" }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
 
     fn status(&self) -> ToolStatus {
         let ok = shell::run("sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
@@ -28,7 +28,7 @@ impl Tool for OpenWebUITool {
         Ok(())
     }
 
-    fn launch(&self, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         println!("🌐 Open WebUI : http://localhost:3000");
         Ok(())
     }
