@@ -1,4 +1,5 @@
 use anyhow::Result;
+use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
@@ -27,6 +28,20 @@ impl Tool for ClaudeCodeTool {
                 println!("claude");
             }
         }
+        Ok(())
+    }
+}
+impl ClaudeCodeTool {
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new().with_prompt(i18n.t("tool.claude.uninstall_confirm")).default(false).interact()? {
+            return Ok(());
+        }
+        // npm
+        let _ = shell::run("sudo npm uninstall -g @anthropic-ai/claude-code 2>/dev/null");
+        // installeur natif
+        let _ = shell::run("sudo rm -f /usr/bin/claude 2>/dev/null");
+        let _ = shell::run("rm -rf ~/.claude* 2>/dev/null");
+        display::success(&i18n.t("tool.claude.uninstalled"));
         Ok(())
     }
 }

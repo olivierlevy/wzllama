@@ -1,8 +1,9 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Input};
+use dialoguer::{Confirm, Input};
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
+use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct OpenClawTool;
@@ -10,7 +11,7 @@ pub struct OpenClawTool;
 impl Tool for OpenClawTool {
     fn id(&self) -> &str { "openclaw" }
     fn name(&self) -> &str { "OpenClaw" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openclaw.description") }
     fn supports_fleets(&self) -> bool { true }
 
     fn status(&self) -> ToolStatus {
@@ -108,5 +109,18 @@ impl OpenClawTool {
         println!("\n{}", "═".repeat(50).cyan());
 
         Ok(project_name)
+    }
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new().with_prompt(i18n.t("tool.openclaw.uninstall_confirm")).default(false).interact()? {
+            return Ok(());
+        }
+        let _ = shell::run("openclaw uninstall --all --yes --non-interactive 2>/dev/null");
+        let _ = shell::run("sudo npm uninstall -g openclaw 2>/dev/null");
+        // Nettoyer les résidus
+        let _ = shell::run("rm -f ~/.local/bin/openclaw 2>/dev/null");
+        let _ = shell::run("rm -rf ~/.openclaw* 2>/dev/null");
+        let _ = shell::run("systemctl --user disable openclaw-gateway-* 2>/dev/null");
+        display::success(&i18n.t("tool.openclaw.uninstalled"));
+        Ok(())
     }
 }

@@ -9,7 +9,7 @@ pub struct CopilotCliTool;
 impl Tool for CopilotCliTool {
     fn id(&self) -> &str { "copilot_cli" }
     fn name(&self) -> &str { "Copilot CLI" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.copilot.description") }
 
     fn status(&self) -> ToolStatus {
         if shell::is_installed("gh-copilot") { ToolStatus::Installed }

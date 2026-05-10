@@ -1,6 +1,8 @@
 use anyhow::Result;
+use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
+use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct PiTool;
@@ -8,7 +10,7 @@ pub struct PiTool;
 impl Tool for PiTool {
     fn id(&self) -> &str { "pi" }
     fn name(&self) -> &str { "Pi" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.pi.description") }
 
     fn status(&self) -> ToolStatus {
         if shell::is_installed("pi-agent") { ToolStatus::Installed }
@@ -23,6 +25,18 @@ impl Tool for PiTool {
             Some(m) => println!("pi --model ollama/{}", m),
             None => println!("pi"),
         }
+        Ok(())
+    }
+}
+
+impl PiTool {
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new().with_prompt(i18n.t("tool.pi.uninstall_confirm")).default(false).interact()? {
+            return Ok(());
+        }
+        let _ = shell::run("sudo npm uninstall -g @mariozechner/pi-coding-agent 2>/dev/null");
+        let _ = shell::run("rm -rf ~/.pi-agent 2>/dev/null");
+        display::success(&i18n.t("tool.pi.uninstalled"));
         Ok(())
     }
 }

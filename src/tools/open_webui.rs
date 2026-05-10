@@ -1,6 +1,8 @@
 use anyhow::Result;
+use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
+use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct OpenWebUITool;
@@ -8,7 +10,7 @@ pub struct OpenWebUITool;
 impl Tool for OpenWebUITool {
     fn id(&self) -> &str { "open_webui" }
     fn name(&self) -> &str { "Open WebUI" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openwebui.description") }
 
     fn status(&self) -> ToolStatus {
         let ok = shell::run("sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
@@ -30,6 +32,24 @@ impl Tool for OpenWebUITool {
 
     fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         println!("🌐 Open WebUI : http://localhost:3000");
+        Ok(())
+    }
+}
+
+
+impl OpenWebUITool {
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.openwebui.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
+            return Ok(());
+        }
+        let _ = shell::run("sudo docker stop open-webui 2>/dev/null");
+        let _ = shell::run("sudo docker rm open-webui 2>/dev/null");
+        let _ = shell::run("sudo docker volume rm open-webui 2>/dev/null");
+        display::success(&i18n.t("tool.openwebui.uninstalled"));
         Ok(())
     }
 }

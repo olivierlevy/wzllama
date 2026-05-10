@@ -8,7 +8,7 @@ pub struct PoolTool;
 impl Tool for PoolTool {
     fn id(&self) -> &str { "pool" }
     fn name(&self) -> &str { "Pool" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
+    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.pool.description") }
 
     fn status(&self) -> ToolStatus {
         if shell::is_installed("pool") { ToolStatus::Installed }

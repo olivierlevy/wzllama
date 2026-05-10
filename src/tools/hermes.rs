@@ -1,4 +1,5 @@
 use anyhow::Result;
+use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
@@ -29,6 +30,19 @@ impl Tool for HermesTool {
                 println!("hermes setup");
             }
         }
+        Ok(())
+    }
+}
+
+impl HermesTool {
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new().with_prompt(i18n.t("tool.hermes.uninstall_confirm")).default(false).interact()? {
+            return Ok(());
+        }
+        // script officiel ne fournit pas de désinstaller → manuel
+        let _ = shell::run("sudo rm -f /usr/bin/hermes ~/.local/bin/hermes 2>/dev/null");
+        let _ = shell::run("rm -rf ~/.hermes* 2>/dev/null");
+        display::success(&i18n.t("tool.hermes.uninstalled"));
         Ok(())
     }
 }
