@@ -1,9 +1,9 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::Select;
+use dialoguer::{Confirm, Select};
 use crate::config::{I18n, WzllamaState};
-use crate::core::HardwareInfo;
-use crate::tools;
+use crate::core::{HardwareInfo, shell};
+use crate::{display, tools};
 use crate::wizard::menu_fleets;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
@@ -19,16 +19,33 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         if sel == tools.len() { return Ok(()); }
 
         let tool = &tools[sel];
-        
+
         if !tool.installed {
-            // Installer d'abord
             if let Some(t) = tools::get_tool(&tool.id) {
-                if let tools::tool_trait::ToolStatus::NotInstalled { ref install_cmd } = t.status() {
-                    println!("   📥 {}", install_cmd);
-                    t.install()?;
-                    crate::config::state::mark_installed(&tool.id, state);
+                println!("   📥 {}", i18n.t("install.run_command"));
+                t.install()?;  // Affiche la commande
+                
+                if Confirm::new()
+                    .with_prompt(i18n.t("install.execute_now"))
+                    .default(true)
+                    .interact()?
+                {
+                    // Exécuter la vraie commande (récupérée depuis status)
+                    if let tools::tool_trait::ToolStatus::NotInstalled { ref install_cmd } = t.status() {
+                        shell::run(install_cmd)?;
+                        display::success(&i18n.t("install.completed"));
+                        crate::config::state::mark_installed(&tool.id, state);
+                    }
                 }
             }
+        }
+
+        // Lancer l'outil (affichage des commandes)
+        if let Some(t) = tools::get_tool(&tool.id) {
+            let model = state.last_model.as_deref();
+            println!("\n   {}", i18n.t("install.launch_first_time").dimmed());
+            t.launch(i18n, state, model, None)?;
+            state.set_last_tool(&tool.id);
         }
 
         // Si l'outil supporte les flottes, rediriger vers le menu flottes

@@ -27,6 +27,8 @@ pub enum Command {
     ResetTemplates,
     #[command(visible_alias = "i")]
     CheckI18n,
+    #[command(visible_alias = "u")]
+    Uninstall,
 }
 
 impl Cli {
@@ -43,6 +45,7 @@ impl Cli {
             Command::Bench => ollama_api::run_benchmark(),
             Command::ResetTemplates => config::templates::reset_all(),
             Command::CheckI18n => config::i18n::check_integrity(),
+            Command::Uninstall => wizard::menu_config::uninstall_wzllama_cli(),
         }
     }
 }

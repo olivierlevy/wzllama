@@ -4,6 +4,7 @@ use dialoguer::{Select, Confirm, Input};
 use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models};
 use crate::display;
+use crate::tools::ollama::OllamaTool;
 use crate::wizard::fleet_creator;
 use crate::wizard::configurator;
 
@@ -53,6 +54,16 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     if sel == ranked.len() { return Ok(()); }
 
     let (chosen, _) = &ranked[sel];
+
+    // Avant le téléchargement
+    if OllamaTool::is_running() {
+        display::warning(&i18n.t("ollama.not_running"));
+        if Confirm::new().with_prompt(i18n.t("ollama.start_now")).default(true).interact()? {
+            OllamaTool::start()?;
+        } else {
+            return Ok(());
+        }
+    }
 
     // Télécharger si nécessaire
     let installed = local.iter().any(|m| m.name == chosen.name);

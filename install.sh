@@ -64,6 +64,7 @@ if command -v wzllama &>/dev/null; then
     echo "    wzllama validate     → Valider les templates"
     echo "    wzllama --dry-run    → Mode simulation"
     echo "    wzllama --help       → Aide complète"
+    echo "    wzllama uninstall    → Désinstallation"
     echo "══════════════════════════════════════════════════"
 else
     echo "   ⚠️  wzllama introuvable dans le PATH."

@@ -20,13 +20,35 @@ impl Tool for OllamaTool {
     fn install(&self) -> Result<()> {
         shell::run("curl -fsSL https://ollama.com/install.sh | sh")?;
         shell::run("sudo systemctl enable ollama")?;
+    
+        // Démarrer Ollama pour l'initialiser
+        shell::run("sudo systemctl start ollama")?;
+    
+        // Attendre qu'il soit prêt
+        for _ in 0..10 {
+            if crate::core::ollama_api::detect_url().is_some() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+    
+        // Générer la configuration par défaut
+        let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());
+        config.save()?;
+        
+        // Installer dans les shells
+        crate::config::shells::install_all_shells_cli()?;
+        
         Ok(())
     }
 
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+        let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => { shell::run(&format!("ollama run {}", m))?; }
-            None => { display::info(&i18n.t("tool.ollama.choose_model")); }
+            None => {
+                display::info(&i18n.t("ollama.choose_model"));
+            }
         }
         Ok(())
     }
@@ -69,9 +91,18 @@ impl OllamaTool {
                 let tool = OllamaTool;
                 tool.install()?;
                 display::success(&i18n.t("ollama.installed"));
+
+                // La config env est déjà générée par install()
+                display::success(&i18n.t("config.generated_env"));
                 return Ok(());
             }
             return Ok(());
+        }
+
+        // Vérifier la santé d'Ollama
+        let fixes = crate::core::ollama_doctor::OllamaDoctor::check_and_fix()?;
+        for fix in &fixes {
+            display::success(fix);
         }
 
         if !Self::is_running() {
@@ -95,6 +126,16 @@ impl OllamaTool {
                     }
                 }
             }
+        }
+        // Vérifier que la config wzllama existe
+        let env_path = crate::config::env::EnvConfig::env_path();
+        if !env_path.exists() {
+            let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());
+            config.save()?;
+            display::success(&i18n.t("config.generated_env"));
+            
+            // Installer dans les shells
+            crate::config::shells::install_all_shells(i18n)?;
         }
         Ok(())
     }

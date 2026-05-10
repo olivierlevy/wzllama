@@ -6,7 +6,7 @@ use crate::core::{hardware::HardwareInfo, system, ollama_api};
 use crate::tools;
 use crate::display;
 use crate::tools::ollama::OllamaTool;
-use crate::wizard::{menu_models, menu_tools, menu_install, menu_fleets, menu_cleanup};
+use crate::wizard::{menu_cleanup, menu_config, menu_fleets, menu_install, menu_models, menu_tools, setup_models};
 
 pub fn select_language(state: &mut WzllamaState) -> Result<I18n> {
     // Si une langue est déjà enregistrée, la charger directement sans menu
@@ -70,8 +70,10 @@ pub fn display_hardware(hw: &HardwareInfo, i18n: &I18n) {
 }
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
-    let mut current_i18n = i18n; // On va peut-être changer de langue en cours de route
-    OllamaTool::ensure_running(i18n)?;
+    let current_i18n = i18n; // On va peut-être changer de langue en cours de route
+    OllamaTool::ensure_running(current_i18n)?;
+    // Vérifier si des modèles sont installés
+    setup_models::ensure_first_models(current_i18n, hw, state)?;
     loop {
         let ram_avail = system::get_available_ram_gb();
         let vram_avail = system::get_available_vram_gb();
@@ -98,6 +100,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 
         items.push(current_i18n.t("menu.main.install"));
         items.push(current_i18n.t("menu.main.cleanup"));
+        items.push(current_i18n.t("menu.main.config")); 
         items.push(current_i18n.t("menu.main.language"));
         items.push(current_i18n.t("menu.main.quit"));
 
@@ -115,7 +118,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             2 if has_fleets => menu_fleets::run(current_i18n, state, hw)?,
             n if n == 2 + has_fleets as usize => menu_install::run(current_i18n, state)?,
             n if n == 3 + has_fleets as usize => menu_cleanup::run(current_i18n, state)?,
-            n if n == 4 + has_fleets as usize => {
+            n if n == 4 + has_fleets as usize => menu_config::run(current_i18n, state)?,
+            n if n == 5 + has_fleets as usize => {
                 // Changer de langue
                 let new_i18n = change_language(state)?;
                 // On ne peut pas réassigner current_i18n directement car c'est une référence

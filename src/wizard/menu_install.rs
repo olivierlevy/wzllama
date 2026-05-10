@@ -59,8 +59,25 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             }
             _ if !*installed => {
                 if let Some(t) = tools::get_tool(id) {
-                    t.install()?;
-                    crate::config::state::mark_installed(id, &mut state);
+                    println!("   📥 {}", i18n.t("install.run_command"));
+                    t.install()?;  // Affiche env vars + commande
+                    
+                    if Confirm::new()
+                        .with_prompt(i18n.t("install.execute_now"))
+                        .default(true)
+                        .interact()?
+                    {
+                        if let tools::tool_trait::ToolStatus::NotInstalled { ref install_cmd } = t.status() {
+                            shell::run(install_cmd)?;
+                            display::success(&i18n.t("install.completed"));
+                            crate::config::state::mark_installed(t.id(), &mut state);
+                            
+                            // Afficher les commandes de lancement
+                            println!("\n   {}", i18n.t("install.launch_first_time").dimmed());
+                            t.launch(i18n, &state, None, None)?;
+                            println!("\n   {}", i18n.t("install.relaunch_wzllama").bold());
+                        }
+                    }
                 }
             }
             _ => {
