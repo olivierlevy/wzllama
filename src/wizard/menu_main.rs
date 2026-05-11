@@ -83,6 +83,9 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         if let Some(vram) = vram_avail {
             println!("   🎮 VRAM : {:.1} / {:.1} Go libres", vram, hw.total_vram_mb as f64 / 1024.0);
         }
+        if let Some(ref model) = state.last_model {
+            println!("   🤖 Modèle : {}", model.cyan());
+        }
         if !running.is_empty() {
             println!("   ⚡ Modèles chargés : {}", running.join(", ").dimmed());
         }
