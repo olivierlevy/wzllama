@@ -101,3 +101,20 @@ pub fn exec(cmd: &str) -> ! {
     // exec ne retourne qu'en cas d'erreur
     panic!("exec failed: {}", err);
 }
+
+/// Ouvre une URL dans le navigateur par défaut du système
+pub fn open_url(url: &str) {
+    let cmd = if cfg!(target_os = "linux") {
+        format!("xdg-open {}", url)
+    } else if cfg!(target_os = "macos") {
+        format!("open {}", url)
+    } else if cfg!(target_os = "windows") {
+        format!("start {}", url)
+    } else {
+        return;
+    };
+    let _ = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(&cmd)
+        .spawn();
+}

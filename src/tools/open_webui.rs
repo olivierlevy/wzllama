@@ -2,6 +2,7 @@ use anyhow::Result;
 use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
+use crate::tools::docker;
 use crate::{display, tools};
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
@@ -12,6 +13,10 @@ impl Tool for OpenWebUITool {
     fn name(&self) -> &str { "Open WebUI" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openwebui.description") }
     fn status(&self) -> ToolStatus {
+        if !docker::is_running() {
+            let _ = docker::start();
+            let _ = docker::startup();
+        }
         let exists = shell::run("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$'").is_ok();
         if exists { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
@@ -26,8 +31,17 @@ impl Tool for OpenWebUITool {
         Ok(())
     }
     fn requires_docker(&self) -> bool { true }
-    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
-        println!("🌐 Open WebUI : http://localhost:3000");
+    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
+        let url = "http://localhost:3000";
+        println!("🌐 Open WebUI : {}", url);
+    
+        if Confirm::new()
+            .with_prompt(i18n.t("url.open"))
+            .default(true)
+            .interact()?
+        {
+            shell::open_url(url);
+        }
         Ok(())
     }
 }

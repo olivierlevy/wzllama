@@ -42,6 +42,9 @@
   "install.docker.confirm": "Installer Docker ?",
   "install.docker.install_now": "Installer Docker maintenant ?",
   "install.docker.required_for": "Docker est requis pour {tool}",
+  "install.docker.stopped": "Docker est arrêté",
+  "install.docker.start_now": "Démarrer Docker maintenant ?",
+  "install.docker.socket_missing": "Socket Docker absent, tentative de redémarrage du socket...",
   "install.ollama.searching": "🔍 Recherche des modèles...",
   "install.ollama.choose": "Choisissez un modèle :",
   "install.ollama.no_compatible": "Aucun modèle compatible.",
@@ -56,6 +59,8 @@
   "install.available_header": "📦 Disponibles à l'installation :",
   "install.choose_to_install": "Choisissez un outil à installer",
   "install.all_installed": "Tous les outils sont installés !",
+
+  "url.open": "Ouvrir dans le navigateur ?",  
 
   "ollama.not_installed": "Ollama n'est pas installé",
   "ollama.install_now": "Installer Ollama ?",
@@ -209,7 +214,7 @@
   "fleet.choose": "Choisissez une flotte :",
   "fleet.launching": "Lancement :",
   "fleet.project_name": "Nom du projet",
-  "fleet.openclaw_launch": "🦞 Lancer OpenClaw :",
+  "fleet.openclaw_launch": "Lancer OpenClaw :",
   "fleet.edit.choose": "Action :",
   "fleet.edit.toggle": "Activer/Désactiver",
   "fleet.edit.role": "Modifier le rôle",
