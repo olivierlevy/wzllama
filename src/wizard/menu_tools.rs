@@ -3,6 +3,7 @@ use colored::*;
 use dialoguer::{Select, Confirm};
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::shell;
+use crate::tools::docker;
 use crate::tools::{self, tool_trait::ToolStatus};
 use crate::display;
 
@@ -41,12 +42,36 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &crate::core::HardwareInfo
         } else {
             // Installer
             println!("   📥 {}", i18n.t("install.run_command"));
-            if tool.requires_docker() && !tools::docker::is_running() {
-                display::warning(&i18n.t("install.docker.stopped"));
-                if !Confirm::new().with_prompt(i18n.t("install.docker.start_now")).default(true).interact()? {
-                    continue;
+
+            // Vérifier Docker si l'outil le nécessite
+            if tool.requires_docker() {
+                if !docker::is_installed() {
+                    display::warning(&i18n.t("install.docker.not_installed"));
+                    if Confirm::new()
+                        .with_prompt(i18n.t("install.docker.install_now"))
+                        .default(true)
+                        .interact()?
+                    {
+                        docker::install_linux()?;
+                        display::success(&i18n.t("install.docker.installed"));
+                    } else {
+                        display::warning(&&i18n.t_with_vars("install.docker.required_for", &[("tool", tool.name())]));
+                        continue;
+                    }
                 }
-                tools::docker::start()?;
+                if !docker::is_running() {
+                    display::warning(&i18n.t("install.docker.stopped"));
+                    if Confirm::new()
+                        .with_prompt(i18n.t("install.docker.start_now"))
+                        .default(true)
+                        .interact()?
+                    {
+                        docker::start()?;
+                    } else {
+                        display::warning(&&i18n.t_with_vars("install.docker.required_for", &[("tool", tool.name())]));
+                        continue;
+                    }
+                }
             }
             tool.install()?;
             display::success(&i18n.t("install.completed"));

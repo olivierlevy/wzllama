@@ -40,6 +40,8 @@
   "install.title": "📦 Installation",
   "install.manage": "Gérer les installations :",
   "install.docker.confirm": "Installer Docker ?",
+  "install.docker.install_now": "Installer Docker maintenant ?",
+  "install.docker.required_for": "Docker est requis pour {tool}",
   "install.ollama.searching": "🔍 Recherche des modèles...",
   "install.ollama.choose": "Choisissez un modèle :",
   "install.ollama.no_compatible": "Aucun modèle compatible.",
