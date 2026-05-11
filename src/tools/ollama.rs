@@ -14,11 +14,11 @@ impl Tool for OllamaTool {
 
     fn status(&self) -> ToolStatus {
         if shell::is_installed("ollama") { ToolStatus::Installed }
-        else { ToolStatus::NotInstalled { install_cmd: "curl -fsSL https://ollama.com/install.sh | sh".into() } }
+        else { ToolStatus::NotInstalled }
     }
 
     fn install(&self) -> Result<()> {
-        shell::run("curl -fsSL https://ollama.com/install.sh | sh")?;
+        shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
         shell::run("sudo systemctl enable ollama")?;
     
         // Démarrer Ollama pour l'initialiser

@@ -1,52 +1,61 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Confirm, Select};
-use crate::config::{I18n, WzllamaState};
-use crate::core::{HardwareInfo, shell};
-use crate::{display, tools};
-use crate::wizard::menu_fleets;
+use dialoguer::{Select, Confirm};
+use crate::config::{self, I18n, WzllamaState};
+use crate::core::shell;
+use crate::tools::{self, tool_trait::ToolStatus};
+use crate::display;
 
-pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
+pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &crate::core::HardwareInfo) -> Result<()> {
     loop {
-        let tools = tools::get_available_tools(state, &i18n);
+        let tools = tools::get_available_tools(state, i18n);
         let mut items: Vec<String> = tools.iter().map(|t| {
-            let s = if t.installed { "✅" } else { "📦" };
-            format!("{} {} - {}", s, t.name, t.description.dimmed())
+            let icon = if t.installed { "✅" } else { "📦" };
+            format!("{} {} - {}", icon, t.name, t.description.dimmed())
         }).collect();
         items.push(i18n.t("menu.back"));
 
-        let sel = Select::new().with_prompt(i18n.t("menu.tools.choose")).items(&items).default(0).interact()?;
+        let sel = Select::new()
+            .with_prompt(i18n.t("menu.tools.choose"))
+            .items(&items)
+            .default(0)
+            .interact()?;
+
         if sel == tools.len() { return Ok(()); }
 
-        let tool = &tools[sel];
+        let tool_info = &tools[sel];
+        let tool = match tools::get_tool(&tool_info.id) {
+            Some(t) => t,
+            None => continue,
+        };
 
-        if !tool.installed {
-            if let Some(t) = tools::get_tool(&tool.id) {
-                println!("   📥 {}", i18n.t("install.run_command"));
-                t.install()?;  // Affiche la commande
-                crate::config::state::mark_installed(t.id(), state);
+        if tool_info.installed {
+            // Lancer l'outil
+            if tool.supports_fleets() {
+                crate::wizard::menu_fleets::run(i18n, state, hw)?;
+                return Ok(());
             }
-        }
-
-        // Lancer l'outil (affichage des commandes)
-        if let Some(t) = tools::get_tool(&tool.id) {
             let model = state.last_model.as_deref();
+            tool.launch(i18n, state, model, None)?;
+            state.set_last_tool(&tool_info.id);
+        } else {
+            // Installer
+            println!("   📥 {}", i18n.t("install.run_command"));
+            if tool.requires_docker() && !tools::docker::is_running() {
+                display::warning(&i18n.t("install.docker.stopped"));
+                if !Confirm::new().with_prompt(i18n.t("install.docker.start_now")).default(true).interact()? {
+                    continue;
+                }
+                tools::docker::start()?;
+            }
+            tool.install()?;
+            display::success(&i18n.t("install.completed"));
+            crate::config::state::mark_installed(&tool_info.id, state);
+            *state = crate::config::state::load();
             println!("\n   {}", i18n.t("install.launch_first_time").dimmed());
-            t.launch(i18n, state, model, None)?;
-            state.set_last_tool(&tool.id);
-        }
-
-        // Si l'outil supporte les flottes, rediriger vers le menu flottes
-        if tool.supports_fleets {
-            menu_fleets::run(i18n, state, hw)?;
-            return Ok(());
-        }
-
-        // Lancer l'outil
-        if let Some(t) = tools::get_tool(&tool.id) {
             let model = state.last_model.as_deref();
-            t.launch(i18n, state, model, None)?;
-            state.set_last_tool(&tool.id);
+            tool.launch(i18n, state, model, None)?;
+            println!("\n   {}", i18n.t("install.relaunch_wzllama").bold());
         }
     }
 }

@@ -5,7 +5,7 @@ use crate::config::{self, I18n, WzllamaState};
 use crate::core::{hardware::HardwareInfo, system, ollama_api};
 use crate::display;
 use crate::tools::ollama::OllamaTool;
-use crate::wizard::{menu_cleanup, menu_config, menu_fleets, menu_install, menu_models, menu_tools, setup_models};
+use crate::wizard::{menu_cleanup, menu_config, menu_fleets, menu_models, menu_tools, setup_models};
 
 pub fn select_language(state: &mut WzllamaState) -> Result<I18n> {
     // Si une langue est déjà enregistrée, la charger directement sans menu
@@ -97,7 +97,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             items.push(current_i18n.t("menu.main.fleets"));
         }
 
-        items.push(current_i18n.t("menu.main.install"));
         items.push(current_i18n.t("menu.main.cleanup"));
         items.push(current_i18n.t("menu.main.config")); 
         items.push(current_i18n.t("menu.main.language"));
@@ -115,10 +114,9 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             0 => menu_models::run(current_i18n, state, hw)?,
             1 => menu_tools::run(current_i18n, state, hw)?,
             2 if has_fleets => menu_fleets::run(current_i18n, state, hw)?,
-            n if n == 2 + has_fleets as usize => menu_install::run(current_i18n, state)?,
-            n if n == 3 + has_fleets as usize => menu_cleanup::run(current_i18n, state)?,
-            n if n == 4 + has_fleets as usize => menu_config::run(current_i18n, state)?,
-            n if n == 5 + has_fleets as usize => {
+            n if n == 2 + has_fleets as usize => menu_cleanup::run(current_i18n, state)?,
+            n if n == 3 + has_fleets as usize => menu_config::run(current_i18n, state)?,
+            n if n == 4 + has_fleets as usize => {
                 // Changer de langue
                 let new_i18n = change_language(state)?;
                 // On ne peut pas réassigner current_i18n directement car c'est une référence

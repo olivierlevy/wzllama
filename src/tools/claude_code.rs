@@ -1,4 +1,6 @@
 use anyhow::Result;
+use std::os::unix::process::CommandExt;
+use std::process::Command;
 use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
@@ -7,31 +9,28 @@ use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct ClaudeCodeTool;
 
-const INSTALL_CMD: &str = "curl -fsSL https://claude.ai/install.sh | bash";
-
 impl Tool for ClaudeCodeTool {
     fn id(&self) -> &str { "claude_code" }
     fn name(&self) -> &str { "Claude Code" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
-
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("claude") { ToolStatus::Installed }
-        else { ToolStatus::NotInstalled { install_cmd: INSTALL_CMD.into() } }
+        if shell::is_installed("claude") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-
     fn install(&self) -> Result<()> {
-        println!("{}", INSTALL_CMD);
-        shell::run_live(INSTALL_CMD)?;
+        shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
         Ok(())
     }
-
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());
         match model {
-            Some(m) => { shell::run_live(&format!("ollama launch claude --model {}", m))?; }
+            Some(m) => {
+                println!("ollama launch claude --model {}", m);
+                Command::new("ollama").args(["launch", "claude", "--model", m]).exec();
+            }
             None => {
-                display::info(&i18n.t("tool.claude_code.no_model"));
-                let _ = shell::run_live("ollama launch claude");
+                display::comment(&i18n.t("tool.claude_code.no_model"));
+                println!("ollama launch claude");
+                Command::new("ollama").args(["launch", "claude"]).exec();
             }
         }
         Ok(())

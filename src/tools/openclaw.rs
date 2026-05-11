@@ -13,17 +13,11 @@ impl Tool for OpenClawTool {
     fn name(&self) -> &str { "OpenClaw" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openclaw.description") }
     fn supports_fleets(&self) -> bool { true }
-
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("openclaw") {
-            ToolStatus::Installed
-        } else {
-            ToolStatus::NotInstalled { install_cmd: "npm install -g openclaw".into() }
-        }
+        if shell::is_installed("openclaw") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-
     fn install(&self) -> Result<()> {
-        shell::run("npm install -g openclaw")?;
+        shell::run_live("npm install -g openclaw")?;
         Ok(())
     }
     fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, fleet: Option<&str>) -> Result<()> {

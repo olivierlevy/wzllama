@@ -11,14 +11,13 @@ impl Tool for PiTool {
     fn id(&self) -> &str { "pi" }
     fn name(&self) -> &str { "Pi" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.pi.description") }
-
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("pi-agent") { ToolStatus::Installed }
-        else { ToolStatus::NotInstalled { install_cmd: "npm install -g pi-agent".into() } }
+        if shell::is_installed("pi") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-
-    fn install(&self) -> Result<()> { shell::run("npm install -g pi-agent")?; Ok(()) }
-
+    fn install(&self) -> Result<()> {
+        shell::run_live("npm install -g pi-agent")?;
+        Ok(())
+    }
     // Le binaire s'appelle "pi"
     fn launch(&self, _i18n: &I18n, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
         match model {
