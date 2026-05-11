@@ -15,8 +15,16 @@ impl Tool for HermesTool {
         if shell::is_installed("hermes") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self) -> Result<()> {
-        shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash")?;
-        shell::exec("hermes setup");
+        match WzllamaState::load().last_model.as_deref() {
+            Some(m) => {
+                let cmd: String = format!("ollama launch hermes --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --no-venv --skip-setup")?;
+            }
+        }
+        Ok(())
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());

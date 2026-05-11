@@ -17,7 +17,15 @@ impl Tool for OpenClawTool {
         if shell::is_installed("openclaw") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self) -> Result<()> {
-        shell::run_live("npm install -g openclaw")?;
+        match WzllamaState::load().last_model.as_deref() {
+            Some(m) => {
+                let cmd: String = format!("ollama launch openclaw --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                shell::run_live("npm install -g openclaw")?;
+            }
+        }
         Ok(())
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {

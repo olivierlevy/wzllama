@@ -15,7 +15,15 @@ impl Tool for PiTool {
         if shell::is_installed("pi") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self) -> Result<()> {
-        shell::run_live("npm install -g pi-agent")?;
+        match WzllamaState::load().last_model.as_deref() {
+            Some(m) => {
+                let cmd: String = format!("ollama launch pi --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                shell::run_live("npm install -g pi-agent")?;
+            }
+        }
         Ok(())
     }
     // Le binaire s'appelle "pi"
