@@ -25,12 +25,12 @@ impl Tool for ClaudeCodeTool {
         match model {
             Some(m) => {
                 println!("ollama launch claude --model {}", m);
-                Command::new("ollama").args(["launch", "claude", "--model", m]).exec();
+                let _ = Command::new("ollama").args(["launch", "claude", "--model", m]).exec();
             }
             None => {
                 display::comment(&i18n.t("tool.claude_code.no_model"));
                 println!("ollama launch claude");
-                Command::new("ollama").args(["launch", "claude"]).exec();
+                let _ = Command::new("ollama").args(["launch", "claude"]).exec();
             }
         }
         Ok(())
