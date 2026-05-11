@@ -56,6 +56,12 @@ pub fn run_live(cmd: &str) -> Result<()> {
     }
 }
 
+pub fn run_cmd(cmd: &str) -> Result<()> {
+    println!("{}", format!("{}", cmd).bright_black());
+    let _ = run(cmd);
+    Ok(())
+}
+
 pub fn run(cmd: &str) -> Result<(String, String)> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
 

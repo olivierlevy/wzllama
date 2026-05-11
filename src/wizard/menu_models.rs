@@ -1,11 +1,10 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Select, Confirm, Input};
+use dialoguer::{Select, Confirm};
 use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models};
 use crate::display;
 use crate::tools::ollama::OllamaTool;
-use crate::wizard::fleet_creator;
 use crate::wizard::configurator;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {

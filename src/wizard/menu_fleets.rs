@@ -4,7 +4,7 @@ use dialoguer::{Select, Confirm};
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::display;
-use crate::wizard::fleet_creator;
+use crate::tools::openclaw::OpenClawTool;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     let fleets = config::fleets::detect_openclaw_fleets();
@@ -38,7 +38,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let (name, _) = fleets.iter().nth(sel).unwrap();
         state.set_last_fleet(name);
         println!("\n🦞 {}", i18n.t("fleet.launching"));
-        println!("   openclaw --profile {}", name.cyan());
+        let _ = OpenClawTool::run_fleet(i18n, &name);
     }
     Ok(())
 }

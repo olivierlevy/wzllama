@@ -4,6 +4,7 @@ use dialoguer::{Select, Confirm};
 use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models::{ModelConfig, TaskType}};
 use crate::display;
+use crate::tools::openclaw::OpenClawTool;
 use crate::wizard::{estimator, fleet_creator};
 
 pub fn display_and_choose(
@@ -45,7 +46,9 @@ pub fn display_and_choose(
         2 => {
             // Créer le modèle d'abord puis la flotte
             ollama_api::create_model(&custom_name, &config.generate_modelfile())?;
-            fleet_creator::run(i18n, state, hw, model, &custom_name, usage_type)?;
+            let project_name = fleet_creator::run(i18n, state, hw, model, &custom_name, usage_type)?;
+            // Lancement final
+            let _ = OpenClawTool::run_fleet(i18n, &project_name);
         }
         _ => {}
     }
