@@ -18,9 +18,20 @@ impl Tool for CodexTool {
         shell::run_live("npm install -g @openai/codex")?;
         Ok(())
     }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
-        println!("codex");
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.codex.auth"));
+        let model = model.or(state.last_model.as_deref());
+        match model {
+            Some(m) => {
+                display::run(&i18n.t_with_vars("tool.codex.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch codex --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                display::comment(&i18n.t("tool.codex.no_model"));
+                println!("ollama launch codex");
+            }
+        }
         Ok(())
     }
 }

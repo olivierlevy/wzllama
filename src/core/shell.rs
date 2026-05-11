@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::thread;
+use std::os::unix::process::CommandExt;
 use colored::Colorize;
 
 /// Exécute une commande en affichant sa sortie en temps réel (pour ollama pull)
@@ -91,4 +92,12 @@ pub fn detect_shell() -> String {
         if shell.contains("bash") { return "bash".into(); }
     }
     "unknown".into()
+}
+
+/// Exécute une commande en remplaçant le processus courant (ne retourne jamais)
+pub fn exec(cmd: &str) -> ! {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
+    let err = Command::new(&shell).arg("-c").arg(cmd).exec();
+    // exec ne retourne qu'en cas d'erreur
+    panic!("exec failed: {}", err);
 }

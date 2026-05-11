@@ -16,14 +16,19 @@ impl Tool for HermesTool {
     }
     fn install(&self) -> Result<()> {
         shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash")?;
-        Ok(())
+        shell::exec("hermes setup");
     }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        let model = model.or(state.last_model.as_deref());
         match model {
-            Some(m) => println!("hermes --model ollama/{}", m),
+            Some(m) => {
+                display::run(&i18n.t_with_vars("tool.hermes.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch hermes --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
             None => {
-                display::info(&i18n.t("tool.hermes.no_model"));
-                println!("hermes setup");
+                display::comment(&i18n.t("tool.hermes.no_model"));
+                println!("ollama launch hermes");
             }
         }
         Ok(())

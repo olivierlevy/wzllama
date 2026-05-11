@@ -16,11 +16,22 @@ impl Tool for OpenCodeTool {
     }
     fn install(&self) -> Result<()> {
         shell::run_live("npm install -g @opencode-ai/cli")?;
-        Ok(())
+        shell::exec("opencode auth login");
     }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
-        println!("opencode");
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.opencode.auth"));
+        let model = model.or(state.last_model.as_deref());
+        match model {
+            Some(m) => {
+                display::run(&i18n.t_with_vars("tool.opencode.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch opencode --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                display::comment(&i18n.t("tool.opencode.no_model"));
+                println!("ollama launch opencode");
+            }
+        }
         Ok(())
     }
 }

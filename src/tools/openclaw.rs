@@ -20,10 +20,21 @@ impl Tool for OpenClawTool {
         shell::run_live("npm install -g openclaw")?;
         Ok(())
     }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, fleet: Option<&str>) -> Result<()> {
-        match fleet {
-            Some(f) => println!("openclaw --profile {}", f),
-            None => println!("openclaw"),
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        let model = model.or(state.last_model.as_deref());
+        match model {
+            Some(m) => {
+                //FIXME essayer openclaw --profile si ça ne marche pas via ollama
+                display::comment(&i18n.t_with_vars("tool.openclaw.run_profile", &[("profile", &m)]));
+                display::comment(&format!("openclaw --profile {}", m));
+                display::run(&i18n.t_with_vars("tool.openclaw.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch openclaw --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                display::comment(&i18n.t("tool.openclaw.no_model"));
+                println!("ollama launch openclaw");
+            }
         }
         Ok(())
     }

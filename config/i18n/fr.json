@@ -78,25 +78,32 @@
   "tool.ollama.choose_model": "Choisissez un modèle d'abord",
 
   "tool.claude.description": "Outil de codage d'Anthropic avec sous-agents",
+  "tool.claude_code.run_model": "Lancement de Claude Code avec {model}",
   "tool.claude_code.no_model": "Lancement sans modèle. Vous pourrez choisir dans Claude Code.",
   "tool.claude.uninstall_confirm": "Désinstaller Claude Code ?",
   "tool.claude.uninstalled": "Claude Code désinstallé",
 
   "tool.codex.description": "Agent de codage open-source d'OpenAI",
   "tool.codex.auth": "Authentification nécessaire au premier lancement.",
-  "tool.codex.uninstall_confirm": "Désinstaller Codex ?",
-  "tool.codex.uninstalled": "Codex désinstallé",
+  "tool.codex.run_model": "Lancement de OpenAI Codex avec {model}",
+  "tool.codex.no_model": "Lancement sans modèle. Vous pourrez choisir dans OpenAI Codex.",
+  "tool.codex.uninstall_confirm": "Désinstaller OpenAI Codex ?",
+  "tool.codex.uninstalled": "OpenAI Codex désinstallé",
 
   "tool.copilot.description": "Agent de codage IA de GitHub pour le terminal",
   "tool.copilot.auth": "Authentification : gh auth login",
 
   "tool.droid.description": "Agent de codage de Factory (terminal + IDE)",
   "tool.droid.xdg": "Nécessite xdg-utils : sudo pacman -S xdg-utils",
+  "tool.droid.run_model": "Lancement de Droid avec {model}",
+  "tool.droid.no_model": "Lancement sans modèle. Vous pourrez choisir dans Droid.",
   "tool.droid.uninstall_confirm": "Désinstaller Droid ?",
   "tool.droid.uninstalled": "Droid désinstallé",
 
   "tool.hermes.description": "Agent IA auto-améliorant de Nous Research",
-  "tool.hermes.no_model": "Premier lancement : exécutez 'hermes setup' pour configurer le fournisseur.",
+  "tool.hermes.run_model": "Lancement de Hermes Agent avec {model}",
+  "tool.hermes.first_run": "Premier lancement : exécutez 'hermes setup' pour configurer le fournisseur.",
+  "tool.hermes.no_model": "Lancement sans modèle. Vous pourrez choisir dans Hermes Agent",
   "tool.hermes.uninstall_confirm": "Désinstaller Hermes Agent ?",
   "tool.hermes.uninstalled": "Hermes Agent désinstallé",
 
@@ -105,11 +112,16 @@
   "tool.openwebui.uninstalled": "Open WebUI désinstallé",
 
   "tool.openclaw.description": "Assistant IA personnel avec 100+ skills",
+  "tool.openclaw.run_profile": "Lancement d'un profil {profile} OpenClaw",
+  "tool.openclaw.run_model": "Lancement de OpenClaw avec {model}",
+  "tool.openclaw.no_model": "Lancement sans modèle. Vous pourrez choisir dans OpenClaw",
   "tool.openclaw.uninstall_confirm": "Désinstaller OpenClaw ?",
   "tool.openclaw.uninstalled": "OpenClaw désinstallé",
 
   "tool.opencode.description": "Agent de codage open-source d'Anomaly",
   "tool.opencode.auth": "Authentification nécessaire : opencode auth login",
+  "tool.opencode.run_model": "Lancement de OpenCode avec {model}",
+  "tool.opencode.no_model": "Lancement sans modèle. Vous pourrez choisir dans OpenCode.",
   "tool.opencode.uninstall_confirm": "Désinstaller OpenCode ?",
   "tool.opencode.uninstalled": "OpenCode désinstallé",
 

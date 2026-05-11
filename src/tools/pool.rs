@@ -17,7 +17,7 @@ impl Tool for PoolTool {
         shell::run_live("curl -fsSL https://downloads.poolside.ai/pool/install.sh | sh")?;
         Ok(())
     }
-    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
         println!("ℹ️  https://github.com/poolsideai/pool");
         println!("pool");
         Ok(())

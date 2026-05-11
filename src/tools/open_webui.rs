@@ -26,7 +26,7 @@ impl Tool for OpenWebUITool {
         Ok(())
     }
     fn requires_docker(&self) -> bool { true }
-    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
         println!("🌐 Open WebUI : http://localhost:3000");
         Ok(())
     }

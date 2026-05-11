@@ -28,6 +28,10 @@ pub fn comment(msg: &str) {
     println!("#  {}", msg.dimmed());
 }
 
+pub fn run(msg: &str) {
+    println!("🚀 {}", msg.dimmed().bold());
+}
+
 pub fn resources(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String]) {
     println!("   💾 RAM : {:.1} / {:.1} Go libres", ram_avail, ram_total);
     if let Some(vram) = vram_avail {

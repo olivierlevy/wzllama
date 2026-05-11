@@ -42,10 +42,14 @@ impl Tool for OllamaTool {
         Ok(())
     }
 
-    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());
         match model {
-            Some(m) => { shell::run(&format!("ollama run {}", m))?; }
+            Some(m) => {
+                display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama run {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
             None => {
                 display::info(&i18n.t("ollama.choose_model"));
             }

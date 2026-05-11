@@ -15,12 +15,26 @@ impl Tool for DroidTool {
         if shell::is_installed("droid") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self) -> Result<()> {
+        // Récupérer la commande d'installation de xdg-utils
+        let xdg_cmd = crate::core::system::get_package_install_command("xdg-utils")?;
+        shell::run_live(&xdg_cmd)?;
         shell::run_live("npm install -g @factoryai/droid")?;
         Ok(())
     }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
-        println!("droid");
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.droid.xdg"));
+        let model = model.or(state.last_model.as_deref());
+        match model {
+            Some(m) => {
+                display::run(&i18n.t_with_vars("tool.droid.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch droid --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                display::comment(&i18n.t("tool.droid.no_model"));
+                println!("ollama launch droid");
+            }
+        }
         Ok(())
     }
 }

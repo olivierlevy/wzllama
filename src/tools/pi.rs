@@ -19,10 +19,20 @@ impl Tool for PiTool {
         Ok(())
     }
     // Le binaire s'appelle "pi"
-    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        let model = model.or(state.last_model.as_deref());
         match model {
-            Some(m) => println!("pi --model ollama/{}", m),
-            None => println!("pi"),
+            Some(m) => {
+                //FIXME essayer pi --model ollama/{model} si ça ne marche pas via ollama
+                display::comment(&format!("pi --model ollama/{}", m));
+                display::run(&i18n.t_with_vars("tool.pi.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch pi --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                display::comment(&i18n.t("tool.pi.no_model"));
+                println!("ollama launch pi");
+            }
         }
         Ok(())
     }

@@ -1,3 +1,4 @@
+use anyhow::{Result, bail};
 use sysinfo::System;
 
 pub fn get_available_ram_gb() -> f64 {
@@ -26,4 +27,17 @@ pub fn detect_package_manager() -> String {
         }
     }
     "unknown".into()
+}
+
+/// Retourne la commande d'installation du paquet système via le gestionnaire détecté
+pub fn get_package_install_command(pkg: &str) -> Result<String> {
+    let pm = detect_package_manager();
+    let cmd = match pm.as_str() {
+        "pacman" => format!("sudo pacman -S --noconfirm {}", pkg),
+        "apt" => format!("sudo apt install -y {}", pkg),
+        "dnf" => format!("sudo dnf install -y {}", pkg),
+        "brew" => format!("brew install {}", pkg),
+        _ => bail!("Gestionnaire de paquets inconnu"),
+    };
+    Ok(cmd)
 }

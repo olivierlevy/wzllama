@@ -20,17 +20,17 @@ impl Tool for ClaudeCodeTool {
         shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
         Ok(())
     }
-    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
-                println!("ollama launch claude --model {}", m);
-                let _ = Command::new("ollama").args(["launch", "claude", "--model", m]).exec();
+                display::run(&i18n.t_with_vars("tool.claude_code.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama launch claude --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
             }
             None => {
                 display::comment(&i18n.t("tool.claude_code.no_model"));
                 println!("ollama launch claude");
-                let _ = Command::new("ollama").args(["launch", "claude"]).exec();
             }
         }
         Ok(())

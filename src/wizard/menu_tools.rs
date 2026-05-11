@@ -36,7 +36,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &crate::core::HardwareInfo
                 return Ok(());
             }
             let model = state.last_model.as_deref();
-            tool.launch(i18n, state, model, None)?;
+            tool.launch(i18n, state, model)?;
             state.set_last_tool(&tool_info.id);
         } else {
             // Installer
@@ -54,7 +54,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &crate::core::HardwareInfo
             *state = crate::config::state::load();
             println!("\n   {}", i18n.t("install.launch_first_time").dimmed());
             let model = state.last_model.as_deref();
-            tool.launch(i18n, state, model, None)?;
+            tool.launch(i18n, state, model)?;
             println!("\n   {}", i18n.t("install.relaunch_wzllama").bold());
         }
     }

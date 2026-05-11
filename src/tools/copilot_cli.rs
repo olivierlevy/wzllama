@@ -17,7 +17,7 @@ impl Tool for CopilotCliTool {
         shell::run_live("gh extension install github/gh-copilot")?;
         Ok(())
     }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>, _fleet: Option<&str>) -> Result<()> {
+    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.copilot.auth"));
         println!("gh auth login");
         println!("gh copilot");
