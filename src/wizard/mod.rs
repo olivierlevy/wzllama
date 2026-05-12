@@ -37,9 +37,17 @@ pub fn run() -> Result<()> {
     // 2. ENSUITE vérifier les modèles
     setup_models::ensure_first_models(&i18n, &hardware, &mut state)?;
 
-    // 3. Menu principal
+    // 3. Menu principal (legacy mode for now)
     menu_main::run(&i18n, &mut state, &hardware)?;
 
     println!("\n{}", i18n.t("app.goodbye").bold().green());
     Ok(())
+}
+
+/// Run the new TUI interface
+pub fn run_tui() -> Result<()> {
+    let mut state = WzllamaState::load();
+    let hardware = crate::core::hardware::detect();
+    
+    crate::tui::run_tui(state, hardware)
 }

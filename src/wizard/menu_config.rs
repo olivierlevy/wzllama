@@ -13,7 +13,7 @@ pub fn run(i18n: &I18n, _state: &mut WzllamaState) -> Result<()> {
     loop {
         display::header(&i18n.t("menu.main.config"));
         
-        // Afficher résumé
+        // Afficher résumé avec icônes
         display_config_summary(i18n, &config);
         
         let items = vec![
@@ -81,20 +81,22 @@ fn check_configured_models(i18n: &I18n, config: &config::env::EnvConfig) -> Resu
     Ok(())
 }
 
-fn display_config_summary(i18n: &I18n, config: &config::env::EnvConfig) {
+fn display_config_summary(_i18n: &I18n, config: &config::env::EnvConfig) {
     println!();
-    println!("   {}", i18n.t_with_vars("config.summary.ollama", &[
-        ("host", &config.ollama.host),
-        ("keep", &config.ollama.keep_alive.to_string()),
-        ("cloud", if config.ollama.no_cloud { "❌" } else { "✅" }),
-        ("ctx", &config.ollama.context_length.to_string()),
-    ]));
-    println!("   {}", i18n.t_with_vars("config.summary.models", &[
-        ("code", &config.models.code),
-        ("book", &config.models.book),
-        ("agent", &config.models.agent),
-        ("chat", &config.models.chat),
-    ]));
+    println!("   {} {} | keep={} | cloud={} | ctx={}", 
+        "🔧".cyan(),
+        config.ollama.host.dimmed(),
+        config.ollama.keep_alive,
+        if config.ollama.no_cloud { "❌" } else { "✅" },
+        config.ollama.context_length
+    );
+    println!("   {} Code: {} | Livre: {} | Agent: {} | Chat: {}",
+        "🤖".cyan().bold(),
+        config.models.code.bold(),
+        config.models.book.bold(),
+        config.models.agent.bold(),
+        config.models.chat.bold(),
+    );
     println!();
 }
 
@@ -119,11 +121,11 @@ fn edit_models(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()> {
 fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()> {
     loop {
         let items = vec![
-            i18n.t_with_vars("config.context", &[("ctx", &config.ollama.context_length.to_string())]),
-            i18n.t_with_vars("config.kv_cache", &[("kv", &config.ollama.kv_cache_type)]),
-            i18n.t_with_vars("config.flash_attn", &[("status", if config.ollama.flash_attention { "✅" } else { "❌" })]),
-            i18n.t_with_vars("config.cloud", &[("status", if config.ollama.no_cloud { "❌ BLOQUÉS" } else { "✅ AUTORISÉS" })]),
-            i18n.t("menu.back"),
+            format!("📐 {} tokens", config.ollama.context_length),
+            format!("💾 Cache KV: {}", config.ollama.kv_cache_type),
+            format!("⚡ Flash Attention: {}", if config.ollama.flash_attention { "✅" } else { "❌" }),
+            format!("☁️  Cloud: {}", if config.ollama.no_cloud { "❌ Bloqué" } else { "✅ Autorisé" }),
+            format!("↩️  {}", i18n.t("menu.back")),
         ];
 
         let sel = Select::new()
@@ -134,14 +136,16 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
 
         match sel {
             0 => {
-                let options = vec!["4096", "8192", "16384", "32768", "65536"];
-                let s = Select::new().with_prompt("Contexte").items(&options).default(2).interact()?;
-                config.ollama.context_length = options[s].parse().unwrap_or(16384);
+                let options = vec![("4K", "4096"), ("8K", "8192"), ("16K", "16384"), ("32K", "32768"), ("64K", "65536")];
+                let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
+                let s = Select::new().with_prompt("Contexte").items(&labels).default(2).interact()?;
+                config.ollama.context_length = options[s].1.parse().unwrap_or(16384);
             }
             1 => {
-                let options = vec!["f16", "q8_0", "q4_0"];
-                let s = Select::new().with_prompt("Cache KV").items(&options).default(1).interact()?;
-                config.ollama.kv_cache_type = options[s].to_string();
+                let options = vec![("f16", "f16"), ("q8_0", "q8_0"), ("q4_0", "q4_0")];
+                let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
+                let s = Select::new().with_prompt("Cache KV").items(&labels).default(1).interact()?;
+                config.ollama.kv_cache_type = options[s].1.to_string();
             }
             2 => config.ollama.flash_attention = !config.ollama.flash_attention,
             3 => config.ollama.no_cloud = !config.ollama.no_cloud,
@@ -152,7 +156,7 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
 
 fn manage_shells(i18n: &I18n) -> Result<()> {
     let statuses = config::shells::get_shells_status(i18n);
-    println!("\n   📂 Shells :");
+    display::section(&i18n.t("config.shells"));
     for s in &statuses { println!("   {}", s); }
     
     let items = vec![

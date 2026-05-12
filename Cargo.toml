@@ -17,7 +17,17 @@ chrono = "0.4"
 thiserror = "2.0"
 log = "0.4"
 env_logger = "0.11"
-dialoguer = "0.12"
 colored = "3.1"
 which = "8.0"
 reqwest = { version = "0.13.3", features = ["blocking", "json"] }
+# TUI with ratatui
+ratatui = "0.26"
+crossterm = "0.27"
+unicode-width = "0.1"
+strum = "0.26"
+strum_macros = "0.26"
+# Keep dialoguer for CLI fallback and tools
+dialoguer = "0.12"
+
+# Optional: keep dialoguer for CLI fallback
+# dialoguer = "0.12"

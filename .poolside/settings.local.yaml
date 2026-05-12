@@ -1,0 +1,24 @@
+tools:
+    shell:
+        allow:
+            - cd *
+            - cargo check
+            - head *
+            - grep *
+            - tail *
+            - mkdir *
+            - cargo build *
+            - ./target/release/wzllama *
+            - ls *
+            - cat *
+            - tree *
+            - find *
+            - sort
+            - readlink *
+            - /bin/cat *
+paths:
+    allow:
+        - path: /home/olivier/Ai/wzllama/src/**
+          write: true
+        - path: /home/olivier/Ai/wzllama/**
+          write: true

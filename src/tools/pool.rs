@@ -20,6 +20,6 @@ impl Tool for PoolTool {
     fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
         println!("ℹ️  https://github.com/poolsideai/pool");
         println!("pool");
-        Ok(())
+        shell::exec("pool")
     }
 }

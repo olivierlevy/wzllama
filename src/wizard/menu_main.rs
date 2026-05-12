@@ -79,15 +79,21 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let running = ollama_api::get_running_models();
 
         display::header(&current_i18n.t("menu.main.title"));
-        println!("   💾 RAM : {:.1} / {:.1} Go libres", ram_avail, hw.ram_gb);
-        if let Some(vram) = vram_avail {
-            println!("   🎮 VRAM : {:.1} / {:.1} Go libres", vram, hw.total_vram_mb as f64 / 1024.0);
-        }
+        
+        // Affichage des ressources avec barres de progression
+        display::resources_with_bars(hw.ram_gb, ram_avail, 
+            hw.total_vram_mb as f64 / 1024.0, vram_avail, &running);
+        
+        // Modèle actif
         if let Some(ref model) = state.last_model {
-            println!("   🤖 Modèle : {}", model.cyan());
+            println!("   {} {}", "🤖".cyan(), model.bold());
         }
-        if !running.is_empty() {
-            println!("   ⚡ Modèles chargés : {}", running.join(", ").dimmed());
+        
+        // Info GPU si présent
+        if hw.has_gpu() {
+            for (i, gpu) in hw.gpus.iter().enumerate() {
+                println!("   {} #{}: {}", "🎮".dimmed(), i+1, gpu.name.dimmed());
+            }
         }
 
         let mut items = vec![

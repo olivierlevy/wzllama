@@ -11,6 +11,10 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub dry_run: bool,
 
+    /// Use TUI (Terminal User Interface) mode instead of CLI
+    #[arg(long, global = true)]
+    pub tui: bool,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }
@@ -35,6 +39,11 @@ impl Cli {
     pub fn parse_args() -> Self { Cli::parse() }
 
     pub fn execute(&self) -> Result<()> {
+        // TUI mode takes precedence
+        if self.tui {
+            return wizard::run_tui();
+        }
+        
         match self.command.as_ref().unwrap_or(&Command::Wizard) {
             Command::Wizard if self.dry_run => {
                 println!("[DRY-RUN]");

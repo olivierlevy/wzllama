@@ -5,6 +5,7 @@ mod display;
 mod error;
 mod tools;
 mod wizard;
+mod tui;
 
 use anyhow::Result;
 use cli::Cli;

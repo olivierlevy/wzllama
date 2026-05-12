@@ -1,5 +1,4 @@
 use anyhow::Result;
-use colored::*;
 use dialoguer::{Select, Confirm};
 use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models};
@@ -42,12 +41,14 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         return Ok(());
     }
 
+    // Affichage amélioré des modèles
     let mut model_items: Vec<String> = ranked.iter().map(|(m, s)| {
-        let status = if all.iter().any(|(lm, dl)| *dl && lm.name == m.name) { "✅" } else { "⬇️ " };
-        format!("{} {} ({} - {:.0}%)", status, m.name.bold(), display::format_size(m.size.unwrap_or(0)), s * 100.0)
+        let installed = all.iter().any(|(lm, dl)| *dl && lm.name == m.name);
+        display::format_model(&m.name, m.size.unwrap_or(0), *s, installed)
     }).collect();
     model_items.push(i18n.t("menu.back"));
 
+    display::section_title("🔍", "Modèles recommandés");
     let sel = Select::new().with_prompt(i18n.t("install.ollama.choose")).items(&model_items).default(0).interact()?;
     
     if sel == ranked.len() { return Ok(()); }

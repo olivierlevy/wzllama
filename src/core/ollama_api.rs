@@ -8,9 +8,22 @@ pub struct OllamaModel {
     pub name: String,
     pub model: String,
     pub modified_at: Option<String>,
+    #[serde(default)]
     pub size: Option<u64>,
     #[serde(default)]
     pub details: Option<ModelDetails>,
+}
+
+impl OllamaModel {
+    /// Format size in human-readable format
+    pub fn formatted_size(&self) -> String {
+        match self.size {
+            Some(bytes) if bytes >= 1_000_000_000 => format!("{:.1} GB", bytes as f64 / 1_000_000_000.0),
+            Some(bytes) if bytes >= 1_000_000 => format!("{:.1} MB", bytes as f64 / 1_000_000.0),
+            Some(bytes) => format!("{} KB", bytes / 1000),
+            None => "?".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -30,6 +43,21 @@ pub fn fetch_local_models(base_url: &str) -> Result<Vec<OllamaModel>> {
     let resp = client.get(&url).send().context("Ollama injoignable")?;
     let data: OllamaTagsResponse = resp.json().context("Parsing /api/tags échoué")?;
     Ok(data.models)
+}
+
+/// Get all local models (convenience function)
+pub fn get_models() -> Vec<OllamaModel> {
+    if let Some(url) = detect_url() {
+        fetch_local_models(&url).unwrap_or_default()
+    } else {
+        vec![]
+    }
+}
+
+/// Check if a specific model is running
+pub fn is_model_running(model_name: &str) -> bool {
+    let running = get_running_models();
+    running.iter().any(|m| m.starts_with(model_name.split(':').next().unwrap_or(model_name)))
 }
 
 /// Détecte si Ollama est lancé
