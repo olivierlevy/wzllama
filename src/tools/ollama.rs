@@ -70,6 +70,7 @@ impl OllamaTool {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn stop() -> Result<()> {
         shell::run("sudo systemctl stop ollama")?;
         Ok(())

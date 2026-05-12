@@ -91,6 +91,7 @@ pub fn is_installed(cmd: &str) -> bool {
     run(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
 }
 
+#[allow(dead_code)]
 pub fn detect_shell() -> String {
     if let Ok(shell) = std::env::var("SHELL") {
         if shell.contains("fish") { return "fish".into(); }

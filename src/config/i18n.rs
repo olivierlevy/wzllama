@@ -24,6 +24,7 @@ pub struct I18nFile {
 }
 
 pub struct I18n {
+    #[allow(dead_code)]
     pub meta: LanguageMeta,
     map: HashMap<String, String>,
 }
@@ -45,6 +46,8 @@ impl I18n {
 pub fn get_available_languages() -> Vec<LanguageMeta> {
     let i18n_path = paths::i18n_dir();
     let mut languages = Vec::new();
+    
+    // Chercher dans ~/.wzllama/i18n d'abord
     if let Ok(entries) = std::fs::read_dir(&i18n_path) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -57,6 +60,23 @@ pub fn get_available_languages() -> Vec<LanguageMeta> {
             }
         }
     }
+    
+    // Si pas trouvé, chercher dans le répertoire embarqué du projet (config/i18n)
+    if languages.is_empty() {
+        if let Ok(entries) = std::fs::read_dir("config/i18n") {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() && path.extension().map_or(false, |e| e == "json") {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        if let Ok(file) = serde_json::from_str::<I18nFile>(&content) {
+                            languages.push(file.language);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     if languages.is_empty() {
         languages.push(LanguageMeta {
             code: "fr".into(), name: "Français".into(),
@@ -82,12 +102,18 @@ pub fn detect_system_language() -> String {
 
 pub fn load(lang_code: &str) -> Result<I18n> {
     let file_path = paths::i18n_dir().join(format!("{}.json", lang_code));
-    let fallback = paths::i18n_dir().join("fr.json");
+    let fallback_path = paths::i18n_dir().join("fr.json");
+    let embedded_path = std::path::Path::new("config/i18n").join(format!("{}.json", lang_code));
+    let embedded_fallback = std::path::Path::new("config/i18n").join("fr.json");
 
     let content = if file_path.exists() {
         std::fs::read_to_string(&file_path)?
-    } else if fallback.exists() {
-        std::fs::read_to_string(&fallback)?
+    } else if embedded_path.exists() {
+        std::fs::read_to_string(&embedded_path)?
+    } else if fallback_path.exists() {
+        std::fs::read_to_string(&fallback_path)?
+    } else if embedded_fallback.exists() {
+        std::fs::read_to_string(&embedded_fallback)?
     } else {
         return Ok(I18n {
             meta: LanguageMeta { code: "fr".into(), name: "Français".into(), name_en: None, direction: "ltr".into() },
@@ -96,7 +122,7 @@ pub fn load(lang_code: &str) -> Result<I18n> {
     };
 
     let file: I18nFile = serde_json::from_str(&content)
-        .context(format!("Fichier i18n '{}' invalide", file_path.display()))?;
+        .context(format!("Fichier i18n '{}' invalide", lang_code))?;
 
     let mut map = HashMap::new();
     for (key, value) in &file.translations {

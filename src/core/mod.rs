@@ -7,5 +7,3 @@ pub mod shell;
 pub mod system;
 
 pub use hardware::HardwareInfo;
-pub use ollama_api::OllamaModel;
-pub use ollama_models::{TaskType, ModelConfig, FleetCapacity};

@@ -15,7 +15,7 @@ pub mod setup_models;
 
 use anyhow::Result;
 use colored::Colorize;
-use crate::config::{I18n, WzllamaState};
+use crate::config::WzllamaState;
 use crate::display;
 use crate::tools::ollama::OllamaTool;
 
@@ -47,7 +47,18 @@ pub fn run() -> Result<()> {
 /// Run the new TUI interface
 pub fn run_tui() -> Result<()> {
     let mut state = WzllamaState::load();
+    
+    // Langue - déterminer la langue à utiliser
+    let i18n = if state.language.is_some() {
+        // Langue déjà choisie, la charger
+        let lang = crate::config::state::load_language();
+        crate::config::i18n::load(&lang)?
+    } else {
+        // Première utilisation : demander la langue AVANT d'entrer en mode TUI
+        menu_main::select_language(&mut state)?
+    };
+    
     let hardware = crate::core::hardware::detect();
     
-    crate::tui::run_tui(state, hardware)
+    crate::tui::run_tui(state, hardware, i18n)
 }

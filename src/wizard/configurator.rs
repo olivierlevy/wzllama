@@ -1,11 +1,10 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Select, Confirm};
+use dialoguer::Select;
 use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models::{ModelConfig, TaskType}};
-use crate::display;
 use crate::tools::openclaw::OpenClawTool;
-use crate::wizard::{estimator, fleet_creator};
+use crate::wizard::fleet_creator;
 
 pub fn display_and_choose(
     i18n: &I18n, state: &mut WzllamaState,
@@ -38,7 +37,7 @@ pub fn display_and_choose(
             state.set_last_model(&model.name);
         }
         1 => {
-            let cmd = config.write_modelfile(&custom_name)?;
+            let _cmd = config.write_modelfile(&custom_name)?;
             ollama_api::create_model(&custom_name, &config.generate_modelfile())?;
             println!("   ✅ {}", i18n.t_with_vars("config.created", &[("name", &custom_name)]));
             state.set_last_model(&custom_name);

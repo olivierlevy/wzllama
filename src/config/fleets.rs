@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 use crate::config::paths;
-use crate::config::state::{FleetState, WzllamaState, load, save};
+use crate::config::state::{FleetState, WzllamaState, save};
 
 pub fn detect_openclaw_fleets() -> HashMap<String, FleetState> {
     let home = paths::home();
@@ -44,6 +43,7 @@ pub fn detect_openclaw_fleets() -> HashMap<String, FleetState> {
     fleets
 }
 
+#[allow(dead_code)]
 pub fn sync(state: &mut WzllamaState) {
     state.fleets = detect_openclaw_fleets();
     let _ = save(state);

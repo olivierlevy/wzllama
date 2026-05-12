@@ -3,7 +3,7 @@ use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::tools::docker;
-use crate::{display, tools};
+use crate::{display};
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct OpenWebUITool;

@@ -4,8 +4,9 @@ use crate::config::I18n;
 
 #[derive(Debug, Clone)]
 pub enum TaskType {
+    #[allow(dead_code)]
     QuickChat, BookWriting, LargeCodeProject,
-    MultiAgent { agent_count: u8 }, Rag, Mixed,
+    MultiAgent { agent_count: u8 }, #[allow(dead_code)] Rag, Mixed,
 }
 
 impl TaskType {
@@ -65,7 +66,9 @@ impl ModelConfig {
 
 pub struct FleetCapacity {
     pub max_experts_ram: u32,
+    #[allow(dead_code)]
     pub max_experts_vram: u32,
+    #[allow(dead_code)]
     pub max_reflexion: u32,
     pub ram_total_gb: f64,
     pub vram_total_gb: f64,

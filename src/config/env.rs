@@ -189,6 +189,11 @@ impl EnvConfig {
         
         content.push_str("# ═══ wzllama ══════════════════════════════\n");
         content.push_str(&format!("export WZLLAMA_HOME='{}'\n", paths::wzllama_dir().display()));
+        // Ajouter la langue si disponible dans le state
+        let state = crate::config::WzllamaState::load();
+        if let Some(ref lang) = state.language {
+            content.push_str(&format!("export WZLLAMA_LANG='{}'\n", lang));
+        }
         content.push_str(&format!("export WZLLAMA_MODEL_CODE='{}'\n", self.models.code));
         content.push_str(&format!("export WZLLAMA_MODEL_BOOK='{}'\n", self.models.book));
         content.push_str(&format!("export WZLLAMA_MODEL_AGENT='{}'\n", self.models.agent));

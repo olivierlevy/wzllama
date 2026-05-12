@@ -1,10 +1,11 @@
-use ratatui::widgets::{Widget, Block, Borders, Paragraph, List, ListItem};
+use ratatui::widgets::{Widget, Block, Borders, Paragraph};
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Rect, Layout, Constraint, Direction};
+use ratatui::layout::Rect;
 use ratatui::style::{Style, Color, Modifier};
 use ratatui::text::{Span, Line, Text};
 
 /// Barre de ressources avec affichage graphique moderne
+#[allow(dead_code)]
 pub struct ResourceBar {
     pub label: String,
     pub used: f64,
@@ -13,6 +14,7 @@ pub struct ResourceBar {
     pub color: Color,
 }
 
+#[allow(dead_code)]
 impl ResourceBar {
     pub fn new(label: &str, used: f64, total: f64) -> Self {
         Self {
@@ -55,12 +57,14 @@ impl Widget for ResourceBar {
 }
 
 /// Indicateur de statut moderne avec icônes
+#[allow(dead_code)]
 pub struct StatusIndicator {
     pub status: Status,
     pub text: String,
     pub detail: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
     Ok,
@@ -72,6 +76,7 @@ pub enum Status {
     Stopped,
 }
 
+#[allow(dead_code)]
 impl Status {
     pub fn symbol(&self) -> &'static str {
         match self {
@@ -118,6 +123,7 @@ impl Widget for StatusIndicator {
 }
 
 /// Carte de modèle moderne avec design épuré
+#[allow(dead_code)]
 pub struct ModelCard {
     pub name: String,
     pub size: String,
@@ -128,6 +134,7 @@ pub struct ModelCard {
     pub tags: Vec<&'static str>,
 }
 
+#[allow(dead_code)]
 impl ModelCard {
     pub fn new(name: &str, size: &str, family: &str) -> Self {
         Self {
@@ -184,12 +191,14 @@ impl Widget for ModelCard {
 }
 
 /// En-tête moderne avec gradient de couleurs
+#[allow(dead_code)]
 pub struct Header {
     pub title: String,
     pub subtitle: Option<String>,
     pub icon: &'static str,
 }
 
+#[allow(dead_code)]
 impl Header {
     pub fn new(title: &str) -> Self {
         Self {
@@ -230,6 +239,7 @@ impl Widget for Header {
 }
 
 /// Carte d'information moderne
+#[allow(dead_code)]
 pub struct InfoCard {
     pub title: String,
     pub content: String,
@@ -237,6 +247,7 @@ pub struct InfoCard {
     pub accent_color: Color,
 }
 
+#[allow(dead_code)]
 impl InfoCard {
     pub fn new(title: &str, content: &str) -> Self {
         Self {
@@ -250,13 +261,6 @@ impl InfoCard {
 
 impl Widget for InfoCard {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let inner_area = Rect::new(
-            area.x + 1,
-            area.y + 1,
-            area.width.saturating_sub(2),
-            area.height.saturating_sub(2),
-        );
-        
         let title_line = Line::from(Span::styled(
             format!(" {} ", self.title),
             Style::default().fg(self.accent_color).add_modifier(Modifier::BOLD),
@@ -278,6 +282,7 @@ impl Widget for InfoCard {
 }
 
 /// Barre de progression moderne
+#[allow(dead_code)]
 pub struct ProgressBar {
     pub label: String,
     pub percent: f64,
@@ -285,6 +290,7 @@ pub struct ProgressBar {
     pub color: Color,
 }
 
+#[allow(dead_code)]
 impl ProgressBar {
     pub fn new(label: &str, percent: f64) -> Self {
         Self {
@@ -317,12 +323,14 @@ impl Widget for ProgressBar {
 }
 
 /// Ligne de commande interactive
+#[allow(dead_code)]
 pub struct CommandRow {
     pub prompt: String,
     pub command: String,
     pub cursor: bool,
 }
 
+#[allow(dead_code)]
 impl CommandRow {
     pub fn new(prompt: &str) -> Self {
         Self {

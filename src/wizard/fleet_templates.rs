@@ -14,6 +14,7 @@ pub struct FleetConfig {
 pub struct OrchestratorConfig {
     pub model: String,
     pub num_ctx: u32,
+    #[allow(dead_code)]
     pub system_prompt: String,
 }
 

@@ -90,7 +90,7 @@ pub fn uninstall_all_shells_cli() -> Result<()> {
     Ok(())
 }
 
-pub fn get_shells_status(i18n: &I18n) -> Vec<String> {
+pub fn get_shells_status(_i18n: &I18n) -> Vec<String> {
     ShellConfig::all().iter().map(|s| {
         let status = if s.has_source() { "✅" } else { "❌" };
         format!("{} {}", status, s.name)

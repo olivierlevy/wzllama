@@ -1,5 +1,5 @@
 use anyhow::Result;
-use dialoguer::{Select, Confirm};
+use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
@@ -78,6 +78,7 @@ fn cleanup_is_installed(id: &str) -> bool {
     }
 }
 
+#[allow(dead_code)]
 fn npm_package(id: &str) -> &str {
     match id {
         "openclaw" => "openclaw",
@@ -91,6 +92,7 @@ fn npm_package(id: &str) -> &str {
     }
 }
 
+#[allow(dead_code)]
 fn mark_uninstalled(id: &str, state: &mut WzllamaState) {
     match id {
         "openclaw" => state.installed.openclaw = false,

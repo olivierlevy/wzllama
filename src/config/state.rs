@@ -40,7 +40,7 @@ pub struct FleetState {
     pub openclaw_installed: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct WzllamaState {
     #[serde(default)]
     pub language: Option<String>,
@@ -117,12 +117,22 @@ pub fn set_last_usage(usage: &str, state: &mut WzllamaState) {
     let _ = save(state);
 }
 
+pub fn load_language() -> String {
+    // Priority: WZLLAMA_LANG env var > state > system detection > fr
+    if let Ok(lang) = std::env::var("WZLLAMA_LANG") {
+        return lang;
+    }
+    
+    let state = load();
+    state.language.unwrap_or_else(|| "fr".into())
+}
 
 impl WzllamaState {
     pub fn load() -> Self {
         load()
     }
     
+    #[allow(dead_code)]
     pub fn save(&self) -> Result<()> {
         save(self)
     }

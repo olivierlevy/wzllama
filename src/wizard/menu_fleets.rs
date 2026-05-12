@@ -1,5 +1,4 @@
 use anyhow::Result;
-use colored::*;
 use dialoguer::{Select, Confirm};
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::HardwareInfo;

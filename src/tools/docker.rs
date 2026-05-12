@@ -1,5 +1,4 @@
 use anyhow::{Result, bail};
-use colored::*;
 use dialoguer::Confirm;
 use std::path::Path;
 use std::thread;

@@ -7,6 +7,7 @@ use colored::Colorize;
 pub struct OllamaModel {
     pub name: String,
     pub model: String,
+    #[allow(dead_code)]
     pub modified_at: Option<String>,
     #[serde(default)]
     pub size: Option<u64>,
@@ -29,8 +30,8 @@ impl OllamaModel {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ModelDetails {
     #[serde(default)] pub family: Option<String>,
-    #[serde(default)] pub parameter_size: Option<String>,
-    #[serde(default)] pub quantization_level: Option<String>,
+    #[serde(default)] #[allow(dead_code)] pub parameter_size: Option<String>,
+    #[serde(default)] #[allow(dead_code)] pub quantization_level: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

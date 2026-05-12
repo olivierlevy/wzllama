@@ -7,7 +7,7 @@ use crate::tools::ollama::OllamaTool;
 use crate::wizard::configurator;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
-    let usage = state.last_usage.clone().unwrap_or_else(|| "mixed".into());
+    let _usage = state.last_usage.clone().unwrap_or_else(|| "mixed".into());
     
     // Choisir l'usage
     display::section(&i18n.t("menu.usage.title"));

@@ -4,6 +4,7 @@ use crate::core::estimation;
 use crate::display;
 use anyhow::Result;
 
+#[allow(dead_code)]
 pub fn run(i18n: &I18n, usage_type: &str) -> Result<()> {
     match usage_type {
         "book" => {

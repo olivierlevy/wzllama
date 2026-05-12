@@ -147,7 +147,7 @@ pub fn create_fleet(
 
     // 3. Agents (construction du JSON comme avant)
     let mut agents_json = String::from("[");
-    for (name, role, model, ctx, _temp, _prompt) in agents {
+    for (name, role, _model, ctx, _temp, _prompt) in agents {
         let id = role.to_lowercase()
             .replace(' ', "-")
             .chars()

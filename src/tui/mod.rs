@@ -4,6 +4,5 @@ mod widgets;
 mod event;
 mod ui;
 
-pub use app::{App, Navigation};
-pub use screens::Screen;
+pub use app::App;
 pub use ui::run_tui;

@@ -13,7 +13,7 @@ pub mod pi;
 pub mod pool;
 
 use crate::config::{I18n, WzllamaState};
-use tool_trait::{Tool, ToolStatus};
+use tool_trait::Tool;
 
 pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
     vec![
@@ -67,5 +67,6 @@ pub struct ToolInfo {
     pub name: String,
     pub description: String,
     pub installed: bool,
+    #[allow(dead_code)]
     pub supports_fleets: bool,
 }

@@ -75,6 +75,7 @@ impl OllamaDoctor {
     }
     
     /// Vérifie si Ollama est en bonne santé
+    #[allow(dead_code)]
     pub fn is_healthy() -> bool {
         ollama_api::detect_url().is_some()
     }

@@ -2,6 +2,7 @@ use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum ToolStatus {
     Installed,
     NotInstalled,
@@ -11,6 +12,7 @@ pub trait Tool {
     fn id(&self) -> &str;
     fn name(&self) -> &str;
     fn description(&self, i18n: &I18n) -> String;
+    #[allow(dead_code)]
     fn status(&self) -> ToolStatus;
     fn install(&self) -> Result<()>;
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()>;

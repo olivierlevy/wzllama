@@ -1,6 +1,6 @@
 use anyhow::Result;
 use colored::*;
-use dialoguer::{Confirm, Input};
+use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;

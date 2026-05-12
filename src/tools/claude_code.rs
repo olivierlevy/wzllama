@@ -1,6 +1,4 @@
 use anyhow::Result;
-use std::os::unix::process::CommandExt;
-use std::process::Command;
 use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;

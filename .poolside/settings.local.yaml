@@ -16,6 +16,7 @@ tools:
             - sort
             - readlink *
             - /bin/cat *
+            - cargo test
 paths:
     allow:
         - path: /home/olivier/Ai/wzllama/src/**
