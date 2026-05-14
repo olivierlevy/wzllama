@@ -44,6 +44,7 @@ tools:
             - cargo download *
             - cargo fetch
             - tr *
+            - wc *
 paths:
     allow:
         - path: /home/olivier/Ai/wzllama/src/**
