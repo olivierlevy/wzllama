@@ -5,33 +5,15 @@ use crate::wizard;
 use crate::config;
 use crate::core::{ollama_api, shell};
 
-/// Returns the current terminal size, or None if unable to determine
-fn get_terminal_size() -> Option<(u16, u16)> {
-    crossterm::terminal::size().ok()
-}
-
-/// Checks if terminal is large enough for TUI (min 60x20)
-fn is_terminal_large_enough() -> bool {
-    if let Some((w, h)) = get_terminal_size() {
-        w >= 60 && h >= 20
-    } else {
-        false
-    }
-}
-
 #[derive(Parser)]
 #[command(name = "wzllama", about = "Assistant IA locale", version = "0.2.0")]
 pub struct Cli {
     #[arg(long, global = true)]
     pub dry_run: bool,
 
-    /// Force TUI (Terminal User Interface) mode
+    /// Force TUI (Terminal User Interface) beta mode
     #[arg(long, global = true)]
     pub tui: bool,
-
-    /// Force CLI (wizard) mode, skip automatic TUI detection
-    #[arg(long, global = true)]
-    pub normal: bool,
 
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -61,13 +43,10 @@ impl Cli {
     pub fn parse_args() -> Self { Cli::parse() }
 
     pub fn execute(&self) -> Result<()> {
-        // TUI mode detection:
+        // TUI mode:
         // - --tui forces TUI mode
-        // - --normal forces CLI mode (skip auto-detection)
-        // - Otherwise, use TUI if terminal is large enough (60x20+)
-        let use_tui = self.tui || (!self.normal && is_terminal_large_enough());
-        
-        if use_tui {
+        // - Otherwise, use wizard CLI mode (default behavior)
+        if self.tui {
             let state = crate::config::WzllamaState::load();
             let hardware = crate::core::hardware::detect();
             let i18n = if let Some(ref lang) = state.language {
