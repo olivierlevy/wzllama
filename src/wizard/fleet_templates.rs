@@ -69,7 +69,10 @@ pub fn edit_agent(i18n: &I18n, agent: &mut AgentTemplate, index: usize, agent_ty
         i18n.t("fleet.edit.system_prompt"),
         i18n.t("fleet.edit.keep"),
     ];
-    let sel = Select::new().with_prompt(i18n.t("fleet.edit.choose")).items(&items).default(3).interact()?;
+    let sel = match Select::new().with_prompt(i18n.t("fleet.edit.choose")).items(&items).default(3).interact_opt()? {
+        Some(s) => s,
+        None => return Ok(()), // Escape pressed
+    };
     match sel {
         0 => agent.enabled = !agent.enabled,
         1 => { agent.role = Input::new().with_prompt(i18n.t("fleet.edit.new_role")).default(agent.role.clone()).interact()?; }

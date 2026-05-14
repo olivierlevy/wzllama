@@ -16,12 +16,15 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
         items.push(i18n.t("cleanup.delete_all_fleets"));
         items.push(i18n.t("menu.back"));
 
-        let sel = Select::new()
+        let sel = match Select::new()
             .with_prompt(i18n.t("cleanup.choose_fleet"))
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact()?;;
+            .interact_opt()? {
+            Some(s) => s,
+            None => return Ok(()), // Escape pressed
+        };
 
         if sel == fleets.len() + 1 { return Ok(()); }
 

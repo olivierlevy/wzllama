@@ -40,7 +40,16 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             .items(&items)
             .max_length(max_items)
             .default(0)
-            .interact()?;
+            .interact_opt();
+
+        // Handle Escape (Interrupted)
+        let sel = match sel {
+            Ok(Some(s)) => s,
+            Ok(None) | Err(_) => {
+                // Echap pressed - return to parent menu (or quit if main)
+                return Ok(());
+            }
+        };
 
         if sel == tools.len() { return Ok(()); }
 

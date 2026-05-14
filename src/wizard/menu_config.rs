@@ -25,12 +25,15 @@ pub fn run(i18n: &I18n, _state: &mut WzllamaState) -> Result<()> {
             i18n.t("menu.back"),
         ];
 
-        let sel = Select::new()
+        let sel = match Select::new()
             .with_prompt(i18n.t("config.choose"))
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact()?;
+            .interact_opt()? {
+            Some(s) => s,
+            None => return Ok(()), // Escape pressed
+        };
 
         match sel {
             0 => edit_models(i18n, &mut config)?,
@@ -129,24 +132,33 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
             format!("↩️  {}", i18n.t("menu.back")),
         ];
 
-        let sel = Select::new()
+        let sel = match Select::new()
             .with_prompt(i18n.t("config.perf_choose"))
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact()?;
+            .interact_opt()? {
+            Some(s) => s,
+            None => return Ok(()), // Escape pressed
+        };
 
         match sel {
             0 => {
                 let options = vec![("4K", "4096"), ("8K", "8192"), ("16K", "16384"), ("32K", "32768"), ("64K", "65536")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
-                let s = Select::new().with_prompt("Contexte").items(&labels).default(2).max_length(10).interact()?;
+                let s = match Select::new().with_prompt("Contexte").items(&labels).default(2).max_length(10).interact_opt()? {
+                    Some(v) => v,
+                    None => continue, // Escape - redo menu
+                };
                 config.ollama.context_length = options[s].1.parse().unwrap_or(16384);
             }
             1 => {
                 let options = vec![("f16", "f16"), ("q8_0", "q8_0"), ("q4_0", "q4_0")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
-                let s = Select::new().with_prompt("Cache KV").items(&labels).default(1).max_length(10).interact()?;
+                let s = match Select::new().with_prompt("Cache KV").items(&labels).default(1).max_length(10).interact_opt()? {
+                    Some(v) => v,
+                    None => continue, // Escape - redo menu
+                };
                 config.ollama.kv_cache_type = options[s].1.to_string();
             }
             2 => config.ollama.flash_attention = !config.ollama.flash_attention,

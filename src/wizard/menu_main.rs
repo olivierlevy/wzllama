@@ -12,6 +12,20 @@ use crate::wizard::menu_models;
 use crate::wizard::menu_tools;
 use crate::wizard::setup_models;
 
+/// Enter alternate screen buffer (keeps content fixed)
+fn enter_alternate_screen() {
+    print!("\x1b[?1049h");
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+}
+
+/// Exit alternate screen buffer
+fn exit_alternate_screen() {
+    print!("\x1b[?1049l");
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+}
+
 pub fn select_language(state: &mut WzllamaState) -> Result<I18n> {
     // Si une langue est déjà enregistrée, la charger directement sans menu
     if let Some(ref lang) = state.language {
@@ -26,11 +40,14 @@ pub fn select_language(state: &mut WzllamaState) -> Result<I18n> {
     let items: Vec<String> = languages.iter().map(|l| format!("{} ({})", l.name, l.code)).collect();
 
     println!("{}", "═".repeat(50).cyan());
-    let sel = Select::new()
+    let sel = match Select::new()
         .with_prompt("🌍 Langue / Language")
         .items(&items)
         .default(default)
-        .interact()?;
+        .interact_opt()? {
+        Some(s) => s,
+        None => return Err(anyhow::anyhow!("Language selection cancelled")),
+    };
     let i18n = config::i18n::load(&languages[sel].code)?;
     config::state::set_language(&languages[sel].code, state);
     Ok(i18n)
@@ -45,11 +62,14 @@ pub fn change_language(state: &mut WzllamaState) -> Result<I18n> {
     let mut all_items = items.clone();
     all_items.push("↩️  Retour".to_string());
 
-    let sel = Select::new()
+    let sel = match Select::new()
         .with_prompt("🌍 Langue / Language")
         .items(&all_items)
         .default(default)
-        .interact()?;
+        .interact_opt()? {
+        Some(s) => s,
+        None => return config::i18n::load(&current), // Escape - return current language
+    };
 
     if sel == items.len() {
         // Retour : recharger la langue actuelle
@@ -74,19 +94,27 @@ pub fn display_hardware(hw: &HardwareInfo, i18n: &I18n) {
 }
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
-    let current_i18n = i18n; // On va peut-être changer de langue en cours de route
+    let current_i18n = i18n;
     OllamaTool::ensure_running(current_i18n)?;
-    // Vérifier si des modèles sont installés
     setup_models::ensure_first_models(current_i18n, hw, state)?;
+    
+    // Enter alternate screen buffer for fixed interface
+    enter_alternate_screen();
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+    
+    let (term_width, term_height) = display::get_terminal_size();
+    let compact = term_height < 25 || term_width < 70;
+    
     loop {
+        // Redraw header each iteration (appears fixed due to alternate screen)
+        print!("\x1b[2J\x1b[H"); // Clear screen, cursor home
+        
         let ram_avail = system::get_available_ram_gb();
         let vram_avail = system::get_available_vram_gb();
         let running = ollama_api::get_running_models();
-
-        let (term_width, term_height) = display::get_terminal_size();
         
-        // Affichage compact sur petits terminaux
-        if term_height < 25 || term_width < 70 {
+        if compact {
             display::section(&current_i18n.t("menu.main.title"));
             println!("   💾 {:.1}/{:.1} Go | 🎮 {:.1}/{:.1} Go", 
                 ram_avail, hw.ram_gb,
@@ -96,12 +124,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             display::resources_with_bars(hw.ram_gb, ram_avail, 
                 hw.total_vram_mb as f64 / 1024.0, vram_avail, &running);
             
-            // Modèle actif
             if let Some(ref model) = state.last_model {
                 println!("   {} {}", "🤖".cyan(), model.bold());
             }
             
-            // Info GPU si présent
             if hw.has_gpu() {
                 for (i, gpu) in hw.gpus.iter().enumerate() {
                     println!("   {} #{}: {}", "🎮".dimmed(), i+1, gpu.name.dimmed());
@@ -124,15 +150,17 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         items.push(current_i18n.t("menu.main.language"));
         items.push(current_i18n.t("menu.main.quit"));
 
-        // Calculate reserved lines based on display mode
-        let reserved = if term_height < 25 || term_width < 70 { 8 } else { 15 };
+        let reserved = if compact { 5 } else { 15 };
         
-        let choice = Select::new()
+        let choice = match Select::new()
             .with_prompt(current_i18n.t("menu.main.choose"))
             .items(&items)
             .default(0)
             .max_length(display::menu_max_items(items.len(), reserved))
-            .interact()?;
+            .interact_opt()? {
+            Some(c) => c,
+            None => break, // Escape pressed - quit from main menu
+        };
 
         let has_fleets = !fleets.is_empty();
         
@@ -143,14 +171,12 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             n if n == 2 + has_fleets as usize => menu_cleanup::run(current_i18n, state)?,
             n if n == 3 + has_fleets as usize => menu_config::run(current_i18n, state)?,
             n if n == 4 + has_fleets as usize => {
-                // Changer de langue
                 let new_i18n = change_language(state)?;
-                // On ne peut pas réassigner current_i18n directement car c'est une référence
-                // On relance la boucle avec la nouvelle langue
                 return run(&new_i18n, state, hw);
             }
             _ => break,
         }
     }
+    exit_alternate_screen();
     Ok(())
 }

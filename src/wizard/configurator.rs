@@ -28,7 +28,10 @@ pub fn display_and_choose(
         i18n.t("config.action_back"),
     ];
 
-    let sel = Select::new().with_prompt(i18n.t("config.launch_choose")).items(&items).default(0).interact()?;
+    let sel = match Select::new().with_prompt(i18n.t("config.launch_choose")).items(&items).default(0).interact_opt()? {
+        Some(s) => s,
+        None => return Ok(()), // Escape pressed
+    };
 
     match sel {
         0 => {
