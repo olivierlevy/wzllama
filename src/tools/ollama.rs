@@ -19,10 +19,8 @@ impl Tool for OllamaTool {
 
     fn install(&self) -> Result<()> {
         shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
-        shell::run("sudo systemctl enable ollama")?;
-    
-        // Démarrer Ollama pour l'initialiser
-        shell::run("sudo systemctl start ollama")?;
+        shell::run_live("sudo systemctl enable ollama")?;
+        shell::run_live("sudo systemctl start ollama")?;
     
         // Attendre qu'il soit prêt
         for _ in 0..10 {
@@ -66,18 +64,18 @@ impl OllamaTool {
     }
 
     pub fn start() -> Result<()> {
-        shell::run("sudo systemctl start ollama")?;
+        shell::run_live("sudo systemctl start ollama")?;
         Ok(())
     }
 
     #[allow(dead_code)]
     pub fn stop() -> Result<()> {
-        shell::run("sudo systemctl stop ollama")?;
+        shell::run_live("sudo systemctl stop ollama")?;
         Ok(())
     }
 
     pub fn enable_autostart() -> Result<()> {
-        shell::run("sudo systemctl enable ollama")?;
+        shell::run_live("sudo systemctl enable ollama")?;
         Ok(())
     }
 

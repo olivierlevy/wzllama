@@ -17,6 +17,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             // Créer une flotte (nécessite un modèle)
             crate::wizard::menu_models::run(i18n, state, hw)?;
         }
+        // Lance OpenClaw avec le modèle courant même si pas de flotte
+        use crate::tools::tool_trait::Tool;
+        let model = state.last_model.as_deref();
+        OpenClawTool.launch(i18n, state, model)?;
         return Ok(());
     }
 

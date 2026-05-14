@@ -56,9 +56,11 @@ pub fn key_to_nav(key: KeyEvent) -> Option<super::app::Navigation> {
     match key.code {
         KeyCode::Up | KeyCode::Char('k') => Some(super::app::Navigation::Up),
         KeyCode::Down | KeyCode::Char('j') => Some(super::app::Navigation::Down),
-        KeyCode::Left | KeyCode::Char('h') | KeyCode::Esc => Some(super::app::Navigation::Left),
+        KeyCode::Left | KeyCode::Char('h') => Some(super::app::Navigation::Left),
         KeyCode::Right | KeyCode::Char('l') | KeyCode::Enter => Some(super::app::Navigation::Right),
         KeyCode::Tab => Some(super::app::Navigation::Search),
+        // Esc is handled separately for quit behavior on Main
+        KeyCode::Esc => Some(super::app::Navigation::Quit),
         _ => None,
     }
 }

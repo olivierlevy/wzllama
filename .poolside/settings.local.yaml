@@ -17,6 +17,22 @@ tools:
             - readlink *
             - /bin/cat *
             - cargo test
+            - cargo test *
+            - echo *
+            - mv *
+            - rm *
+            - rmdir *
+            - sed *
+            - ./target/debug/wzllama *
+            - timeout 2 bash *
+            - cargo search *
+            - timeout 2 *
+            - "true"
+            - curl *
+            - which ls
+            - docker ps *
+            - git status
+            - git diff *
 paths:
     allow:
         - path: /home/olivier/Ai/wzllama/src/**

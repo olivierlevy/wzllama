@@ -29,6 +29,20 @@ pub struct I18n {
     map: HashMap<String, String>,
 }
 
+impl Default for I18n {
+    fn default() -> Self {
+        Self {
+            meta: LanguageMeta { 
+                code: "en".into(), 
+                name: "English".into(), 
+                name_en: Some("English".into()), 
+                direction: "ltr".into() 
+            },
+            map: HashMap::new(),
+        }
+    }
+}
+
 impl I18n {
     pub fn t(&self, key: &str) -> String {
         self.map.get(key).cloned().unwrap_or_else(|| key.to_string())

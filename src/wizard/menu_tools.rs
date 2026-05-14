@@ -3,10 +3,29 @@ use colored::*;
 use dialoguer::Select;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::tools::{self, docker};
+use crate::core::shell;
+use crate::tools::{self, docker, tool_trait::ToolStatus};
 use crate::display;
 
+fn sync_tools_state(state: &mut WzllamaState) {
+    state.installed.docker = docker::is_installed();
+    state.installed.ollama = shell::is_installed("ollama");
+    state.installed.open_webui = shell::run("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+    state.installed.openclaw = shell::is_installed("openclaw");
+    state.installed.claude_code = shell::is_installed("claude");
+    state.installed.hermes_agent = shell::is_installed("hermes");
+    state.installed.opencode = shell::is_installed("opencode");
+    state.installed.codex = shell::is_installed("codex");
+    state.installed.droid = shell::is_installed("droid");
+    state.installed.pi = shell::is_installed("pi");
+    state.installed.pool = shell::is_installed("pool");
+}
+
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
+    // Synchroniser l'état réel des outils avec Docker
+    sync_tools_state(state);
+    crate::config::state::save(state)?;
+    
     loop {
         let tools = tools::get_available_tools(state, i18n);
         let mut items: Vec<String> = tools.iter().map(|t| {
@@ -30,16 +49,19 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         };
 
         if tool.requires_docker() {
-            if let Err(_) = docker::ensure_ready(i18n) {
+            docker::ensure_ready(i18n)?;
+            // Réévaluer le statut après le démarrage de Docker
+            let current_status = tool.status();
+            // Si l'outil n'était pas marqué comme installé mais le conteneur existe
+            if !tool_info.installed && current_status == ToolStatus::Installed {
+                // L'outil est maintenant installé, le lancer
+                let model = state.last_model.as_deref();
+                tool.launch(i18n, state, model)?;
+                state.set_last_tool(&tool_info.id);
                 continue;
             }
         }
-
-        if tool.requires_docker() {
-            if let Err(_) = docker::ensure_ready(i18n) {
-                continue;
-            }
-        }
+        
         if tool_info.installed {
             // Lancer l'outil
             if tool.supports_fleets() {

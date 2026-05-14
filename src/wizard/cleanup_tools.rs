@@ -58,6 +58,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             "pi" => PiTool::uninstall(i18n)?,
             _ => display::error(&i18n.t("cleanup.manual_uninstall")),
         }
+        mark_uninstalled(tool.id(), state);
         config::state::save(state)?;
     }
 }
@@ -92,9 +93,10 @@ fn npm_package(id: &str) -> &str {
     }
 }
 
-#[allow(dead_code)]
 fn mark_uninstalled(id: &str, state: &mut WzllamaState) {
     match id {
+        "ollama" => state.installed.ollama = false,
+        "open_webui" => state.installed.open_webui = false,
         "openclaw" => state.installed.openclaw = false,
         "claude_code" => state.installed.claude_code = false,
         "hermes_agent" => state.installed.hermes_agent = false,

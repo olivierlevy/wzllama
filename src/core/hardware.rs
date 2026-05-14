@@ -2,12 +2,23 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HardwareInfo {
     pub os: String,
     pub ram_gb: f64,
     pub total_vram_mb: u64,
     pub gpus: Vec<GpuInfo>,
+}
+
+impl HardwareInfo {
+    pub fn default_for_test() -> Self {
+        Self {
+            os: "linux x86_64".to_string(),
+            ram_gb: 16.0,
+            total_vram_mb: 0,
+            gpus: vec![],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

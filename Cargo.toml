@@ -26,8 +26,9 @@ crossterm = "0.27"
 unicode-width = "0.1"
 strum = "0.26"
 strum_macros = "0.26"
+# Unix libc for fork/exec
+libc = "0.2"
+# Terminal PTY for embedded terminal (optional - for future use)
+# tui-term = "0.3"  # Commented out due to enumset_derive incompatibility
 # Keep dialoguer for CLI fallback and tools
 dialoguer = "0.12"
-
-# Optional: keep dialoguer for CLI fallback
-# dialoguer = "0.12"

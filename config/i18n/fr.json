@@ -60,7 +60,8 @@
   "install.choose_to_install": "Choisissez un outil à installer",
   "install.all_installed": "Tous les outils sont installés !",
 
-  "url.open": "Ouvrir dans le navigateur ?",  
+  "url.open": "Ouvrir dans le navigateur ?  ",
+  "url.refresh_hint": "Ctrl+Alt+R pour forcer le rafraîchissement du cache si la page ne se charge pas correctement.",  
 
   "ollama.not_installed": "Ollama n'est pas installé",
   "ollama.install_now": "Installer Ollama ?",
@@ -305,5 +306,13 @@
   "usage.fast_agents.label": "⚡ Agents rapides",
   "usage.fast_agents.description": "💬 Chatbots, interactions rapides",
   "usage.mixed.label": "🎯 Usage général",
-  "usage.mixed.description": "🛠️  Code, écriture, recherche"
+  "usage.mixed.description": "🛠️  Code, écriture, recherche",
+
+  "screen.information.title": "📖 À propos de wzllama",
+  "screen.models.title": "🤖 Choisir un modèle IA",
+  "screen.tools.title": "🛠️ Lancer un outil",
+  "screen.cleanup.title": "🧹 Nettoyage",
+  "screen.config.title": "⚙️ Configuration",
+  "screen.language.title": "🌍 Changer de langue",
+  "screen.quit.title": "❌ Quitter"
 }
