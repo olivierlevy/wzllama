@@ -33,6 +33,17 @@ tools:
             - docker ps *
             - git status
             - git diff *
+            - cargo doc *
+            - xargs *
+            - python3 *
+            - strings *
+            - cargo run *
+            - sort *
+            - read f
+            - basename "$f"
+            - cargo download *
+            - cargo fetch
+            - tr *
 paths:
     allow:
         - path: /home/olivier/Ai/wzllama/src/**

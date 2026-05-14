@@ -19,3 +19,5 @@
 cargo build --release
 cargo test
 ```
+
+pool --resume 019e1e16-4ff6-7418-8b8b-d4486d4a295e

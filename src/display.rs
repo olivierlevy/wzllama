@@ -1,4 +1,17 @@
 use colored::*;
+use crossterm::terminal::size;
+
+/// Get terminal size, returns default (80, 24) if unavailable
+pub fn get_terminal_size() -> (u16, u16) {
+    size().unwrap_or((80, 24))
+}
+
+/// Calculate max items for a menu based on available terminal lines
+pub fn menu_max_items(available_lines: usize, reserved_lines: usize) -> usize {
+    let (_, term_height) = get_terminal_size();
+    let max = (term_height as usize).saturating_sub(reserved_lines).max(5);
+    available_lines.min(max).max(5)
+}
 
 pub fn header(title: &str) {
     println!("\n{}\n{}", "═".repeat(50).cyan(), title.bold());

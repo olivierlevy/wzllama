@@ -182,9 +182,9 @@ pub fn run_tui(state: WzllamaState, hw: crate::core::hardware::HardwareInfo, i18
 fn render_app(frame: &mut Frame, app: &mut App) {
     let area = frame.size();
     
-    // Check minimum terminal size
-    if area.width < 60 || area.height < 15 {
-        let msg = Paragraph::new("Terminal too small! Min 60x15 required.")
+    // Check minimum terminal size - use compact layout for small terminals
+    if area.width < 40 || area.height < 10 {
+        let msg = Paragraph::new("Terminal too small! Min 40x10 required.\nResize for better experience.")
             .block(Block::default().borders(Borders::ALL).title("Error"));
         frame.render_widget(msg, area);
         return;
@@ -193,9 +193,12 @@ fn render_app(frame: &mut Frame, app: &mut App) {
     let constraints = if area.width > 100 {
         // Wide terminal: sidebar + main
         [Constraint::Percentage(25), Constraint::Percentage(75)]
+    } else if area.width > 60 {
+        // Medium terminal: balanced sidebar + main
+        [Constraint::Percentage(35), Constraint::Percentage(65)]
     } else {
-        // Narrow terminal: stacked
-        [Constraint::Percentage(30), Constraint::Percentage(70)]
+        // Small terminal: minimal sidebar, larger main
+        [Constraint::Length(15), Constraint::Min(20)]
     };
     
     let layout = Layout::default()
@@ -211,14 +214,25 @@ fn render_app(frame: &mut Frame, app: &mut App) {
 }
 
 fn render_sidebar(frame: &mut Frame, app: &App, area: Rect) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),   // Title
-            Constraint::Length(8),   // Resources (réduit de 12 à 8)
-            Constraint::Min(0),    // Menu
-        ])
-        .split(area);
+    let chunks = if area.width > 60 {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),   // Title
+                Constraint::Length(6),   // Resources (compact)
+                Constraint::Min(0),        // Menu
+            ])
+            .split(area)
+    } else {
+        // Very small sidebar - minimal
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(2),   // Title (compact)
+                Constraint::Min(0),      // Menu only
+            ])
+            .split(area)
+    };
     
     // Title with color bar
     let title_block = Block::default()
@@ -234,41 +248,43 @@ fn render_sidebar(frame: &mut Frame, app: &App, area: Rect) {
     ).block(title_block).alignment(Alignment::Center);
     frame.render_widget(title, chunks[0]);
     
-    // Resources panel with colored bars
-    let ram_total = app.hw.ram_gb;
-    let ram_avail = system::get_available_ram_gb();
-    let ram_used = ram_total - ram_avail;
-    let ram_ratio = if ram_total > 0.0 { ram_used / ram_total } else { 0.0 };
+    // Resources panel only for width > 60
+    if area.width > 60 {
+        let ram_total = app.hw.ram_gb;
+        let ram_avail = system::get_available_ram_gb();
+        let ram_used = ram_total - ram_avail;
+        let ram_ratio = if ram_total > 0.0 { ram_used / ram_total } else { 0.0 };
+        
+        let vram_total = app.hw.total_vram_mb as f64 / 1024.0;
+        let vram_avail = system::get_available_vram_gb().unwrap_or(0.0);
+        let vram_used = (vram_total - vram_avail).max(0.0);
+        let vram_ratio = if vram_total > 0.0 { vram_used / vram_total } else { 0.0 };
+        
+        let resources_text = vec![
+            Line::from(vec![
+                Span::styled("💾 RAM ", Style::default().fg(Color::Cyan)),
+                Span::styled("█".repeat(((ram_ratio * 10.0) as usize).min(10)), Style::default().fg(Color::Yellow)),
+                Span::styled("░".repeat((10 - (ram_ratio * 10.0) as usize).max(0)), Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("  {:.1}/{:.1} Go", ram_avail, ram_total), Style::default().fg(Color::White)),
+            ]),
+            Line::from(vec![
+                Span::styled("🎮 GPU ", Style::default().fg(Color::Cyan)),
+                Span::styled("█".repeat(((vram_ratio * 10.0) as usize).min(10)), Style::default().fg(Color::Green)),
+                Span::styled("░".repeat((10 - (vram_ratio * 10.0) as usize).max(0)), Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("  {:.1}/{:.1} Go", vram_avail, vram_total), Style::default().fg(Color::White)),
+            ]),
+            Line::from(Span::styled("🤖 Current Model", Style::default().fg(Color::Magenta))),
+            Line::from(format!("   {}", app.state.lock().unwrap().last_model.clone().unwrap_or_else(|| "none".into()))),
+        ];
+        
+        let resources = Paragraph::new(resources_text)
+            .block(Block::default().borders(Borders::ALL).title("📊 Resources").border_style(Style::default().fg(Color::DarkGray)));
+        frame.render_widget(resources, chunks[1]);
+    }
     
-    let vram_total = app.hw.total_vram_mb as f64 / 1024.0;
-    let vram_avail = system::get_available_vram_gb().unwrap_or(0.0);
-    let vram_used = (vram_total - vram_avail).max(0.0);
-    let vram_ratio = if vram_total > 0.0 { vram_used / vram_total } else { 0.0 };
+    // Menu navigation - use appropriate chunk index
+    let menu_chunk = if area.width > 60 { chunks[2] } else { chunks[1] };
     
-    // Note: get_running_models() removed from render loop to avoid excessive HTTP requests
-    
-    let resources_text = vec![
-        Line::from(vec![
-            Span::styled("💾 RAM ", Style::default().fg(Color::Cyan)),
-            Span::styled("█".repeat(((ram_ratio * 10.0) as usize).min(10)), Style::default().fg(Color::Yellow)),
-            Span::styled("░".repeat((10 - (ram_ratio * 10.0) as usize).max(0)), Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("  {:.1}/{:.1} Go", ram_avail, ram_total), Style::default().fg(Color::White)),
-        ]),
-        Line::from(vec![
-            Span::styled("🎮 GPU ", Style::default().fg(Color::Cyan)),
-            Span::styled("█".repeat(((vram_ratio * 10.0) as usize).min(10)), Style::default().fg(Color::Green)),
-            Span::styled("░".repeat((10 - (vram_ratio * 10.0) as usize).max(0)), Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("  {:.1}/{:.1} Go", vram_avail, vram_total), Style::default().fg(Color::White)),
-        ]),
-        Line::from(Span::styled("🤖 Current Model", Style::default().fg(Color::Magenta))),
-        Line::from(format!("   {}", app.state.lock().unwrap().last_model.clone().unwrap_or_else(|| "none".into()))),
-    ];
-    
-    let resources = Paragraph::new(resources_text)
-        .block(Block::default().borders(Borders::ALL).title("📊 Resources").border_style(Style::default().fg(Color::DarkGray)));
-    frame.render_widget(resources, chunks[1]);
-    
-    // Menu navigation with colors
     let menu_items: Vec<ListItem> = [
         ("📖 Information", Screen::Information, Color::Cyan),
         ("🤖 Models", Screen::Models, Color::Magenta),
@@ -289,7 +305,7 @@ fn render_sidebar(frame: &mut Frame, app: &App, area: Rect) {
     
     let menu = List::new(menu_items)
         .block(Block::default().borders(Borders::ALL).title("Navigation").border_style(Style::default().fg(Color::Blue)));
-    frame.render_widget(menu, chunks[2]);
+    frame.render_widget(menu, menu_chunk);
 }
 
 fn render_main(frame: &mut Frame, app: &App, area: Rect) {

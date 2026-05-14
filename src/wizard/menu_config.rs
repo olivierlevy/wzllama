@@ -29,6 +29,7 @@ pub fn run(i18n: &I18n, _state: &mut WzllamaState) -> Result<()> {
             .with_prompt(i18n.t("config.choose"))
             .items(&items)
             .default(0)
+            .max_length(15)
             .interact()?;
 
         match sel {
@@ -132,19 +133,20 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
             .with_prompt(i18n.t("config.perf_choose"))
             .items(&items)
             .default(0)
+            .max_length(15)
             .interact()?;
 
         match sel {
             0 => {
                 let options = vec![("4K", "4096"), ("8K", "8192"), ("16K", "16384"), ("32K", "32768"), ("64K", "65536")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
-                let s = Select::new().with_prompt("Contexte").items(&labels).default(2).interact()?;
+                let s = Select::new().with_prompt("Contexte").items(&labels).default(2).max_length(10).interact()?;
                 config.ollama.context_length = options[s].1.parse().unwrap_or(16384);
             }
             1 => {
                 let options = vec![("f16", "f16"), ("q8_0", "q8_0"), ("q4_0", "q4_0")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
-                let s = Select::new().with_prompt("Cache KV").items(&labels).default(1).interact()?;
+                let s = Select::new().with_prompt("Cache KV").items(&labels).default(1).max_length(10).interact()?;
                 config.ollama.kv_cache_type = options[s].1.to_string();
             }
             2 => config.ollama.flash_attention = !config.ollama.flash_attention,
@@ -169,7 +171,8 @@ fn manage_shells(i18n: &I18n) -> Result<()> {
         .with_prompt(i18n.t("config.shells_choose"))
         .items(&items)
         .default(0)
-        .interact()?;
+        .max_length(15)
+        .interact()?;;
 
     match sel {
         0 => config::shells::install_all_shells(i18n)?,

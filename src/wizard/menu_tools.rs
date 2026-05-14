@@ -34,9 +34,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         }).collect();
         items.push(i18n.t("menu.back"));
 
+        let max_items = display::menu_max_items(items.len(), 10);
         let sel = Select::new()
             .with_prompt(i18n.t("menu.tools.choose"))
             .items(&items)
+            .max_length(max_items)
             .default(0)
             .interact()?;
 

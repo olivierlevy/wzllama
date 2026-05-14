@@ -83,21 +83,29 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let vram_avail = system::get_available_vram_gb();
         let running = ollama_api::get_running_models();
 
-        display::header(&current_i18n.t("menu.main.title"));
+        let (term_width, term_height) = display::get_terminal_size();
         
-        // Affichage des ressources avec barres de progression
-        display::resources_with_bars(hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, &running);
-        
-        // Modèle actif
-        if let Some(ref model) = state.last_model {
-            println!("   {} {}", "🤖".cyan(), model.bold());
-        }
-        
-        // Info GPU si présent
-        if hw.has_gpu() {
-            for (i, gpu) in hw.gpus.iter().enumerate() {
-                println!("   {} #{}: {}", "🎮".dimmed(), i+1, gpu.name.dimmed());
+        // Affichage compact sur petits terminaux
+        if term_height < 25 || term_width < 70 {
+            display::section(&current_i18n.t("menu.main.title"));
+            println!("   💾 {:.1}/{:.1} Go | 🎮 {:.1}/{:.1} Go", 
+                ram_avail, hw.ram_gb,
+                vram_avail.unwrap_or(0.0), hw.total_vram_mb as f64 / 1024.0);
+        } else {
+            display::header(&current_i18n.t("menu.main.title"));
+            display::resources_with_bars(hw.ram_gb, ram_avail, 
+                hw.total_vram_mb as f64 / 1024.0, vram_avail, &running);
+            
+            // Modèle actif
+            if let Some(ref model) = state.last_model {
+                println!("   {} {}", "🤖".cyan(), model.bold());
+            }
+            
+            // Info GPU si présent
+            if hw.has_gpu() {
+                for (i, gpu) in hw.gpus.iter().enumerate() {
+                    println!("   {} #{}: {}", "🎮".dimmed(), i+1, gpu.name.dimmed());
+                }
             }
         }
 
@@ -116,10 +124,14 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         items.push(current_i18n.t("menu.main.language"));
         items.push(current_i18n.t("menu.main.quit"));
 
+        // Calculate reserved lines based on display mode
+        let reserved = if term_height < 25 || term_width < 70 { 8 } else { 15 };
+        
         let choice = Select::new()
             .with_prompt(current_i18n.t("menu.main.choose"))
             .items(&items)
             .default(0)
+            .max_length(display::menu_max_items(items.len(), reserved))
             .interact()?;
 
         let has_fleets = !fleets.is_empty();

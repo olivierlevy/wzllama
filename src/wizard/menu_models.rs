@@ -18,7 +18,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     let mut items: Vec<String> = usage_items.iter().map(|(_, s)| i18n.t(&s.i18n_key)).collect();
     items.push(i18n.t("menu.back"));
     
-    let sel = Select::new().with_prompt(i18n.t("menu.usage.choose")).items(&items).default(0).interact()?;
+    let sel = Select::new().with_prompt(i18n.t("menu.usage.choose")).items(&items).default(0).max_length(15).interact()?;
     
     if sel == usage_items.len() { return Ok(()); }
     
@@ -49,7 +49,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     model_items.push(i18n.t("menu.back"));
 
     display::section_title("🔍", "Modèles recommandés");
-    let sel = Select::new().with_prompt(i18n.t("install.ollama.choose")).items(&model_items).default(0).interact()?;
+    let sel = Select::new().with_prompt(i18n.t("install.ollama.choose")).items(&model_items).default(0).max_length(15).interact()?;
     
     if sel == ranked.len() { return Ok(()); }
 

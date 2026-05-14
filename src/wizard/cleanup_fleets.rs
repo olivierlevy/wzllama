@@ -20,7 +20,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             .with_prompt(i18n.t("cleanup.choose_fleet"))
             .items(&items)
             .default(0)
-            .interact()?;
+            .max_length(15)
+            .interact()?;;
 
         if sel == fleets.len() + 1 { return Ok(()); }
 

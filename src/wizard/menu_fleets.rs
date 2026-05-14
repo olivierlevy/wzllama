@@ -31,7 +31,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     items.push(i18n.t("fleet.create_new"));
     items.push(i18n.t("menu.back"));
 
-    let sel = Select::new().with_prompt(i18n.t("fleet.choose")).items(&items).default(0).interact()?;
+    let sel = Select::new().with_prompt(i18n.t("fleet.choose")).items(&items).default(0).max_length(15).interact()?;
 
     if sel == fleets.len() {
         crate::wizard::menu_models::run(i18n, state, hw)?;

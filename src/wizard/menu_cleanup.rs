@@ -15,6 +15,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             .with_prompt(i18n.t("cleanup.choose"))
             .items(&items)
             .default(0)
+            .max_length(15)
             .interact()?;
 
         match sel {
