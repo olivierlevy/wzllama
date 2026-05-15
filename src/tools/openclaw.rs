@@ -32,7 +32,7 @@ impl Tool for OpenClawTool {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
-                //FIXME essayer openclaw --profile si ça ne marche pas via ollama
+                //FIXME try openclaw --profile si ça ne marche pas via ollama
                 display::comment(&i18n.t_with_vars("tool.openclaw.run_profile", &[("profile", &m)]));
                 display::comment(&format!("openclaw --profile {}", m));
                 display::run(&i18n.t_with_vars("tool.openclaw.run_model", &[("model", &m)]));

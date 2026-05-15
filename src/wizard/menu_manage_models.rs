@@ -109,7 +109,7 @@ fn show_model_info(i18n: &I18n, model: &ollama_api::OllamaModel, hw: &HardwareIn
         }
     }
     
-    // Vérifier la compatibilité hardware
+    // Check la compatibilité hardware
     println!();
     let score = ollama_models::score_model(model, "mixed", hw);
     if score > 0.0 {

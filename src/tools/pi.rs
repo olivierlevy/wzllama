@@ -31,7 +31,7 @@ impl Tool for PiTool {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
-                //FIXME essayer pi --model ollama/{model} si ça ne marche pas via ollama
+                //FIXME try pi --model ollama/{model} si ça ne marche pas via ollama
                 display::comment(&format!("pi --model ollama/{}", m));
                 display::run(&i18n.t_with_vars("tool.pi.run_model", &[("model", &m)]));
                 let cmd: String = format!("ollama launch pi --model {}", m);

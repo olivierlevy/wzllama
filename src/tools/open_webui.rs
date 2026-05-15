@@ -13,35 +13,35 @@ impl Tool for OpenWebUITool {
     fn name(&self) -> &str { "Open WebUI" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openwebui.description") }
     fn status(&self) -> ToolStatus {
-        // Vérifier si le conteneur existe avec docker inspect (plus fiable)
-        // Si Docker n'est pas démarré, on retourne NotInstalled (le menu lancera ensure_ready)
+        // Check if container exists with docker inspect (more reliable)
+        // If Docker is not running, return NotInstalled (menu will launch ensure_ready)
         if !docker::is_running() {
             return ToolStatus::NotInstalled;
         }
-        // Essayer sans sudo d'abord
+        // Try without sudo first
         let exists = docker::run("inspect open-webui");
         if exists { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
-        // Docker doit être démarré avant (géré par menu_tools via ensure_ready)
+        // Docker must be running first (handled by menu_tools via ensure_ready)
         if !docker::is_running() {
-            anyhow::bail!("Docker n'est pas prêt");
+            anyhow::bail!("Docker is not ready");
         }
         
-        display::info("Vérification du conteneur Open WebUI...");
+        display::info("Checking Open WebUI container...");
         
-        // Vérifier si le conteneur existe avec docker inspect (plus fiable)
-        // Essayer sans sudo d'abord
+        // Check if container exists with docker inspect (more reliable)
+        // Try without sudo first
         let container_exists = docker::run("inspect open-webui");
         
         if container_exists {
-            // Le conteneur existe - essayer de le démarrer
-            display::info("Démarrage du conteneur existant...");
+            // Container exists - try to start it
+            display::info("Starting existing container...");
             docker::run_live("start open-webui")?;
-            display::success("Conteneur Open WebUI démarré.");
+            display::success("Open WebUI container started.");
         } else {
-            // Le conteneur n'existe pas - le créer
-            display::info("Pull de l'image Open WebUI (~500MB)...");
+            // Container does not exist - create it
+            display::info("Pulling Open WebUI image (~500MB)...");
             let _ = OpenWebUITool::pull();
         }
         Ok(())
@@ -106,7 +106,7 @@ impl OpenWebUITool {
         {
             return Ok(());
         }
-        // Vérifier si le conteneur existe avant de tenter de le supprimer
+        // Check si le conteneur existe avant de tenter de le supprimer
         if docker::run("inspect open-webui") {
             display::info(&i18n.t("tool.openwebui.uninstall_stop"));
             let _ = docker::run_live("stop open-webui 2>/dev/null");

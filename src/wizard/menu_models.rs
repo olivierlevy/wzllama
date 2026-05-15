@@ -10,7 +10,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     // Récupérer les modèles locaux
     let local = ollama_api::detect_url().and_then(|u| ollama_api::fetch_local_models(&u).ok()).unwrap_or_default();
     
-    // Si des modèles sont déjà installés, proposer de les utiliser
+    // Si des modèles sont déjà installés, proposer de les use
     if !local.is_empty() {
         return run_with_installed_models(i18n, state, hw, local);
     }
@@ -118,7 +118,7 @@ fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInf
         }
     }
 
-    // Avant le téléchargement
+    // Before download
     if !ollama_api::detect_url().is_some() {
         display::warning(&i18n.t("ollama.not_running"));
         if Confirm::new().with_prompt(i18n.t("ollama.start_now")).default(true).interact()? {
@@ -128,7 +128,7 @@ fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInf
         }
     }
 
-    // Télécharger le modèle
+    // Download le modèle
     let confirm = Confirm::new()
         .with_prompt(&i18n.t_with_vars("config.download_confirm", &[("model", &chosen.name)]))
         .default(true)

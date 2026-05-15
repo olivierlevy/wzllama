@@ -29,7 +29,7 @@ pub fn detect_package_manager() -> String {
     "unknown".into()
 }
 
-/// Retourne la commande d'installation du paquet système via le gestionnaire détecté
+/// Reruns la commande d'installation du paquet système via le gestionnaire détecté
 pub fn get_package_install_command(pkg: &str) -> Result<String> {
     let pm = detect_package_manager();
     let cmd = match pm.as_str() {

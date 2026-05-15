@@ -64,7 +64,7 @@ pub fn load_usages() -> UsagesConfig {
     }
 }
 
-fn default_usages() -> UsagesConfig {
+pub fn default_usages() -> UsagesConfig {
     let mut usages = HashMap::new();
     usages.insert("big_book".into(), UsageSpec {
         i18n_key: "usage.big_book.label".into(),

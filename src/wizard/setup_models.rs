@@ -48,12 +48,12 @@ pub fn ensure_first_models(i18n: &I18n, hw: &HardwareInfo, state: &mut WzllamaSt
         }
     }
     
-    // Après la boucle d'installation des modèles
+    // After the loop d'installation des modèles
     if let Some((heavy_model, _)) = heavy.first() {
         crate::config::state::set_last_model(&heavy_model.name, state);
     }
 
-    // Mettre à jour la config env avec les modèles installés
+    // Update la config env with installed models
     let mut env_config = crate::config::env::EnvConfig::load();
     if let Some((heavy_model, _)) = heavy.first() {
         env_config.models.code = heavy_model.name.clone();

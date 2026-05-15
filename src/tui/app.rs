@@ -257,7 +257,7 @@ impl App {
                             let tool = tools[sel].clone();
                             let model = self.state.lock().unwrap().last_model.clone();
                             
-                            // Vérifier si l'outil est installé
+                            // Check si l'outil is installed
                             if !tool.installed {
                                 // Lancer l'installation - si c'est une commande avec sudo, quitter le TUI
                                 if let Some(cmd) = crate::tools::get_install_command(&tool.id) {
@@ -273,7 +273,7 @@ impl App {
                                     }
                                 }
                             } else {
-                                // L'outil est installé
+                                // L'outil is installed
                                 if let Some(cmd) = crate::tools::get_launch_command(&tool.id, model.as_deref()) {
                                     // Les commandes avec sudo quittent le TUI
                                     if cmd.contains("sudo") {

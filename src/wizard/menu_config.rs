@@ -7,7 +7,7 @@ use crate::display;
 pub fn run(i18n: &I18n, _state: &mut WzllamaState) -> Result<()> {
     let mut config = config::env::EnvConfig::load();
 
-    // Vérifier les modèles configurés
+    // Check les modèles configurés
     check_configured_models(i18n, &config)?;
 
     loop {

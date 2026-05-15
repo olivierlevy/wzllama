@@ -74,15 +74,15 @@ impl Cli {
             Command::CheckI18n => config::i18n::check_integrity(),
             Command::Uninstall => wizard::menu_config::uninstall_wzllama_cli(),
             Command::InstallWebui => {
-                // Vérifier Docker puis installer Open WebUI
+                // Check Docker puis installer Open WebUI
                 if let Err(e) = crate::tools::docker::ensure_ready_no_confirm() {
                     println!("⚠️  Docker non prêt: {}", e);
                     println!("💡 Pour installer Docker: curl -fsSL https://get.docker.com | sh");
                     println!("💡 Pour ajouter votre utilisateur au groupe docker: sudo usermod -aG docker $USER");
-                    println!("💡 Puis déconnectez-vous et reconnectez-vous");
+                    println!("💡 Puis déconnectez-vous et log back in");
                     return Ok(());
                 }
-                // Vérifier si déjà installé
+                // Check si déjà installé
                 let exists = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$' || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$'").is_ok();
                 if exists {
                     shell::run("docker start open-webui 2>/dev/null || sudo docker start open-webui")?;
@@ -94,7 +94,7 @@ impl Cli {
                 Ok(())
             }
             Command::LaunchWebui => {
-                // Vérifier Docker puis lancer Open WebUI
+                // Check Docker puis lancer Open WebUI
                 if let Err(e) = crate::tools::docker::ensure_ready_no_confirm() {
                     println!("⚠️  Docker non prêt: {}", e);
                     println!("💡 Pour démarrer Docker: sudo systemctl start docker");

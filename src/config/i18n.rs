@@ -26,7 +26,8 @@ pub struct I18nFile {
 pub struct I18n {
     #[allow(dead_code)]
     pub meta: LanguageMeta,
-    map: HashMap<String, String>,
+    #[allow(dead_code)]
+    pub map: HashMap<String, String>,
 }
 
 impl Default for I18n {

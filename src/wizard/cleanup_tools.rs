@@ -17,7 +17,7 @@ use crate::tools::tool_trait::Tool;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
     loop {
-        // Resynchroniser l'état avec la réalité à chaque itération
+        // Resynchroniser l'état with reality at each iteration
         sync_tools_state(state);
         let all_tools = tools::get_all_tools();
         let installed_tools: Vec<&Box<dyn Tool>> = all_tools.iter()

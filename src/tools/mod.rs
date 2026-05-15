@@ -71,7 +71,7 @@ pub struct ToolInfo {
     pub supports_fleets: bool,
 }
 
-/// Retourne la commande d'installation pour un outil (via son ID)
+/// Reruns la commande d'installation pour un outil (via son ID)
 pub fn get_install_command(tool_id: &str) -> Option<String> {
     match tool_id {
         "ollama" => Some("curl -fsSL https://ollama.com/install.sh | sh".to_string()),
@@ -88,11 +88,11 @@ pub fn get_install_command(tool_id: &str) -> Option<String> {
     }
 }
 
-/// Retourne la commande de lancement pour un outil (via son ID) avec modèle optionnel
+/// Reruns la commande de lancement pour un outil (via son ID) avec modèle optionnel
 pub fn get_launch_command(tool_id: &str, model: Option<&str>) -> Option<String> {
     match tool_id {
         "openclaw" => Some(format!("ollama launch openclaw{}", model.map(|m| format!(" --model {}", m)).unwrap_or_default())),
-        // Open WebUI nécessite Docker - utiliser un wrapper
+        // Open WebUI nécessite Docker - use un wrapper
         "open_webui" => Some("wzllama launch-webui".to_string()),
         "claude_code" => Some("claude".to_string()),
         "opencode" => Some("opencode".to_string()),

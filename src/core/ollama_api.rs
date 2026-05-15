@@ -129,7 +129,7 @@ pub fn fetch_remote_catalog() -> Result<Vec<OllamaModel>> {
     Ok(data.models)
 }
 
-/// Fusionne locaux + distants sans doublons
+/// Fusionne locaux + distants sudo doublons
 pub fn merge_models(local: &[OllamaModel], remote: &[OllamaModel]) -> Vec<(OllamaModel, bool)> {
     use std::collections::HashSet;
     let mut seen: HashSet<String> = local.iter().map(|m| m.name.split(':').next().unwrap_or(&m.name).to_lowercase()).collect();

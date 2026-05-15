@@ -114,7 +114,7 @@ impl OllamaTool {
             return Ok(());
         }
 
-        // Vérifier la santé d'Ollama
+        // Check la santé d'Ollama
         let fixes = crate::core::ollama_doctor::OllamaDoctor::check_and_fix()?;
         for fix in &fixes {
             display::success(fix);
@@ -142,7 +142,7 @@ impl OllamaTool {
                 }
             }
         }
-        // Vérifier que la config wzllama existe
+        // Check que la config wzllama existe
         let env_path = crate::config::env::EnvConfig::env_path();
         if !env_path.exists() {
             let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());

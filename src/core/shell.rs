@@ -43,7 +43,7 @@ impl Default for ShellContext {
     }
 }
 
-/// Exécute une commande avec un contexte (peut rediriger vers le terminal intégré)
+/// Executes une commande avec un contexte (peut rediriger vers le terminal intégré)
 pub fn run_with_context(cmd: &str, ctx: Option<&ShellContext>) -> Result<()> {
     if let Some(ctx) = ctx {
         if let Some(ref output) = ctx.output {
@@ -64,7 +64,7 @@ pub fn run_with_context(cmd: &str, ctx: Option<&ShellContext>) -> Result<()> {
     Ok(())
 }
 
-/// Exécute une commande en affichant sa sortie en temps réel (pour ollama pull)
+/// Executes une commande en affichant sa sortie en temps réel (pour ollama pull)
 pub fn run_live(cmd: &str) -> Result<()> {
     exit_raw_mode();
     println!("   ⏳ {}", cmd.dimmed());
@@ -129,7 +129,7 @@ pub fn run_live(cmd: &str) -> Result<()> {
     }
 }
 
-/// Exécute une commande et écrit la sortie dans un buffer partagé
+/// Executes une commande et écrit la sortie dans un buffer partagé
 /// Version asynchrone (non bloquante) - lance la commande dans un thread
 /// La commande ($ cmd) doit être écrite AVANT l'appel (pour un affichage immédiat)
 pub fn run_sync_with_output(cmd: &str, output: &Arc<Mutex<String>>) -> Result<()> {
@@ -196,7 +196,7 @@ pub fn run(cmd: &str) -> Result<(String, String)> {
     }
 }
 
-/// Exécute une commande en la forkant pour permettre les interactions (sudo, etc.)
+/// Executes une commande en la forkant pour permettre les interactions (sudo, etc.)
 /// Le processus parent attend que la commande se termine
 pub fn spawn(cmd: &str) -> Result<()> {
     exit_raw_mode();
@@ -241,7 +241,7 @@ pub fn detect_shell() -> String {
     "unknown".into()
 }
 
-/// Exécute une commande en remplaçant le processus courant (ne retourne jamais)
+/// Executes une commande en remplaçant le processus courant (ne reruns jamais)
 /// Avant l'exécution, sort du mode raw et réinitialise le terminal
 pub fn exec(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal avant l'exec
@@ -263,13 +263,13 @@ pub fn exec(cmd: &str) -> ! {
     
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
     let err = Command::new(&shell).arg("-c").arg(cmd).exec();
-    // exec ne retourne qu'en cas d'erreur
+    // exec ne reruns qu'en cas d'erreur
     panic!("exec failed: {}", err);
 }
 
 /// Lance une application depuis le TUI en sortant proprement du mode raw
 /// Usage: depuis le TUI, appel `spawn_and_exit("ollama run qwen")`
-/// Cette fonction ne retourne jamais - après la commande, le programme se termine.
+/// Cette fonction ne reruns jamais - après la commande, le programme se termine.
 pub fn spawn_and_exit(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();

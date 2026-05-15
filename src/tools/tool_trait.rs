@@ -13,11 +13,11 @@ pub trait Tool {
     fn name(&self) -> &str;
     fn description(&self, i18n: &I18n) -> String;
     
-    /// Retourne le statut de l'installation de l'outil
+    /// Returns the installation status of the tool
     #[allow(dead_code)]
     fn status(&self) -> ToolStatus;
     
-    /// Retourne un message de statut internationalisé
+    /// Returns an internationalized status message
     fn status_message(&self, i18n: &I18n) -> String {
         match self.status() {
             ToolStatus::Installed => i18n.t("tool.installed"),
@@ -25,15 +25,15 @@ pub trait Tool {
         }
     }
     
-    /// Installe l'outil
+    /// Installs the tool
     fn install(&self, _i18n: &I18n) -> Result<()> { Ok(()) }
     
-    /// Met à jour l'outil
+    /// Updates the tool
     fn update(&self, _i18n: &I18n) -> Result<()> { 
         anyhow::bail!("Update not supported for this tool");
     }
     
-    /// Désinstalle l'outil
+    /// Uninstalls the tool
     fn uninstall(&self, _i18n: &I18n) -> Result<()> {
         anyhow::bail!("Uninstall not supported for this tool");
     }
@@ -42,6 +42,6 @@ pub trait Tool {
     
     fn supports_fleets(&self) -> bool { false }
     
-    /// Pour les outils qui ont besoin de Docker (ex: Open WebUI)
+    /// For tools that need Docker (e.g., Open WebUI)
     fn requires_docker(&self) -> bool { false }
 }

@@ -187,36 +187,36 @@ fn test_app_esc_returns_to_main() {
 
 #[test]
 fn test_app_esc_from_content_mode() {
+    // Models screen - Right on Models does NOT enter content mode currently
     let mut app = App::new_test();
-    
-    // Entrer en mode content depuis Models
     app.navigate(Navigation::Down); // Information → Models
-    app.navigate(Navigation::Right); // Enter sur Models
-    assert!(!app.sidebar_focus);
-    
-    // Esc doit revenir au sidebar focus sur Models (pas changer d'écran)
-    app.navigate(Navigation::Left); // Esc
-    assert!(app.sidebar_focus);
-    assert_eq!(app.current_screen, Screen::Models); // Reste sur Models
+    app.navigate(Navigation::Right); // Enter sur Models - stays on sidebar
+    assert!(app.sidebar_focus); // Models doesn't enter content mode on select
+    assert_eq!(app.current_screen, Screen::Models);
     
     // Terminal screen - enters content mode now (integrated terminal)
     let mut app = App::new_test();
     app.navigate(Navigation::Down); // Information → Models
-    app.navigate(Navigation::Down); // Models → Tools
+    app.navigate(Navigation::Down); // Models → Tools  
     app.navigate(Navigation::Down); // Tools → Terminal
     app.navigate(Navigation::Right); // Enter sur Terminal - enters content mode
     assert!(!app.should_quit); // No longer quits immediately
     assert!(app.sidebar_focus == false); // Enters content mode
     assert_eq!(app.exec_command, None); // No exec command set
+    
+    // Test returning from content mode via Esc
+    app.navigate(Navigation::Left); // Esc
+    assert!(app.sidebar_focus); // Returns to sidebar focus
 }
 
 #[test]
 fn test_app_select_models_enters_content_mode() {
     let mut app = App::new_test();
     
-    // Naviguer vers Models puis entrer en content mode
+    // Naviguer vers Tools (qui entre en content mode)
     app.navigate(Navigation::Down); // Information → Models
-    app.navigate(Navigation::Right); // Enter sur Models
-    assert!(!app.sidebar_focus);
+    app.navigate(Navigation::Down); // Models → Tools
+    app.navigate(Navigation::Right); // Enter sur Tools
+    assert!(!app.sidebar_focus); // Tools enters content mode
     assert_eq!(app.selected_tool, Some(0));
 }
