@@ -38,11 +38,12 @@ INSTALL_DIR="${TMPDIR:-/tmp}/wzllama-install-$$"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-git clone --depth 1 --branch "$BRANCH" "https://github.com/$REPO.git" . 2>/dev/null || {
+git clone --depth 1 --branch "$BRANCH" "https://github.com/$REPO.git" wzllama 2>/dev/null || {
     echo "   ❌ Échec du clonage du dépôt"
     rm -rf "$INSTALL_DIR"
     exit 1
 }
+cd wzllama
 echo "   ✅ Code source téléchargé"
 
 # ─── 2. Compilation ─────────────────────────────────

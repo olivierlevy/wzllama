@@ -49,7 +49,7 @@ Running a local AI stack usually means manually installing Ollama, hunting for c
 ### Install from remote (recommended)
 
 ```bash
-curl -fsSL https://github.com/olivierlevy/wzllama/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/olivierlevy/wzllama/main/install.sh | sh
 ```
 
 This script automatically downloads, compiles, and installs wzllama.

@@ -1,8 +1,8 @@
 use anyhow::Result;
+use colored::*;
 use dialoguer::Select;
 use crate::config::{I18n, WzllamaState};
 use crate::core::hardware::HardwareInfo;
-use crate::config::state::UsageType;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, _hw: &HardwareInfo) -> Result<()> {
     loop {
@@ -20,11 +20,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, _hw: &HardwareInfo) -> Result<
             i18n.t("menu.back").to_string(),
         ];
 
-        let default = match state.last_usage.as_str() {
-            "big_book" => 0,
-            "big_code" => 1,
-            "fast_agents" => 2,
-            "mixed" => 3,
+        let default = match state.last_usage.as_deref() {
+            Some("big_book") => 0,
+            Some("big_code") => 1,
+            Some("fast_agents") => 2,
+            Some("mixed") => 3,
             _ => 0,
         };
 
@@ -37,26 +37,17 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, _hw: &HardwareInfo) -> Result<
             None => break,
         };
 
-        match choice {
-            0 => {
-                state.last_usage = "big_book".to_string();
-                crate::config::state::save(state.clone())?;
-            }
-            1 => {
-                state.last_usage = "big_code".to_string();
-                crate::config::state::save(state.clone())?;
-            }
-            2 => {
-                state.last_usage = "fast_agents".to_string();
-                crate::config::state::save(state.clone())?;
-            }
-            3 => {
-                state.last_usage = "mixed".to_string();
-                crate::config::state::save(state.clone())?;
-            }
+        let usage = match choice {
+            0 => "big_book",
+            1 => "big_code",
+            2 => "fast_agents",
+            3 => "mixed",
             4 => break, // Back
             _ => break,
-        }
+        };
+
+        state.last_usage = Some(usage.to_string());
+        crate::config::state::save(state)?;
 
         // Exit loop after selection (return to main menu)
         break;

@@ -45,6 +45,11 @@ tools:
             - cargo fetch
             - tr *
             - wc *
+            - bash *
+            - git status *
+            - git add *
+            - git commit *
+            - git push
 paths:
     allow:
         - path: /home/olivier/Ai/wzllama/src/**

@@ -15,6 +15,7 @@
 
   "menu.main.title": "Main Menu",
   "menu.main.choose": "What do you want to do?",
+  "menu.main.usage": "🎯 Choose usage type",
   "menu.main.models": "🤖 Choose an AI model",
   "menu.main.manage_models": "📂 Manage installed models",
   "menu.main.tools": "🛠️  Launch a tool",
