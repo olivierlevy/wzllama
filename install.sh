@@ -1,6 +1,6 @@
 #!/bin/bash
 # wzllama installer - https://github.com/olivierlevy/wzllama
-# Usage: curl -fsSL https://github.com/olivierlevy/wzllama/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/olivierlevy/wzllama/main/install.sh | sh
 
 set -e
 
@@ -56,16 +56,28 @@ echo "   ✅ Compilation terminée"
 echo ""
 echo "📂 Étape 3/4 : Installation du binaire..."
 BIN_SRC="target/release/wzllama"
-BIN_DEST="/usr/local/bin/wzllama"
 
-if [ -f "$BIN_SRC" ]; then
-    sudo cp "$BIN_SRC" "$BIN_DEST"
-    sudo chmod +x "$BIN_DEST"
-    echo "   ✅ wzllama installé dans /usr/local/bin/"
+# Try ~/.local/bin first, then /usr/local/bin (requires sudo)
+if mkdir -p ~/.local/bin 2>/dev/null; then
+    BIN_DEST="$HOME/.local/bin/wzllama"
+    mkdir -p ~/.local/bin
+    cp "$BIN_SRC" "$BIN_DEST"
+    chmod +x "$BIN_DEST"
+    echo "   ✅ wzllama installé dans ~/.local/bin/"
+    echo "   💡 Ajoutez ~/.local/bin à votre PATH si ce n'est pas déjà fait:"
+    echo "      echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
 else
-    echo "   ❌ Binaire non trouvé après compilation"
-    rm -rf "$INSTALL_DIR"
-    exit 1
+    # Fallback to /usr/local/bin with sudo
+    BIN_DEST="/usr/local/bin/wzllama"
+    if [ -f "$BIN_SRC" ]; then
+        sudo cp "$BIN_SRC" "$BIN_DEST"
+        sudo chmod +x "$BIN_DEST"
+        echo "   ✅ wzllama installé dans /usr/local/bin/"
+    else
+        echo "   ❌ Binaire non trouvé après compilation"
+        rm -rf "$INSTALL_DIR"
+        exit 1
+    fi
 fi
 
 # ─── 4. Configuration utilisateur ────────────────────
@@ -98,4 +110,5 @@ if command -v wzllama &>/dev/null; then
     echo "══════════════════════════════════════════════════"
 else
     echo "   ⚠️  wzllama introuvable dans le PATH."
+    echo "   Essayez: hash -r || source ~/.bashrc"
 fi
