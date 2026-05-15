@@ -4,13 +4,13 @@ use dialoguer::Select;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::core::shell;
-use crate::tools::{self, docker, tool_trait::ToolStatus};
+use crate::tools::{self, docker, tool_trait::ToolStatus, open_webui::OpenWebUITool};
 use crate::display;
 
 fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.docker = docker::is_installed();
     state.installed.ollama = shell::is_installed("ollama");
-    state.installed.open_webui = shell::run("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+    state.installed.open_webui = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
     state.installed.openclaw = shell::is_installed("openclaw");
     state.installed.claude_code = shell::is_installed("claude");
     state.installed.hermes_agent = shell::is_installed("hermes");
@@ -74,7 +74,32 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         }
         
         if tool_info.installed {
-            // Lancer l'outil
+            // Pour Open WebUI, proposer mise à jour
+            if tool_info.id == "open_webui" {
+                let items = vec![
+                    i18n.t("menu.tools.launch"),
+                    i18n.t("tool.openwebui.update"),
+                ];
+                let sel = Select::new()
+                    .with_prompt(i18n.t("menu.tools.choose"))
+                    .items(&items)
+                    .default(0)
+                    .interact_opt()?;
+                
+                match sel {
+                    Some(0) => {
+                        let model = state.last_model.as_deref();
+                        tool.launch(i18n, state, model)?;
+                        state.set_last_tool(&tool_info.id);
+                    }
+                    Some(1) => {
+                        OpenWebUITool::update(i18n)?;
+                    }
+                    _ => {} // Escape or cancel
+                }
+                continue;
+            }
+            
             if tool.supports_fleets() {
                 crate::wizard::menu_fleets::run(i18n, state, hw)?;
                 return Ok(());

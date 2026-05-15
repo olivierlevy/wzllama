@@ -70,7 +70,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
 fn cleanup_is_installed(id: &str) -> bool {
     match id {
         "ollama" => shell::is_installed("ollama"),
-        "open_webui" => shell::run("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok(),
+        "open_webui" => shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok(),
         "openclaw" => shell::is_installed("openclaw"),
         "claude_code" => shell::is_installed("claude"),
         "hermes_agent" => shell::is_installed("hermes"),
@@ -116,7 +116,7 @@ fn mark_uninstalled(id: &str, state: &mut WzllamaState) {
 
 fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.ollama = shell::is_installed("ollama");
-    state.installed.open_webui = shell::run("sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+    state.installed.open_webui = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
     state.installed.openclaw = shell::is_installed("openclaw");
     state.installed.claude_code = shell::is_installed("claude");
     state.installed.hermes_agent = shell::is_installed("hermes");

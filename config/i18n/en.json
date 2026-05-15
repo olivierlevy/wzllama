@@ -24,6 +24,7 @@
   "menu.main.quit": "❌ Quit",
 
   "menu.tools.choose": "Choose a tool:",
+  "menu.tools.launch": "▶ Launch",
 
   "menu.usage.title": "Usage type",
   "menu.usage.choose": "Choose your usage:",
@@ -116,7 +117,14 @@
   "tool.hermes.uninstalled": "Hermes Agent uninstalled",
 
   "tool.openwebui.description": "Web interface for your AI models",
+  "tool.openwebui.update": "Updating Open WebUI...",
+  "tool.openwebui.updated": "Open WebUI updated!",
   "tool.openwebui.uninstall_confirm": "Uninstall Open WebUI?",
+  "tool.openwebui.uninstall_confirm_volume": "Remove also Open WebUI's sessions and chats?",
+  "tool.openwebui.uninstall_nothing": "No Open WebUI container found.",
+  "tool.openwebui.uninstall_stop": "Stopping Open WebUI container...",
+  "tool.openwebui.uninstall_rm": "Removing container...",
+  "tool.openwebui.uninstall_rm_volume": "Removing volume...",
   "tool.openwebui.uninstalled": "Open WebUI uninstalled",
 
   "tool.openclaw.description": "Personal AI assistant with 100+ skills",

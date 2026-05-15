@@ -8,9 +8,30 @@ use crate::core::{shell, system};
 use crate::display;
 
 pub fn is_installed() -> bool { shell::is_installed("docker") }
+
+/// Exécute une commande docker, sans sudo d'abord, puis avec sudo si nécessaire
+pub fn run(cmd: &str) -> bool {
+    shell::run(&format!("docker {} 2>/dev/null", cmd)).is_ok() ||
+    shell::run(&format!("sudo docker {} 2>/dev/null", cmd)).is_ok()
+}
+
+/// Exécute une commande docker live (pour run_live), sans sudo d'abord
+pub fn run_live(cmd: &str) -> Result<()> {
+    if shell::run(&format!("docker {} 2>/dev/null", cmd)).is_ok() {
+        Ok(())
+    } else {
+        shell::run_live(&format!("sudo docker {}", cmd))
+    }
+}
+
 pub fn is_running() -> bool { 
     // Vérifier que Docker répond aux commandes de conteneurs (plus fiable que docker info)
     // Essayer sans sudo d'abord, puis avec sudo
+    if shell::run("docker ps >/dev/null 2>&1").is_ok() {
+        return true;
+    }
+    // Attendre un peu et réessayer (docker peut mettre du temps à être prêt)
+    std::thread::sleep(std::time::Duration::from_millis(500));
     if shell::run("docker ps >/dev/null 2>&1").is_ok() {
         return true;
     }
@@ -21,16 +42,18 @@ pub fn is_running() -> bool {
     std::path::Path::new("/var/run/docker.sock").exists()
 }
 pub fn start() -> Result<()> { shell::run("systemctl start docker 2>/dev/null || sudo systemctl start docker").map(|_| ()) }
-pub fn startup() -> Result<()> { shell::run("sudo systemctl enable docker 2>/dev/null").map(|_| ()) }
-pub fn restart_socket() -> Result<()> { shell::run("sudo systemctl restart docker.socket 2>/dev/null").map(|_| ()) }
+pub fn startup() -> Result<()> { shell::run("systemctl enable docker 2>/dev/null || sudo systemctl enable docker").map(|_| ()) }
+pub fn restart_socket() -> Result<()> { shell::run("systemctl restart docker.socket 2>/dev/null || sudo systemctl restart docker.socket").map(|_| ()) }
 
 pub fn install_linux() -> Result<()> {
     let install_docker = system::get_package_install_command("docker")?;
+    // Structure claire: installer docker, puis démarrer le service, puis ajouter l'utilisateur au groupe
     let cmd = format!(
-        "{} && sudo systemctl enable --now docker && sudo usermod -aG docker $USER",
+        "{} && (systemctl enable --now docker 2>/dev/null || sudo systemctl enable --now docker 2>/dev/null || true) && (groupadd docker 2>/dev/null || sudo groupadd docker 2>/dev/null || true) && (usermod -aG docker $USER 2>/dev/null || sudo usermod -aG docker $USER)",
         install_docker
     );
     shell::run_live(&cmd)?;
+    display::info("Docker installé. Déconnectez-vous et reconnectez-vous pour utiliser docker sans sudo.");
     Ok(())
 }
 
@@ -92,14 +115,24 @@ pub fn ensure_ready(i18n: &I18n) -> Result<()> {
         {
             start()?;
             // Attendre que Docker soit vraiment prêt - jusqu'à 30 secondes
-            // Vérifier avec sudo car les permissions peuvent nécessiter sudo
+            // Vérifier avec ou sans sudo (essayer les deux)
             let mut ready = false;
             for i in 1..=60 {
                 std::thread::sleep(std::time::Duration::from_millis(500));
-                // Essayer sudo docker ps -a
-                if shell::run("sudo docker ps -a >/dev/null 2>&1").is_ok() {
+                // Essayer docker ps -a sans sudo d'abord
+                if shell::run("docker ps -a >/dev/null 2>&1").is_ok() {
                     ready = true;
                     break;
+                }
+            }
+            if !ready {
+                // Essayer avec sudo
+                for i in 1..=30 {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    if shell::run("sudo docker ps -a >/dev/null 2>&1").is_ok() {
+                        ready = true;
+                        break;
+                    }
                 }
             }
             if !ready {

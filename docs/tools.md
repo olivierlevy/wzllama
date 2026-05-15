@@ -65,7 +65,7 @@ pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
 
 **Docker command:**
 ```bash
-docker run -d -p 3000:8080 \
+docker run -d -p 8080:8080 \
   --add-host=host.docker.internal:host-gateway \
   -v open-webui:/app/backend/data \
   --name open-webui \
@@ -194,7 +194,7 @@ pub fn ensure_ready_no_confirm() -> Result<()> {
 
 ```rust
 pub fn check_docker_running() -> bool {
-    shell::run("docker ps").is_ok()
+    shell::run("sudo docker ps").is_ok()
 }
 
 pub fn check_docker_installed() -> bool {

@@ -184,7 +184,7 @@ fn manage_shells(i18n: &I18n) -> Result<()> {
         .items(&items)
         .default(0)
         .max_length(15)
-        .interact()?;;
+        .interact()?;
 
     match sel {
         0 => config::shells::install_all_shells(i18n)?,

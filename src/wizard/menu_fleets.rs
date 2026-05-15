@@ -1,5 +1,6 @@
 use anyhow::Result;
-use dialoguer::{Select, Confirm};
+use colored::*;
+use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::display;
@@ -12,7 +13,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 
     if fleets.is_empty() {
         display::warning(&i18n.t("fleet.none_found"));
-        let create = Confirm::new().with_prompt(i18n.t("fleet.create_new")).default(true).interact()?;
+        let create = dialoguer::Confirm::new()
+            .with_prompt(i18n.t("fleet.create_new"))
+            .default(true)
+            .interact_opt()?
+            .unwrap_or(false);
         if create {
             // Créer une flotte (nécessite un modèle)
             crate::wizard::menu_models::run(i18n, state, hw)?;
@@ -24,6 +29,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         return Ok(());
     }
 
+    // Afficher les ressources hardware
+    println!("\n{}", i18n.t("fleet.resources"));
+    crate::wizard::menu_main::display_hardware(hw, i18n);
+    
     let mut items: Vec<String> = fleets.iter().map(|(name, f)| {
         let s = if f.openclaw_installed { "✅" } else { "📄" };
         format!("{} {} ({} agents)", s, name, f.agents.len())

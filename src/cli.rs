@@ -83,12 +83,12 @@ impl Cli {
                     return Ok(());
                 }
                 // Vérifier si déjà installé
-                let exists = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$'").is_ok();
+                let exists = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$' || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$'").is_ok();
                 if exists {
-                    shell::run("docker start open-webui")?;
+                    shell::run("docker start open-webui 2>/dev/null || sudo docker start open-webui")?;
                     println!("✅ Open WebUI démarré");
                 } else {
-                    shell::run_live("docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main")?;
+                    shell::run("docker run -d --network=host --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama 2>/dev/null || sudo docker run -d --network=host --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama")?;
                     println!("✅ Open WebUI installé");
                 }
                 Ok(())
@@ -101,7 +101,7 @@ impl Cli {
                     println!("💡 Si erreur de permission: sudo usermod -aG docker $USER");
                     return Ok(());
                 }
-                let url = "http://localhost:3000";
+                let url = "http://localhost:8080";
                 println!("🌐 Open WebUI : {}", url);
                 shell::open_url(url);
                 println!("✅ Open WebUI lancé dans le navigateur");
