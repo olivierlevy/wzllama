@@ -112,7 +112,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             // Installer
             println!("   📥 {}", i18n.t("install.run_command"));
 
-            tool.install()?;
+            tool.install(i18n)?;
             display::success(&i18n.t("install.completed"));
             crate::config::state::mark_installed(&tool_info.id, state);
             *state = crate::config::state::load();

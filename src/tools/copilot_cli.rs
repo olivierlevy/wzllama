@@ -13,7 +13,7 @@ impl Tool for CopilotCliTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("gh-copilot") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("gh extension install github/gh-copilot")?;
         Ok(())
     }

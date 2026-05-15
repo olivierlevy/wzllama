@@ -14,7 +14,7 @@ impl Tool for OpenCodeTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("opencode") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("npm install -g @opencode-ai/cli")?;
         shell::exec("opencode auth login");
     }

@@ -14,7 +14,7 @@ impl Tool for DroidTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("droid") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         // Récupérer la commande d'installation de xdg-utils
         let xdg_cmd = crate::core::system::get_package_install_command("xdg-utils")?;
         shell::run_live(&xdg_cmd)?;

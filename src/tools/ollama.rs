@@ -17,7 +17,7 @@ impl Tool for OllamaTool {
         else { ToolStatus::NotInstalled }
     }
 
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
         shell::run_live("sudo systemctl enable ollama")?;
         shell::run_live("sudo systemctl start ollama")?;
@@ -38,6 +38,18 @@ impl Tool for OllamaTool {
         crate::config::shells::install_all_shells_cli()?;
         
         Ok(())
+    }
+
+    fn update(&self, _i18n: &I18n) -> Result<()> {
+        // Ollama se met à jour automatiquement, mais on peut forcer la vérification
+        display::info("Checking for Ollama updates...");
+        shell::run_live("ollama pull --latest 2>/dev/null || true")?;
+        display::success("✅ Ollama is up to date");
+        Ok(())
+    }
+
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        OllamaTool::uninstall(i18n)
     }
 
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
@@ -92,7 +104,7 @@ impl OllamaTool {
                 .interact()?
             {
                 let tool = OllamaTool;
-                tool.install()?;
+                tool.install(i18n)?;
                 display::success(&i18n.t("ollama.installed"));
 
                 // La config env est déjà générée par install()

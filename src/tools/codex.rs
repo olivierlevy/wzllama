@@ -14,7 +14,7 @@ impl Tool for CodexTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("codex") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("npm install -g @openai/codex")?;
         Ok(())
     }

@@ -46,22 +46,23 @@ Running a local AI stack usually means manually installing Ollama, hunting for c
 - **GPU**: Optional but strongly recommended (NVIDIA / AMD)
 - **Rust**: To build from source
 
-### Install from source
+### Install from remote (recommended)
+
+```bash
+curl -fsSL https://github.com/olivierlevy/wzllama/install.sh | sh
+```
+
+This script automatically downloads, compiles, and installs wzllama.
+
+### Install locally (for developers)
 
 ```bash
 git clone https://github.com/olivierlevy/wzllama.git
 cd wzllama
-cargo build --release
-cargo install --path .
+./deploy.sh
 ```
 
-### Install from release
-
-```bash
-wget https://github.com/olivierlevy/wzllama/releases/latest/download/wzllama
-chmod +x wzllama
-sudo mv wzllama /usr/local/bin/
-```
+The `deploy.sh` script builds and installs wzllama locally for development purposes.
 
 ### First run
 

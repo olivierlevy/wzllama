@@ -16,7 +16,7 @@ impl Tool for OpenClawTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("openclaw") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         match WzllamaState::load().last_model.as_deref() {
             Some(m) => {
                 let cmd: String = format!("ollama launch openclaw --model {}", m);

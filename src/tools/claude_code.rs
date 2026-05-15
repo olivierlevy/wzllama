@@ -14,7 +14,7 @@ impl Tool for ClaudeCodeTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("claude") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
         Ok(())
     }

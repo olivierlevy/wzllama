@@ -22,7 +22,7 @@ impl Tool for OpenWebUITool {
         let exists = docker::run("inspect open-webui");
         if exists { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         // Docker doit être démarré avant (géré par menu_tools via ensure_ready)
         if !docker::is_running() {
             anyhow::bail!("Docker n'est pas prêt");
@@ -45,6 +45,14 @@ impl Tool for OpenWebUITool {
             let _ = OpenWebUITool::pull();
         }
         Ok(())
+    }
+    
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        OpenWebUITool::update(i18n)
+    }
+    
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        OpenWebUITool::uninstall(i18n)
     }
     
     fn requires_docker(&self) -> bool { true }

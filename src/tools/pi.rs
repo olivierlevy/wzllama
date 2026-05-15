@@ -14,7 +14,7 @@ impl Tool for PiTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("pi") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self) -> Result<()> {
+    fn install(&self, _i18n: &I18n) -> Result<()> {
         match WzllamaState::load().last_model.as_deref() {
             Some(m) => {
                 let cmd: String = format!("ollama launch pi --model {}", m);
