@@ -110,7 +110,7 @@ impl EnvConfig {
         let mut config = EnvConfig::default();
         
         // Pour chaque usage, trouver le meilleur modèle
-        if let Ok(remote) = crate::core::ollama_api::fetch_remote_catalog() {
+        if let Ok(remote) = crate::core::ollama_api::fetch_full_catalog() {
             let local = crate::core::ollama_api::detect_url()
                 .and_then(|u| crate::core::ollama_api::fetch_local_models(&u).ok())
                 .unwrap_or_default();

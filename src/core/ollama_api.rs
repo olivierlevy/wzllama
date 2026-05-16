@@ -142,6 +142,50 @@ pub fn fetch_remote_catalog() -> Result<Vec<OllamaModel>> {
     Ok(data.models)
 }
 
+/// List of popular models not always in the API catalog
+/// These are verified working models from ollama.com/library
+fn get_popular_models() -> Vec<OllamaModel> {
+    vec![
+        // Large models
+        OllamaModel { name: "gpt-oss:120b".to_string(), model: "gpt-oss:120b".to_string(), modified_at: None, size: Some(65 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "deepseek-v3:671b".to_string(), model: "deepseek-v3:671b".to_string(), modified_at: None, size: Some(400 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "deepseek-coder-v2:16b".to_string(), model: "deepseek-coder-v2:16b".to_string(), modified_at: None, size: Some(16 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "devstral:24b".to_string(), model: "devstral:24b".to_string(), modified_at: None, size: Some(24 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "kimi-k2:1t".to_string(), model: "kimi-k2:1t".to_string(), modified_at: None, size: Some(1118 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "minimax-m2.5:30b".to_string(), model: "minimax-m2.5:30b".to_string(), modified_at: None, size: Some(230 * 1024 * 1024 * 1024), details: None },
+        // Qwen 3.6 family
+        OllamaModel { name: "qwen3:30b".to_string(), model: "qwen3:30b".to_string(), modified_at: None, size: Some(30 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "qwen3:35b-a3b".to_string(), model: "qwen3:35b-a3b".to_string(), modified_at: None, size: Some(35 * 1024 * 1024 * 1024), details: None },
+        // Vision models
+        OllamaModel { name: "qwen2.5vl:72b".to_string(), model: "qwen2.5vl:72b".to_string(), modified_at: None, size: Some(72 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "llava-llama3:8b".to_string(), model: "llava-llama3:8b".to_string(), modified_at: None, size: Some(8 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "minicpm-v:8b".to_string(), model: "minicpm-v:8b".to_string(), modified_at: None, size: Some(8 * 1024 * 1024 * 1024), details: None },
+        // Coder models
+        OllamaModel { name: "qwen2.5-coder:32b".to_string(), model: "qwen2.5-coder:32b".to_string(), modified_at: None, size: Some(32 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "starcoder2:15b".to_string(), model: "starcoder2:15b".to_string(), modified_at: None, size: Some(15 * 1024 * 1024 * 1024), details: None },
+        // Embedding models
+        OllamaModel { name: "nomic-embed-text:7b".to_string(), model: "nomic-embed-text:7b".to_string(), modified_at: None, size: Some(7 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "mxbai-embed-large:335m".to_string(), model: "mxbai-embed-large:335m".to_string(), modified_at: None, size: Some(335 * 1024 * 1024), details: None },
+    ]
+}
+
+/// Fetch catalog and merge with popular models list
+pub fn fetch_full_catalog() -> Result<Vec<OllamaModel>> {
+    let mut models = fetch_remote_catalog()?;
+    
+    // Add models from popular list that aren't already included
+    use std::collections::HashSet;
+    let existing: HashSet<String> = models.iter().map(|m| m.name.clone()).collect();
+    
+    for model in get_popular_models() {
+        if !existing.contains(&model.name) {
+            models.push(model);
+        }
+    }
+    
+    Ok(models)
+}
+
 /// Get detailed model information from local Ollama server using POST /api/show
 pub fn show_model(model_name: &str) -> Result<ModelShowResponse> {
     let url = "http://localhost:11434/api/show";

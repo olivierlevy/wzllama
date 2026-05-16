@@ -58,7 +58,7 @@ fn run_with_installed_models(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
 fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     println!("   {}", i18n.t("install.ollama.searching"));
     
-    let remote = ollama_api::fetch_remote_catalog().unwrap_or_default();
+    let remote = ollama_api::fetch_full_catalog().unwrap_or_default();
     
     if remote.is_empty() {
         display::warning(&i18n.t("install.ollama.no_compatible"));
@@ -127,6 +127,7 @@ fn run_local_models_selection(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwa
     
     let display_items: Vec<String> = model_items.iter().map(|(s, _, _)| s.clone()).collect();
     let mut all_items = display_items.clone();
+    all_items.push(i18n.t("models.catalog_custom"));
     all_items.push(i18n.t("menu.back"));
     
     let sel = match Select::new()
@@ -141,6 +142,11 @@ fn run_local_models_selection(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwa
     };
     
     if sel == model_items.len() {
+        // Custom model input
+        return prompt_custom_model(i18n, state, hw);
+    }
+    
+    if sel == all_items.len() - 1 {
         return Ok(());
     }
     
@@ -353,4 +359,47 @@ fn show_model_details(i18n: &I18n, model: &ollama_api::OllamaModel, hw: &Hardwar
         },
         _ => println!("  {} ❌ {}", "Hardware:".red(), "May not fit in memory".red()),
     }
+}
+
+/// Prompt user for a custom model name
+fn prompt_custom_model(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
+    use dialoguer::Input;
+    
+    let model_name: String = Input::new()
+        .with_prompt(&i18n.t("models.catalog_custom_prompt"))
+        .interact()?;
+    
+    let model_name = model_name.trim();
+    if model_name.is_empty() {
+        return Ok(());
+    }
+    
+    // Create a fake model for display purposes
+    let custom_model = ollama_api::OllamaModel {
+        name: model_name.to_string(),
+        model: model_name.to_string(),
+        modified_at: None,
+        size: None, // Size will be fetched from API when installing
+        details: None,
+    };
+    
+    // Show model info
+    show_model_details(i18n, &custom_model, hw);
+    
+    // Install
+    let confirm = Confirm::new()
+        .with_prompt(&i18n.t_with_vars("config.download_confirm", &[("model", &custom_model.name)]))
+        .default(true)
+        .interact()?;
+    
+    if confirm {
+        // Try to pull the model
+        if let Err(e) = ollama_api::pull_model(&custom_model.name) {
+            display::warning(&format!("{}: {}", i18n.t("tool.install_failed"), e));
+        } else {
+            state.set_last_model(&custom_model.name);
+        }
+    }
+    
+    Ok(())
 }

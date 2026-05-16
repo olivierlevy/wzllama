@@ -252,6 +252,9 @@
   "models.cloud_select": "Choose a cloud model:",
   "models.cloud_notice": "⚠️ Cloud models run on remote servers. Check API pricing.",
   "models.cloud_install_confirm": "Use {model} in cloud mode?",
+  "models.cloud_ready": "Cloud model ready to use",
+  "models.catalog_custom": "📝 Enter custom model name...",
+  "models.catalog_custom_prompt": "Model name (e.g., qwen3:30b, gpt-oss:120b):",
 
   "fleet.title": "🤖 AI Agent Fleet",
   "fleet.resources": "📊 Resources:",

@@ -254,6 +254,9 @@
   "models.cloud_select": "Choisissez un modèle cloud :",
   "models.cloud_notice": "⚠️ Les modèles cloud s'exécutent sur les serveurs distants. Vérifiez les tarifs API.",
   "models.cloud_install_confirm": "Utiliser {model} en mode cloud ?",
+  "models.cloud_ready": "Modèle cloud prêt à l'emploi",
+  "models.catalog_custom": "📝 Entrer un nom de modèle personnalisé...",
+  "models.catalog_custom_prompt": "Nom du modèle (ex: qwen3:30b, gpt-oss:120b) :",
 
   "fleet.title": "🤖 Flotte d'agents IA",
   "fleet.resources": "📊 Ressources :",

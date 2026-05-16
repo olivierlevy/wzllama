@@ -17,7 +17,7 @@ pub fn ensure_first_models(i18n: &I18n, hw: &HardwareInfo, state: &mut WzllamaSt
     display::header(&i18n.t("models.first_time"));
     display::info(&i18n.t("models.no_models_yet"));
 
-    let remote = ollama_api::fetch_remote_catalog().unwrap_or_default();
+    let remote = ollama_api::fetch_full_catalog().unwrap_or_default();
     
     // 1. Meilleur modèle qualité (gros)
     let heavy = ollama_models::rank_models(&remote, "mixed", hw, 1);
