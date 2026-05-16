@@ -231,6 +231,36 @@ pub fn is_installed(cmd: &str) -> bool {
     run(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
 }
 
+/// Check if a command is installed without exiting raw mode
+pub fn is_installed_quiet(cmd: &str) -> bool {
+    run_quiet(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
+}
+
+/// Run a command without exiting raw mode (for internal use)
+pub fn run_quiet(cmd: &str) -> Result<(String, String)> {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
+
+    let output = if shell.contains("fish") {
+        Command::new("fish").args(["-c", cmd]).output()
+            .with_context(|| "Fish error")?
+    } else if cfg!(target_os = "windows") {
+        Command::new("cmd").args(["/C", cmd]).output()
+            .with_context(|| "Cmd error")?
+    } else {
+        Command::new("sh").args(["-c", cmd]).output()
+            .with_context(|| "Sh error")?
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if output.status.success() {
+        Ok((stdout, stderr))
+    } else {
+        Err(anyhow::anyhow!("Command failed: {}", stderr))
+    }
+}
+
 #[allow(dead_code)]
 pub fn detect_shell() -> String {
     if let Ok(shell) = std::env::var("SHELL") {

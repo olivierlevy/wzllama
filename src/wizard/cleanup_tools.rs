@@ -69,16 +69,16 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
 
 fn cleanup_is_installed(id: &str) -> bool {
     match id {
-        "ollama" => shell::is_installed("ollama"),
-        "open_webui" => shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok(),
-        "openclaw" => shell::is_installed("openclaw"),
-        "claude_code" => shell::is_installed("claude"),
-        "hermes_agent" => shell::is_installed("hermes"),
-        "opencode" => shell::is_installed("opencode"),
-        "codex" => shell::is_installed("codex"),
-        "droid" => shell::is_installed("droid"),
-        "pi" => shell::is_installed("pi"),
-        "pool" => shell::is_installed("pool"),
+        "ollama" => shell::is_installed_quiet("ollama"),
+        "open_webui" => shell::run_quiet("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok(),
+        "openclaw" => shell::is_installed_quiet("openclaw"),
+        "claude_code" => shell::is_installed_quiet("claude"),
+        "hermes_agent" => shell::is_installed_quiet("hermes"),
+        "opencode" => shell::is_installed_quiet("opencode"),
+        "codex" => shell::is_installed_quiet("codex"),
+        "droid" => shell::is_installed_quiet("droid"),
+        "pi" => shell::is_installed_quiet("pi"),
+        "pool" => shell::is_installed_quiet("pool"),
         _ => false,
     }
 }
@@ -115,14 +115,14 @@ fn mark_uninstalled(id: &str, state: &mut WzllamaState) {
 }
 
 fn sync_tools_state(state: &mut WzllamaState) {
-    state.installed.ollama = shell::is_installed("ollama");
-    state.installed.open_webui = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
-    state.installed.openclaw = shell::is_installed("openclaw");
-    state.installed.claude_code = shell::is_installed("claude");
-    state.installed.hermes_agent = shell::is_installed("hermes");
-    state.installed.opencode = shell::is_installed("opencode");
-    state.installed.codex = shell::is_installed("codex");
-    state.installed.droid = shell::is_installed("droid");
-    state.installed.pi = shell::is_installed("pi");
-    state.installed.pool = shell::is_installed("pool");
+    state.installed.ollama = shell::is_installed_quiet("ollama");
+    state.installed.open_webui = shell::run_quiet("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+    state.installed.openclaw = shell::is_installed_quiet("openclaw");
+    state.installed.claude_code = shell::is_installed_quiet("claude");
+    state.installed.hermes_agent = shell::is_installed_quiet("hermes");
+    state.installed.opencode = shell::is_installed_quiet("opencode");
+    state.installed.codex = shell::is_installed_quiet("codex");
+    state.installed.droid = shell::is_installed_quiet("droid");
+    state.installed.pi = shell::is_installed_quiet("pi");
+    state.installed.pool = shell::is_installed_quiet("pool");
 }
