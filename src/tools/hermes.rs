@@ -49,8 +49,8 @@ impl HermesTool {
             return Ok(());
         }
         // Official script does not provide uninstall → manual cleanup
-        let _ = shell::run("sudo rm -f /usr/bin/hermes ~/.local/bin/hermes 2>/dev/null");
-        let _ = shell::run("rm -rf ~/.hermes* 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -f /usr/bin/hermes ~/.local/bin/hermes 2>/dev/null");
+        let _ = shell::run_quiet("rm -rf ~/.hermes* 2>/dev/null");
         display::success(&i18n.t("tool.hermes.uninstalled"));
         Ok(())
     }

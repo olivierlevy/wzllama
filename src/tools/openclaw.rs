@@ -59,12 +59,12 @@ impl OpenClawTool {
         if !Confirm::new().with_prompt(i18n.t("tool.openclaw.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run("openclaw uninstall --all --yes --non-interactive 2>/dev/null");
-        let _ = shell::run("sudo npm uninstall -g openclaw 2>/dev/null");
+        let _ = shell::run_quiet("openclaw uninstall --all --yes --non-interactive 2>/dev/null");
+        let _ = shell::run_quiet("sudo npm uninstall -g openclaw 2>/dev/null");
         // Nettoyer les résidus
-        let _ = shell::run("rm -f ~/.local/bin/openclaw 2>/dev/null");
-        let _ = shell::run("rm -rf ~/.openclaw* 2>/dev/null");
-        let _ = shell::run("systemctl --user disable openclaw-gateway-* 2>/dev/null");
+        let _ = shell::run_quiet("rm -f ~/.local/bin/openclaw 2>/dev/null");
+        let _ = shell::run_quiet("rm -rf ~/.openclaw* 2>/dev/null");
+        let _ = shell::run_quiet("systemctl --user disable openclaw-gateway-* 2>/dev/null");
         display::success(&i18n.t("tool.openclaw.uninstalled"));
         Ok(())
     }

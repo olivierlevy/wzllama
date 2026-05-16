@@ -92,7 +92,7 @@ impl OllamaTool {
     }
 
     fn is_autostart_enabled() -> bool {
-        shell::run("systemctl is-enabled ollama 2>/dev/null | grep -q enabled").is_ok()
+        shell::run_quiet("systemctl is-enabled ollama 2>/dev/null | grep -q enabled").is_ok()
     }
 
     pub fn ensure_running(i18n: &I18n) -> Result<()> {
@@ -171,17 +171,17 @@ impl OllamaTool {
         display::section(&i18n.t("ollama.uninstalling"));
 
         // 1. Arrêter et désactiver le service
-        let _ = shell::run("sudo systemctl stop ollama 2>/dev/null");
-        let _ = shell::run("sudo systemctl disable ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo systemctl stop ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo systemctl disable ollama 2>/dev/null");
         display::success(&i18n.t("ollama.service_stopped"));
 
         // 2. Supprimer le service systemd
-        let _ = shell::run("sudo rm -f /etc/systemd/system/ollama.service 2>/dev/null");
-        let _ = shell::run("sudo systemctl daemon-reload 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -f /etc/systemd/system/ollama.service 2>/dev/null");
+        let _ = shell::run_quiet("sudo systemctl daemon-reload 2>/dev/null");
         display::success(&i18n.t("ollama.service_removed"));
 
         // 3. Supprimer le binaire
-        if let Ok((stdout, _)) = shell::run("which ollama 2>/dev/null") {
+        if let Ok((stdout, _)) = shell::run_quiet("which ollama 2>/dev/null") {
             let bin = stdout.trim();
             if !bin.is_empty() {
                 let _ = shell::run(&format!("sudo rm -f {}", bin));
@@ -190,14 +190,14 @@ impl OllamaTool {
         }
 
         // 4. Supprimer les données
-        let _ = shell::run("sudo rm -rf /usr/share/ollama 2>/dev/null");
-        let _ = shell::run("sudo rm -rf /usr/lib/ollama 2>/dev/null");
-        let _ = shell::run("sudo rm -rf ~/.ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -rf /usr/share/ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -rf /usr/lib/ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -rf ~/.ollama 2>/dev/null");
         display::success(&i18n.t("ollama.data_removed"));
 
         // 5. Supprimer l'utilisateur et le groupe
-        let _ = shell::run("sudo userdel ollama 2>/dev/null");
-        let _ = shell::run("sudo groupdel ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo userdel ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo groupdel ollama 2>/dev/null");
         display::success(&i18n.t("ollama.user_removed"));
 
         display::success(&i18n.t("ollama.uninstalled"));

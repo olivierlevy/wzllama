@@ -44,8 +44,8 @@ impl DroidTool {
         if !Confirm::new().with_prompt(i18n.t("tool.droid.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run("sudo npm uninstall -g @factoryai/droid 2>/dev/null");
-        let _ = shell::run("rm -rf ~/.factoryai 2>/dev/null");
+        let _ = shell::run_quiet("sudo npm uninstall -g @factoryai/droid 2>/dev/null");
+        let _ = shell::run_quiet("rm -rf ~/.factoryai 2>/dev/null");
         display::success(&i18n.t("tool.droid.uninstalled"));
         Ok(())
     }

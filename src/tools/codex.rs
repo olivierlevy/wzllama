@@ -41,7 +41,7 @@ impl CodexTool {
         if !Confirm::new().with_prompt(i18n.t("tool.codex.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run("sudo npm uninstall -g @openai/codex 2>/dev/null");
+        let _ = shell::run_quiet("sudo npm uninstall -g @openai/codex 2>/dev/null").ok();
         display::success(&i18n.t("tool.codex.uninstalled"));
         Ok(())
     }

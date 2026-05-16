@@ -41,9 +41,9 @@ impl OpenCodeTool {
         if !Confirm::new().with_prompt(i18n.t("tool.opencode.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run("sudo npm uninstall -g opencode-ai 2>/dev/null");
-        let _ = shell::run("sudo rm -f /usr/bin/opencode ~/.local/bin/opencode 2>/dev/null");
-        let _ = shell::run("rm -rf ~/.opencode* 2>/dev/null");
+        let _ = shell::run_quiet("sudo npm uninstall -g opencode-ai 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -f /usr/bin/opencode ~/.local/bin/opencode 2>/dev/null");
+        let _ = shell::run_quiet("rm -rf ~/.opencode* 2>/dev/null");
         display::success(&i18n.t("tool.opencode.uninstalled"));
         Ok(())
     }
