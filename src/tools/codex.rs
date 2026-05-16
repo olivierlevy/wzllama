@@ -18,6 +18,9 @@ impl Tool for CodexTool {
         shell::run_live("npm install -g @openai/codex")?;
         Ok(())
     }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        CodexTool::uninstall(i18n)
+    }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.codex.auth"));
         let model = model.or(state.last_model.as_deref());
@@ -42,6 +45,8 @@ impl CodexTool {
             return Ok(());
         }
         let _ = shell::run_quiet("sudo npm uninstall -g @openai/codex 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.codex 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.local/bin/codex 2>/dev/null").ok();
         display::success(&i18n.t("tool.codex.uninstalled"));
         Ok(())
     }

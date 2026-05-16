@@ -92,7 +92,7 @@ fn npm_package(id: &str) -> &str {
         "opencode" => "opencode-ai",
         "codex" => "@openai/codex",
         "droid" => "@factoryai/droid",
-        "pi" => "@mariozechner/pi-coding-agent",
+        "pi" => "@earendil-works/pi-coding-agent",
         _ => id,
     }
 }

@@ -51,8 +51,9 @@ impl PiTool {
         if !Confirm::new().with_prompt(i18n.t("tool.pi.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo npm uninstall -g @mariozechner/pi-coding-agent 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.pi-agent 2>/dev/null").ok();
+        let _ = shell::run_quiet("sudo npm uninstall -g @earendil-works/pi-coding-agent 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.pi 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.local/bin/pi 2>/dev/null").ok();
         display::success(&i18n.t("tool.pi.uninstalled"));
         Ok(())
     }
