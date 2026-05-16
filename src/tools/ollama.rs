@@ -61,6 +61,27 @@ impl OllamaTool {
         shell::run_quiet("systemctl is-enabled ollama 2>/dev/null | grep -q enabled").is_ok()
     }
 
+    /// Setup ollama user and directory for models (called when ollama is not installed)
+    pub fn setup_ollama_user_dir() -> Result<()> {
+        // Create ollama user if not exists
+        if !shell::run("id -u ollama >/dev/null 2>&1").is_ok() {
+            shell::run("sudo useradd -r -s /bin/false ollama")?;
+        }
+        
+        // Create home directory for ollama
+        shell::run("sudo mkdir -p /home/ollama")?;
+        shell::run("sudo chown ollama:ollama /home/ollama")?;
+        shell::run("sudo chmod 755 /home/ollama")?;
+        
+        // Create symlink for /usr/share/ollama if it exists
+        if std::path::Path::new("/usr/share/ollama").exists() {
+            shell::run("sudo rm -rf /usr/share/ollama")?;
+        }
+        shell::run("sudo ln -sf /home/ollama /usr/share/ollama")?;
+        
+        Ok(())
+    }
+
     pub fn ensure_running(i18n: &I18n) -> Result<()> {
         if !shell::is_installed("ollama") {
             display::warning(&i18n.t("ollama.not_installed"));
@@ -125,7 +146,19 @@ impl OllamaTool {
 
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
+        // Setup ollama user and directory BEFORE installation
+        Self::setup_ollama_user_dir()?;
+        
+        // Install Ollama
         shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
+        
+        // Install systemd drop-in for environment variables
+        // Use bash explicitly for heredoc compatibility across all shells (fish, zsh, bash)
+        shell::run("sudo mkdir -p /etc/systemd/system/ollama.service.d")?;
+        // Write override.conf using printf for reliability
+        shell::run_quiet("printf '[Service]\\nEnvironment=\"OLLAMA_MODELS=/home/ollama\"\\nEnvironment=\"OLLAMA_ORIGINS=*\"\\n' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null")?;
+        shell::run_quiet("sudo systemctl daemon-reload")?;
+        
         shell::run_live("sudo systemctl enable ollama")?;
         shell::run_live("sudo systemctl start ollama")?;
     
@@ -210,6 +243,7 @@ impl OllamaTool {
         let _ = shell::run_quiet("sudo rm -rf /usr/share/ollama 2>/dev/null");
         let _ = shell::run_quiet("sudo rm -rf /usr/lib/ollama 2>/dev/null");
         let _ = shell::run_quiet("sudo rm -rf ~/.ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -rf /home/ollama 2>/dev/null");  // Custom models dir
         display::success(&i18n.t("ollama.data_removed"));
 
         // 5. Supprimer l'utilisateur et le groupe système
@@ -219,6 +253,8 @@ impl OllamaTool {
         if shell::run_quiet("getent group ollama >/dev/null 2>&1").is_ok() {
             let _ = shell::run_quiet("sudo groupdel ollama 2>/dev/null");
         }
+        // Remove systemd drop-in
+        let _ = shell::run_quiet("sudo rm -rf /etc/systemd/system/ollama.service.d 2>/dev/null");
         display::success(&i18n.t("ollama.user_removed"));
 
         // 6. Vérification finale

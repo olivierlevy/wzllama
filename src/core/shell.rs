@@ -69,17 +69,10 @@ pub fn run_live(cmd: &str) -> Result<()> {
     exit_raw_mode();
     println!("   ⏳ {}", cmd.dimmed());
     
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
-    
-    let mut child = if shell.contains("fish") {
-        Command::new("fish").args(["-c", cmd])
-            .stdout(Stdio::piped()).stderr(Stdio::piped())
-            .spawn()?
-    } else {
-        Command::new("sh").args(["-c", cmd])
-            .stdout(Stdio::piped()).stderr(Stdio::piped())
-            .spawn()?
-    };
+    // Always use sh for heredoc compatibility across shells (fish, zsh, bash)
+    let mut child = Command::new("sh").args(["-c", cmd])
+        .stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn()?;
 
     // Lire stdout et stderr en même temps dans des threads séparés
     let stdout_handle = if let Some(stdout) = child.stdout.take() {
@@ -133,16 +126,12 @@ pub fn run_live(cmd: &str) -> Result<()> {
 /// Version asynchrone (non bloquante) - lance la commande dans un thread
 /// La commande ($ cmd) doit être écrite AVANT l'appel (pour un affichage immédiat)
 pub fn run_sync_with_output(cmd: &str, output: &Arc<Mutex<String>>) -> Result<()> {
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
     let output = Arc::clone(output);
     let cmd = cmd.to_string();
 
     thread::spawn(move || {
-        let output_result = if shell.contains("fish") {
-            Command::new("fish").args(["-c", &cmd]).output()
-        } else {
-            Command::new("sh").args(["-c", &cmd]).output()
-        };
+        // Always use sh for heredoc compatibility
+        let output_result = Command::new("sh").args(["-c", &cmd]).output();
 
         if let Ok(output_result) = output_result {
             let stdout = String::from_utf8_lossy(&output_result.stdout).to_string();
@@ -172,18 +161,11 @@ pub fn run_cmd(cmd: &str) -> Result<()> {
 
 pub fn run(cmd: &str) -> Result<(String, String)> {
     exit_raw_mode();
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
-
-    let output = if shell.contains("fish") {
-        Command::new("fish").args(["-c", cmd]).output()
-            .with_context(|| "Erreur fish")?
-    } else if cfg!(target_os = "windows") {
-        Command::new("cmd").args(["/C", cmd]).output()
-            .with_context(|| "Erreur cmd")?
-    } else {
-        Command::new("sh").args(["-c", cmd]).output()
-            .with_context(|| "Erreur sh")?
-    };
+    // Always use sh for heredoc compatibility across shells (fish, zsh, bash)
+    let output = Command::new("sh")
+        .args(["-c", cmd])
+        .output()
+        .with_context(|| "Sh error")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -191,8 +173,7 @@ pub fn run(cmd: &str) -> Result<(String, String)> {
     if output.status.success() {
         Ok((stdout, stderr))
     } else {
-        let name = if shell.contains("fish") { "Fish" } else if shell.contains("zsh") { "Zsh" } else { "Bash/Sh" };
-        Err(anyhow::anyhow!("Commande échouée ({}): {}", name, stderr))
+        Err(anyhow::anyhow!("Command failed (sh): {}", stderr))
     }
 }
 
@@ -248,19 +229,13 @@ pub fn is_installed_with_local_bin(cmd: &str) -> bool {
 }
 
 /// Run a command without exiting raw mode (for internal use)
+/// Uses sh explicitly for compatibility across all shells (fish, zsh, bash)
 pub fn run_quiet(cmd: &str) -> Result<(String, String)> {
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
-
-    let output = if shell.contains("fish") {
-        Command::new("fish").args(["-c", cmd]).output()
-            .with_context(|| "Fish error")?
-    } else if cfg!(target_os = "windows") {
-        Command::new("cmd").args(["/C", cmd]).output()
-            .with_context(|| "Cmd error")?
-    } else {
-        Command::new("sh").args(["-c", cmd]).output()
-            .with_context(|| "Sh error")?
-    };
+    // Always use sh for heredoc compatibility
+    let output = Command::new("sh")
+        .args(["-c", cmd])
+        .output()
+        .with_context(|| "Sh error")?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
