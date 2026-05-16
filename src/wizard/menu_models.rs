@@ -68,23 +68,24 @@ fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInf
     // Afficher les modèles avec leur compatibilité hardware
     display::section(&i18n.t("models.catalog_title"));
     
-    let mut model_items: Vec<(String, &ollama_api::OllamaModel, bool)> = remote.iter()
+    let mut model_items: Vec<(String, &ollama_api::OllamaModel, f32)> = remote.iter()
         .map(|m| {
             let score = ollama_models::score_model(m, "mixed", hw);
-            let compatible = score > 0.0;
-            let status = if compatible { "✅".green() } else { "⚠️".yellow() };
+            let (status, emoji) = match score {
+                s if s >= 0.8 => ("Excellent fit".green(), "🚀"),
+                s if s >= 0.5 => ("Good fit".green(), "✅"),
+                s if s >= 0.2 => ("Fits with constraints".yellow(), "⚠️"),
+                _ => ("May not fit".red(), "❌"),
+            };
             let size_str = m.formatted_size();
-            (format!("{} {} ({})", status, m.name, size_str), m, compatible)
+            let hw_str = format_hardware_compatibility(m, hw);
+            (format!("{} {} ({}) {} {}", emoji, m.name, size_str, status, hw_str), m, score)
         })
         .collect();
     
-    // Trier par compatibilité puis par taille décroissante
+    // Trier par score de compatibilité décroissant
     model_items.sort_by(|a, b| {
-        match (b.2, a.2) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => b.1.size.unwrap_or(0).cmp(&a.1.size.unwrap_or(0)),
-        }
+        b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal)
     });
     
     let display_items: Vec<String> = model_items.iter().map(|(s, _, _)| s.clone()).collect();
@@ -106,9 +107,9 @@ fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInf
         return Ok(());
     }
     
-    let (_, chosen, compatible) = model_items[sel];
+    let (_, chosen, score) = model_items[sel];
     
-    if !compatible {
+    if score < 0.2 {
         if !Confirm::new()
             .with_prompt(&i18n.t("models.catalog_not_compatible"))
             .default(false)
@@ -140,4 +141,19 @@ fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInf
     }
     
     Ok(())
+}
+
+/// Format hardware compatibility info for display
+fn format_hardware_compatibility(model: &ollama_api::OllamaModel, hw: &HardwareInfo) -> String {
+    let vram_gb = hw.total_vram_mb as f64 / 1024.0;
+    let size_gb = model.size.unwrap_or(0) as f64 / 1_073_741_824.0;
+    let has_gpu = hw.has_gpu();
+    
+    if size_gb > vram_gb && has_gpu {
+        format!("[VRAM: {:.0}GB/{:.0}GB]", vram_gb, size_gb)
+    } else if size_gb > hw.ram_gb {
+        format!("[RAM: {:.0}GB/{:.0}GB]", hw.ram_gb, size_gb)
+    } else {
+        String::new()
+    }
 }
