@@ -14,7 +14,21 @@ impl Tool for PiTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed_with_local_bin("pi") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self, _i18n: &I18n) -> Result<()> {
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        PiTool::install(i18n)
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        PiTool::uninstall(i18n)
+    }
+    // Le binaire s'appelle "pi"
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        PiTool::launch(i18n, state, model)
+    }
+}
+
+impl PiTool {
+    pub fn install(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
         match WzllamaState::load().last_model.as_deref() {
             Some(m) => {
                 let cmd: String = format!("ollama launch pi --model {}", m);
@@ -26,15 +40,20 @@ impl Tool for PiTool {
         }
         Ok(())
     }
-    fn uninstall(&self, i18n: &I18n) -> Result<()> {
-        PiTool::uninstall(i18n)
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new().with_prompt(i18n.t("tool.pi.uninstall_confirm")).default(false).interact()? {
+            return Ok(());
+        }
+        let _ = shell::run_quiet("sudo npm uninstall -g @earendil-works/pi-coding-agent 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.pi 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.local/bin/pi 2>/dev/null").ok();
+        display::success(&i18n.t("tool.pi.uninstalled"));
+        Ok(())
     }
-    // Le binaire s'appelle "pi"
-    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+    pub fn launch(i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
-                //FIXME try pi --model ollama/{model} si ça ne marche pas via ollama
                 display::comment(&format!("pi --model ollama/{}", m));
                 display::run(&i18n.t_with_vars("tool.pi.run_model", &[("model", &m)]));
                 let cmd: String = format!("ollama launch pi --model {}", m);
@@ -45,19 +64,6 @@ impl Tool for PiTool {
                 println!("ollama launch pi");
             }
         }
-        Ok(())
-    }
-}
-
-impl PiTool {
-    pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.pi.uninstall_confirm")).default(false).interact()? {
-            return Ok(());
-        }
-        let _ = shell::run_quiet("sudo npm uninstall -g @earendil-works/pi-coding-agent 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.pi 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.local/bin/pi 2>/dev/null").ok();
-        display::success(&i18n.t("tool.pi.uninstalled"));
         Ok(())
     }
 }

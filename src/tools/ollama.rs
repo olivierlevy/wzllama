@@ -17,35 +17,12 @@ impl Tool for OllamaTool {
         else { ToolStatus::NotInstalled }
     }
 
-    fn install(&self, _i18n: &I18n) -> Result<()> {
-        shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
-        shell::run_live("sudo systemctl enable ollama")?;
-        shell::run_live("sudo systemctl start ollama")?;
-    
-        // Attendre qu'il soit prêt
-        for _ in 0..10 {
-            if crate::core::ollama_api::detect_url().is_some() {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_secs(1));
-        }
-    
-        // Générer la configuration par défaut
-        let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());
-        config.save()?;
-        
-        // Installer dans les shells
-        crate::config::shells::install_all_shells_cli()?;
-        
-        Ok(())
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        OllamaTool::install(i18n)
     }
 
-    fn update(&self, _i18n: &I18n) -> Result<()> {
-        // Ollama se met à jour automatiquement, mais on peut forcer la vérification
-        display::info("Checking for Ollama updates...");
-        shell::run_live("ollama pull --latest 2>/dev/null || true")?;
-        display::success("✅ Ollama is up to date");
-        Ok(())
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        OllamaTool::update(i18n)
     }
 
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
@@ -53,18 +30,7 @@ impl Tool for OllamaTool {
     }
 
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
-        let model = model.or(state.last_model.as_deref());
-        match model {
-            Some(m) => {
-                display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", &m)]));
-                let cmd: String = format!("ollama run {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
-            }
-            None => {
-                display::info(&i18n.t("ollama.choose_model"));
-            }
-        }
-        Ok(())
+        OllamaTool::launch(i18n, state, model)
     }
 }
 
@@ -151,6 +117,55 @@ impl OllamaTool {
             
             // Installer dans les shells
             crate::config::shells::install_all_shells(i18n)?;
+        }
+        Ok(())
+    }
+
+    // ─── Installation, Update, Launch ─────────────────
+
+    pub fn install(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
+        shell::run_live("sudo systemctl enable ollama")?;
+        shell::run_live("sudo systemctl start ollama")?;
+    
+        // Attendre qu'il soit prêt
+        for _ in 0..10 {
+            if crate::core::ollama_api::detect_url().is_some() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+    
+        // Générer la configuration par défaut
+        let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());
+        config.save()?;
+        
+        // Installer dans les shells
+        crate::config::shells::install_all_shells_cli()?;
+        
+        Ok(())
+    }
+
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Checking for Ollama updates...");
+        shell::run_live("ollama pull --latest 2>/dev/null || true")?;
+        display::success("✅ Ollama is up to date");
+        Ok(())
+    }
+
+    pub fn launch(i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        let model = model.or(state.last_model.as_deref());
+        match model {
+            Some(m) => {
+                display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", &m)]));
+                let cmd: String = format!("ollama run {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                display::info(&i18n.t("ollama.choose_model"));
+            }
         }
         Ok(())
     }

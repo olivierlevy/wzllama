@@ -14,14 +14,34 @@ impl Tool for CodexTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed_with_local_bin("codex") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self, _i18n: &I18n) -> Result<()> {
-        shell::run_live("npm install -g @openai/codex")?;
-        Ok(())
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        CodexTool::install(i18n)
     }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         CodexTool::uninstall(i18n)
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        CodexTool::launch(i18n, state, model)
+    }
+}
+
+impl CodexTool {
+    pub fn install(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        shell::run_live("npm install -g @openai/codex")?;
+        Ok(())
+    }
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        if !Confirm::new().with_prompt(i18n.t("tool.codex.uninstall_confirm")).default(false).interact()? {
+            return Ok(());
+        }
+        let _ = shell::run_quiet("sudo npm uninstall -g @openai/codex 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.codex 2>/dev/null").ok();
+        let _ = shell::run_quiet("rm -rf ~/.local/bin/codex 2>/dev/null").ok();
+        display::success(&i18n.t("tool.codex.uninstalled"));
+        Ok(())
+    }
+    pub fn launch(i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.codex.auth"));
         let model = model.or(state.last_model.as_deref());
         match model {
@@ -35,19 +55,6 @@ impl Tool for CodexTool {
                 println!("ollama launch codex");
             }
         }
-        Ok(())
-    }
-}
-
-impl CodexTool {
-    pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.codex.uninstall_confirm")).default(false).interact()? {
-            return Ok(());
-        }
-        let _ = shell::run_quiet("sudo npm uninstall -g @openai/codex 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.codex 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.local/bin/codex 2>/dev/null").ok();
-        display::success(&i18n.t("tool.codex.uninstalled"));
         Ok(())
     }
 }

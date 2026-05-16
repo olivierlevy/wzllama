@@ -12,12 +12,23 @@ impl Tool for PoolTool {
     fn status(&self) -> ToolStatus {
         if shell::is_installed("pool") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self, _i18n: &I18n) -> Result<()> {
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        PoolTool::install(i18n)
+    }
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        PoolTool::launch(i18n, state, model)
+    }
+}
+
+impl PoolTool {
+    pub fn install(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
         println!("ℹ️  https://github.com/poolsideai/pool");
         shell::run_live("curl -fsSL https://downloads.poolside.ai/pool/install.sh | sh")?;
         Ok(())
     }
-    fn launch(&self, _i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
+    pub fn launch(i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
+        let _ = i18n;
         println!("ℹ️  https://github.com/poolsideai/pool");
         println!("pool");
         shell::exec("pool")

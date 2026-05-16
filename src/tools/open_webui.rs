@@ -22,7 +22,40 @@ impl Tool for OpenWebUITool {
         let exists = docker::run("inspect open-webui");
         if exists { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
-    fn install(&self, _i18n: &I18n) -> Result<()> {
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        OpenWebUITool::install(i18n)
+    }
+    
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        OpenWebUITool::update(i18n)
+    }
+    
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        OpenWebUITool::uninstall(i18n)
+    }
+    
+    fn requires_docker(&self) -> bool { true }
+    fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
+        OpenWebUITool::launch(i18n, state, model)
+    }
+}
+
+
+impl OpenWebUITool {
+    pub fn pull() -> Result<()> {
+        docker::run_live("pull ghcr.io/open-webui/open-webui:ollama")?;
+        docker::run_live("run -d \
+            --network=host \
+            --add-host=host.docker.internal:host-gateway \
+            -v open-webui:/app/backend/data \
+            -e OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+            --name open-webui \
+            --restart always \
+            ghcr.io/open-webui/open-webui:ollama")?;
+        Ok(())
+    }
+    pub fn install(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
         // Docker must be running first (handled by menu_tools via ensure_ready)
         if !docker::is_running() {
             anyhow::bail!("Docker is not ready");
@@ -42,48 +75,8 @@ impl Tool for OpenWebUITool {
         } else {
             // Container does not exist - create it
             display::info("Pulling Open WebUI image (~500MB)...");
-            let _ = OpenWebUITool::pull();
+            let _ = Self::pull();
         }
-        Ok(())
-    }
-    
-    fn update(&self, i18n: &I18n) -> Result<()> {
-        OpenWebUITool::update(i18n)
-    }
-    
-    fn uninstall(&self, i18n: &I18n) -> Result<()> {
-        OpenWebUITool::uninstall(i18n)
-    }
-    
-    fn requires_docker(&self) -> bool { true }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
-        let url = "http://localhost:8080";
-        println!("🌐 Open WebUI : {}", url);
-        println!("💡 {}", i18n.t("url.refresh_hint"));
-    
-        if Confirm::new()
-            .with_prompt(i18n.t("url.open"))
-            .default(true)
-            .interact()?
-        {
-            shell::open_url(url);
-        }
-        Ok(())
-    }
-}
-
-
-impl OpenWebUITool {
-    pub fn pull() -> Result<()> {
-        docker::run_live("pull ghcr.io/open-webui/open-webui:ollama")?;
-        docker::run_live("run -d \
-            --network=host \
-            --add-host=host.docker.internal:host-gateway \
-            -v open-webui:/app/backend/data \
-            -e OLLAMA_BASE_URL=http://127.0.0.1:11434 \
-            --name open-webui \
-            --restart always \
-            ghcr.io/open-webui/open-webui:ollama")?;
         Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
@@ -93,7 +86,7 @@ impl OpenWebUITool {
             display::info(&i18n.t("tool.openwebui.uninstall_rm"));
             let _ = docker::run_live("rm -f open-webui 2>/dev/null");
             display::info(&i18n.t("tool.openwebui.uninstall_rm_volume"));
-            let _ = OpenWebUITool::pull();
+            let _ = Self::pull();
         }
         display::success(&i18n.t("tool.openwebui.updated"));
         Ok(())
@@ -124,6 +117,20 @@ impl OpenWebUITool {
             display::info(&i18n.t("tool.openwebui.uninstall_nothing"));
         }
         display::success(&i18n.t("tool.openwebui.uninstalled"));
+        Ok(())
+    }
+    pub fn launch(i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
+        let url = "http://localhost:8080";
+        println!("🌐 Open WebUI : {}", url);
+        println!("💡 {}", i18n.t("url.refresh_hint"));
+    
+        if Confirm::new()
+            .with_prompt(i18n.t("url.open"))
+            .default(true)
+            .interact()?
+        {
+            shell::open_url(url);
+        }
         Ok(())
     }
 }
