@@ -195,7 +195,7 @@ impl OllamaTool {
         let _ = shell::run_quiet("sudo systemctl daemon-reload 2>/dev/null");
         display::success(&i18n.t("ollama.service_removed"));
 
-        // 3. Supprimer le binaire
+        // 3. Supprimer le binaire et fichiers d'installation
         if let Ok((stdout, _)) = shell::run_quiet("which ollama 2>/dev/null") {
             let bin = stdout.trim();
             if !bin.is_empty() {
@@ -203,6 +203,8 @@ impl OllamaTool {
                 display::success(&i18n.t_with_vars("ollama.binary_removed", &[("path", bin)]));
             }
         }
+        let _ = shell::run_quiet("sudo rm -rf /usr/local/lib/ollama 2>/dev/null");
+        let _ = shell::run_quiet("sudo rm -rf /lib/ollama 2>/dev/null");
 
         // 4. Supprimer les données
         let _ = shell::run_quiet("sudo rm -rf /usr/share/ollama 2>/dev/null");
@@ -210,10 +212,22 @@ impl OllamaTool {
         let _ = shell::run_quiet("sudo rm -rf ~/.ollama 2>/dev/null");
         display::success(&i18n.t("ollama.data_removed"));
 
-        // 5. Supprimer l'utilisateur et le groupe
-        let _ = shell::run_quiet("sudo userdel ollama 2>/dev/null");
-        let _ = shell::run_quiet("sudo groupdel ollama 2>/dev/null");
+        // 5. Supprimer l'utilisateur et le groupe système
+        if shell::run_quiet("id -u ollama >/dev/null 2>&1").is_ok() {
+            let _ = shell::run_quiet("sudo userdel ollama 2>/dev/null");
+        }
+        if shell::run_quiet("getent group ollama >/dev/null 2>&1").is_ok() {
+            let _ = shell::run_quiet("sudo groupdel ollama 2>/dev/null");
+        }
         display::success(&i18n.t("ollama.user_removed"));
+
+        // 6. Vérification finale
+        display::info("Verifying uninstallation...");
+        if shell::run("command -v ollama >/dev/null 2>&1").is_ok() {
+            display::warning("ollama binary still found - manual cleanup may be needed");
+        } else {
+            display::success("ollama binary not found - uninstallation complete");
+        }
 
         display::success(&i18n.t("ollama.uninstalled"));
         Ok(())
