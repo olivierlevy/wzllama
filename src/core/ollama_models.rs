@@ -75,9 +75,25 @@ pub struct FleetCapacity {
 }
 
 pub fn extract_size(name: &str) -> u32 {
-    for part in name.split([':', '-', '/']) {
+    for part in name.split([':', '-', '/', '_']) {
+        // Handle formats like "3b", "3.5b", "70b", "27b", "35b"
         if let Some(size) = part.strip_suffix('b') {
+            // Handle decimal sizes like "3.5b"
+            if let Ok(n) = size.parse::<f32>() {
+                return (n * 10.0).round() as u32 / 10; // Round to nearest 0.1b precision
+            }
             if let Ok(n) = size.parse::<u32>() { return n; }
+        }
+    }
+    // Try to extract from model name patterns like "qwen3-30b" or "gpt-oss-120b"
+    for part in name.split(['-', ':', '/', '_']) {
+        let lower = part.to_lowercase();
+        // Check for patterns like "30b", "120b", "27b" at end of word
+        if lower.ends_with("b") && lower.len() > 1 {
+            let num_part = &lower[..lower.len()-1];
+            if let Ok(n) = num_part.parse::<f32>() {
+                return (n * 10.0).round() as u32 / 10;
+            }
         }
     }
     0
@@ -98,15 +114,53 @@ pub fn calculate_fleet_capacity(hw: &HardwareInfo, orchestrator: &OllamaModel) -
 pub fn score_model(model: &OllamaModel, usage: &str, hw: &HardwareInfo) -> f32 {
     let name = model.name.to_lowercase();
     let size = extract_size(&model.name);
-    if size == 0 && (name.contains("cloud") || name.contains("remote")) { return 0.0; }
-
-    let available = if hw.has_gpu() { hw.total_vram_mb as f64 / 1024.0 } else { hw.ram_gb };
+    
+    // Cloud models are handled separately - return low score here
+    if name.contains("cloud") || name.contains("remote") { return 0.0; }
+    
+    // Check disk space - model needs at least its size + 20% buffer
+    let model_gb = model.size.unwrap_or(0) as f64 / 1_073_741_824.0;
+    let has_disk_space = hw.available_disk_gb >= model_gb * 1.2;
+    
+    let has_gpu = hw.has_gpu();
+    let vram_gb = hw.total_vram_mb as f64 / 1024.0;
     let mut score: f32 = 0.2;
-
-    let size_score = if (size as f64 * 2.0) <= available {
-        if (size as f64 * 2.0) <= available * 0.3 { 0.4 } else if (size as f64 * 2.0) <= available * 0.5 { 0.25 } else { 0.1 }
+    
+    // VRAM/RAM fit check - model needs ~2x its size in memory for loading
+    // GPU: prefer VRAM but fall back to RAM if needed
+    // CPU: use RAM only
+    let needs_mem = size as f64 * 2.0;
+    
+    let (fits_memory, uses_ram) = if has_gpu {
+        if needs_mem <= vram_gb {
+            (true, false)  // Fits in VRAM - optimal
+        } else if needs_mem <= hw.ram_gb {
+            (true, true)   // Fits in RAM but not VRAM - slower but possible
+        } else {
+            (false, false) // Doesn't fit anywhere
+        }
+    } else {
+        (needs_mem <= hw.ram_gb, false)
+    };
+    
+    let size_score = if fits_memory {
+        if uses_ram {
+            0.15  // Fits but only in RAM - slower performance warning
+        } else if needs_mem <= vram_gb * 0.3 { 
+            0.4   // Small model - excellent fit
+        } else if needs_mem <= vram_gb * 0.5 { 
+            0.25  // Medium model - good fit
+        } else { 
+            0.1   // Large model - tight fit
+        }
     } else { -1.0 };
     score += size_score;
+    
+    // Disk space check
+    if !has_disk_space {
+        score -= 0.5;
+    }
+    
     if score < 0.0 { return 0.0; }
 
     match usage {
@@ -126,6 +180,12 @@ pub fn score_model(model: &OllamaModel, usage: &str, hw: &HardwareInfo) -> f32 {
     for kw in keywords { if name.contains(kw) || family.contains(kw) { score += 0.1; } }
 
     score.min(1.0).max(0.0)
+}
+
+/// Check if a model is a cloud model
+pub fn is_cloud_model(model: &OllamaModel) -> bool {
+    let name = model.name.to_lowercase();
+    name.contains("cloud") || name.contains("remote")
 }
 
 pub fn rank_models(models: &[OllamaModel], usage: &str, hw: &HardwareInfo, limit: usize) -> Vec<(OllamaModel, f32)> {
