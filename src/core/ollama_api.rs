@@ -146,6 +146,9 @@ pub fn fetch_remote_catalog() -> Result<Vec<OllamaModel>> {
 /// These are verified working models from ollama.com/library
 fn get_popular_models() -> Vec<OllamaModel> {
     vec![
+        // Qwen 3.6 - Latest models (27b, 35b)
+        OllamaModel { name: "qwen3.6:27b".to_string(), model: "qwen3.6:27b".to_string(), modified_at: None, size: Some(27 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "qwen3.6:35b-a3b".to_string(), model: "qwen3.6:35b-a3b".to_string(), modified_at: None, size: Some(35 * 1024 * 1024 * 1024), details: None },
         // Large models
         OllamaModel { name: "gpt-oss:120b".to_string(), model: "gpt-oss:120b".to_string(), modified_at: None, size: Some(65 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "deepseek-v3:671b".to_string(), model: "deepseek-v3:671b".to_string(), modified_at: None, size: Some(400 * 1024 * 1024 * 1024), details: None },
@@ -153,7 +156,7 @@ fn get_popular_models() -> Vec<OllamaModel> {
         OllamaModel { name: "devstral:24b".to_string(), model: "devstral:24b".to_string(), modified_at: None, size: Some(24 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "kimi-k2:1t".to_string(), model: "kimi-k2:1t".to_string(), modified_at: None, size: Some(1118 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "minimax-m2.5:30b".to_string(), model: "minimax-m2.5:30b".to_string(), modified_at: None, size: Some(230 * 1024 * 1024 * 1024), details: None },
-        // Qwen 3.6 family
+        // Qwen 3 family
         OllamaModel { name: "qwen3:30b".to_string(), model: "qwen3:30b".to_string(), modified_at: None, size: Some(30 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "qwen3:35b-a3b".to_string(), model: "qwen3:35b-a3b".to_string(), modified_at: None, size: Some(35 * 1024 * 1024 * 1024), details: None },
         // Vision models
