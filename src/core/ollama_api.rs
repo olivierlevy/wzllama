@@ -146,16 +146,27 @@ pub fn fetch_remote_catalog() -> Result<Vec<OllamaModel>> {
 /// These are verified working models from ollama.com/library
 fn get_popular_models() -> Vec<OllamaModel> {
     vec![
+        // Llama 3.3 - Best all-around model (2026)
+        OllamaModel { name: "llama3.3:8b".to_string(), model: "llama3.3:8b".to_string(), modified_at: None, size: Some(8 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "llama3.3:70b".to_string(), model: "llama3.3:70b".to_string(), modified_at: None, size: Some(70 * 1024 * 1024 * 1024), details: None },
         // Qwen 3.6 - Latest models (27b, 35b)
         OllamaModel { name: "qwen3.6:27b".to_string(), model: "qwen3.6:27b".to_string(), modified_at: None, size: Some(27 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "qwen3.6:35b-a3b".to_string(), model: "qwen3.6:35b-a3b".to_string(), modified_at: None, size: Some(35 * 1024 * 1024 * 1024), details: None },
+        // Mistral Nemo - 12B reasoning model
+        OllamaModel { name: "mistral-nemo:12b".to_string(), model: "mistral-nemo:12b".to_string(), modified_at: None, size: Some(12 * 1024 * 1024 * 1024), details: None },
+        // CodeLlama - Code generation
+        OllamaModel { name: "codellama:7b".to_string(), model: "codellama:7b".to_string(), modified_at: None, size: Some(7 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "codellama:34b".to_string(), model: "codellama:34b".to_string(), modified_at: None, size: Some(34 * 1024 * 1024 * 1024), details: None },
+        // Embedding models
+        OllamaModel { name: "nomic-embed-text:7b".to_string(), model: "nomic-embed-text:7b".to_string(), modified_at: None, size: Some(7 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "mxbai-embed-large:335m".to_string(), model: "mxbai-embed-large:335m".to_string(), modified_at: None, size: Some(335 * 1024 * 1024), details: None },
+        OllamaModel { name: "all-minilm:3b".to_string(), model: "all-minilm:3b".to_string(), modified_at: None, size: Some(3 * 1024 * 1024 * 1024), details: None },
+        OllamaModel { name: "bge-large:340m".to_string(), model: "bge-large:340m".to_string(), modified_at: None, size: Some(340 * 1024 * 1024), details: None },
         // Large models
         OllamaModel { name: "gpt-oss:120b".to_string(), model: "gpt-oss:120b".to_string(), modified_at: None, size: Some(65 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "deepseek-v3:671b".to_string(), model: "deepseek-v3:671b".to_string(), modified_at: None, size: Some(400 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "deepseek-coder-v2:16b".to_string(), model: "deepseek-coder-v2:16b".to_string(), modified_at: None, size: Some(16 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "devstral:24b".to_string(), model: "devstral:24b".to_string(), modified_at: None, size: Some(24 * 1024 * 1024 * 1024), details: None },
-        OllamaModel { name: "kimi-k2:1t".to_string(), model: "kimi-k2:1t".to_string(), modified_at: None, size: Some(1118 * 1024 * 1024 * 1024), details: None },
-        OllamaModel { name: "minimax-m2.5:30b".to_string(), model: "minimax-m2.5:30b".to_string(), modified_at: None, size: Some(230 * 1024 * 1024 * 1024), details: None },
         // Qwen 3 family
         OllamaModel { name: "qwen3:30b".to_string(), model: "qwen3:30b".to_string(), modified_at: None, size: Some(30 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "qwen3:35b-a3b".to_string(), model: "qwen3:35b-a3b".to_string(), modified_at: None, size: Some(35 * 1024 * 1024 * 1024), details: None },
@@ -166,9 +177,6 @@ fn get_popular_models() -> Vec<OllamaModel> {
         // Coder models
         OllamaModel { name: "qwen2.5-coder:32b".to_string(), model: "qwen2.5-coder:32b".to_string(), modified_at: None, size: Some(32 * 1024 * 1024 * 1024), details: None },
         OllamaModel { name: "starcoder2:15b".to_string(), model: "starcoder2:15b".to_string(), modified_at: None, size: Some(15 * 1024 * 1024 * 1024), details: None },
-        // Embedding models
-        OllamaModel { name: "nomic-embed-text:7b".to_string(), model: "nomic-embed-text:7b".to_string(), modified_at: None, size: Some(7 * 1024 * 1024 * 1024), details: None },
-        OllamaModel { name: "mxbai-embed-large:335m".to_string(), model: "mxbai-embed-large:335m".to_string(), modified_at: None, size: Some(335 * 1024 * 1024), details: None },
     ]
 }
 
