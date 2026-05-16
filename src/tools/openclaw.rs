@@ -19,6 +19,9 @@ impl Tool for OpenClawTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         OpenClawTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        OpenClawTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         OpenClawTool::uninstall(i18n)
     }
@@ -45,6 +48,13 @@ impl OpenClawTool {
                 shell::run_live("npm install -g openclaw")?;
             }
         }
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating OpenClaw...");
+        shell::run_live("npm update -g openclaw")?;
+        display::success("✅ OpenClaw updated");
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {

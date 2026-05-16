@@ -17,6 +17,9 @@ impl Tool for CodexTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         CodexTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        CodexTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         CodexTool::uninstall(i18n)
     }
@@ -29,6 +32,13 @@ impl CodexTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         shell::run_live("npm install -g @openai/codex")?;
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating Codex...");
+        shell::run_live("npm update -g @openai/codex")?;
+        display::success("✅ Codex updated");
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {

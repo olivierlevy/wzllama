@@ -17,6 +17,9 @@ impl Tool for OpenCodeTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         OpenCodeTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        OpenCodeTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         OpenCodeTool::uninstall(i18n)
     }
@@ -30,6 +33,13 @@ impl OpenCodeTool {
         let _ = i18n;
         shell::run_live("npm install -g @opencode-ai/cli")?;
         shell::exec("opencode auth login");
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating OpenCode...");
+        shell::run_live("npm update -g @opencode-ai/cli")?;
+        display::success("✅ OpenCode updated");
+        Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
         if !Confirm::new().with_prompt(i18n.t("tool.opencode.uninstall_confirm")).default(false).interact()? {

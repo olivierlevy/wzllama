@@ -17,6 +17,9 @@ impl Tool for PiTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         PiTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        PiTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         PiTool::uninstall(i18n)
     }
@@ -38,6 +41,21 @@ impl PiTool {
                 shell::run_live("npm install -g pi-agent")?;
             }
         }
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating Pi...");
+        match WzllamaState::load().last_model.as_deref() {
+            Some(m) => {
+                let cmd: String = format!("ollama launch pi --model {}", m);
+                println!("{}", cmd); shell::exec(&cmd);
+            }
+            None => {
+                shell::run_live("npm update -g pi-agent")?;
+            }
+        }
+        display::success("✅ Pi updated");
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {

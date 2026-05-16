@@ -17,6 +17,9 @@ impl Tool for DroidTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         DroidTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        DroidTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         DroidTool::uninstall(i18n)
     }
@@ -31,6 +34,13 @@ impl DroidTool {
         let xdg_cmd = crate::core::system::get_package_install_command("xdg-utils")?;
         shell::run_live(&xdg_cmd)?;
         shell::run_live("npm install -g @factoryai/droid")?;
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating Droid...");
+        shell::run_live("npm update -g @factoryai/droid")?;
+        display::success("✅ Droid updated");
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {

@@ -16,6 +16,9 @@ impl Tool for CopilotCliTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         CopilotCliTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        CopilotCliTool::update(i18n)
+    }
     fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
         CopilotCliTool::launch(i18n)
     }
@@ -25,6 +28,13 @@ impl CopilotCliTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         shell::run_live("gh extension install github/gh-copilot")?;
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating Copilot CLI...");
+        shell::run_live("gh extension install github/gh-copilot")?;  // reinstall updates
+        display::success("✅ Copilot CLI updated");
         Ok(())
     }
     pub fn launch(i18n: &I18n) -> Result<()> {

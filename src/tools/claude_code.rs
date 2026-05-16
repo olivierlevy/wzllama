@@ -17,6 +17,9 @@ impl Tool for ClaudeCodeTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         ClaudeCodeTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        ClaudeCodeTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         ClaudeCodeTool::uninstall(i18n)
     }
@@ -29,6 +32,13 @@ impl ClaudeCodeTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating Claude Code...");
+        shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
+        display::success("✅ Claude Code updated");
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {

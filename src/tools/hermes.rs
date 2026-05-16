@@ -17,6 +17,9 @@ impl Tool for HermesTool {
     fn install(&self, i18n: &I18n) -> Result<()> {
         HermesTool::install(i18n)
     }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        HermesTool::update(i18n)
+    }
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         HermesTool::uninstall(i18n)
     }
@@ -37,6 +40,14 @@ impl HermesTool {
                 shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --no-venv --skip-setup")?;
             }
         }
+        Ok(())
+    }
+    pub fn update(i18n: &I18n) -> Result<()> {
+        let _ = i18n;
+        display::info("Updating Hermes...");
+        // Re-run install script for update
+        shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --no-venv --skip-setup")?;
+        display::success("✅ Hermes updated");
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
