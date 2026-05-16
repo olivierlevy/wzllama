@@ -12,11 +12,14 @@ impl Tool for ClaudeCodeTool {
     fn name(&self) -> &str { "Claude Code" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("claude") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("claude") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
         Ok(())
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        ClaudeCodeTool::uninstall(i18n)
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());

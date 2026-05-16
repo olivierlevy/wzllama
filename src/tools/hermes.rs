@@ -12,7 +12,7 @@ impl Tool for HermesTool {
     fn name(&self) -> &str { "Hermes Agent" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.hermes.description") }
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("hermes") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("hermes") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
         match WzllamaState::load().last_model.as_deref() {
@@ -25,6 +25,9 @@ impl Tool for HermesTool {
             }
         }
         Ok(())
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        HermesTool::uninstall(i18n)
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());

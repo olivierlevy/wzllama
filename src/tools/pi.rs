@@ -26,6 +26,9 @@ impl Tool for PiTool {
         }
         Ok(())
     }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        PiTool::uninstall(i18n)
+    }
     // Le binaire s'appelle "pi"
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());

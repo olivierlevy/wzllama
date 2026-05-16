@@ -12,11 +12,14 @@ impl Tool for OpenCodeTool {
     fn name(&self) -> &str { "OpenCode" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.opencode.description") }
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("opencode") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("opencode") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("npm install -g @opencode-ai/cli")?;
         shell::exec("opencode auth login");
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        OpenCodeTool::uninstall(i18n)
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.opencode.auth"));

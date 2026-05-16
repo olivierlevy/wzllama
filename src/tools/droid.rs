@@ -12,7 +12,7 @@ impl Tool for DroidTool {
     fn name(&self) -> &str { "Droid" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.droid.description") }
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("droid") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("droid") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
         // Récupérer la commande d'installation de xdg-utils
@@ -20,6 +20,9 @@ impl Tool for DroidTool {
         shell::run_live(&xdg_cmd)?;
         shell::run_live("npm install -g @factoryai/droid")?;
         Ok(())
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        DroidTool::uninstall(i18n)
     }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         display::info(&i18n.t("tool.droid.xdg"));
