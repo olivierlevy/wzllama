@@ -109,6 +109,9 @@ fn run_catalog_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInf
     
     let (_, chosen, score) = model_items[sel];
     
+    // Show detailed model information before asking to install
+    show_model_details(i18n, chosen, hw);
+    
     if score < 0.2 {
         if !Confirm::new()
             .with_prompt(&i18n.t("models.catalog_not_compatible"))
@@ -155,5 +158,60 @@ fn format_hardware_compatibility(model: &ollama_api::OllamaModel, hw: &HardwareI
         format!("[RAM: {:.0}GB/{:.0}GB]", hw.ram_gb, size_gb)
     } else {
         String::new()
+    }
+}
+
+/// Show detailed model information using /api/show
+fn show_model_details(i18n: &I18n, model: &ollama_api::OllamaModel, hw: &HardwareInfo) {
+    display::section(&format!("🤖 {}", model.name));
+    
+    println!("  {}: {}", i18n.t("models.info_size"), model.formatted_size());
+    
+    // Try to get detailed info from /api/show
+    if let Ok(details) = ollama_api::get_model_details(&model.name) {
+        if let Some(family) = details.details.as_ref().and_then(|d| d.family.as_ref()) {
+            println!("  {}: {}", i18n.t("models.info_family"), family);
+        }
+        
+        if let Some(param_size) = details.details.as_ref().and_then(|d| d.parameter_size.as_ref()) {
+            println!("  {}: {}", i18n.t("models.info_param_size"), param_size);
+        }
+        
+        if let Some(ref license) = details.license {
+            let short_license = if license.len() > 50 { 
+                format!("{}...", &license[..47]) 
+            } else { 
+                license.clone() 
+            };
+            println!("  {}: {}", i18n.t("models.info_license"), short_license.dimmed());
+        }
+        
+        if let Some(ref template) = details.template {
+            let short_template = if template.len() > 60 { 
+                format!("{}...", &template[..57]) 
+            } else { 
+                template.clone() 
+            };
+            println!("  {}: {}", "Template", short_template.dimmed());
+        }
+        
+        // Show model_info if available (contains extra metadata)
+        if let Some(ref info) = details.model_info {
+            if let Some(arch) = info.get("architecture").and_then(|a| a.as_str()) {
+                println!("  {}: {}", "Arch", arch);
+            }
+        }
+    } else {
+        println!("  {}", "Detailed info unavailable".dimmed());
+    }
+    
+    // Hardware compatibility check
+    println!();
+    let score = ollama_models::score_model(model, "mixed", hw);
+    match score {
+        s if s >= 0.8 => println!("  {} 🚀 {}", "Hardware:".green(), "Excellent fit for your system".green()),
+        s if s >= 0.5 => println!("  {} ✅ {}", "Hardware:".green(), "Good fit".green()),
+        s if s >= 0.2 => println!("  {} ⚠️ {}", "Hardware:".yellow(), "Fits with constraints".yellow()),
+        _ => println!("  {} ❌ {}", "Hardware:".red(), "May not fit in memory".red()),
     }
 }

@@ -243,6 +243,7 @@
   "models.info_modified": "Modifié",
   "models.info_family": "Famille",
   "models.info_param_size": "Paramètres",
+  "models.info_license": "Licence",
   "models.hardware_ok": "✅ Compatible avec le hardware",
   "models.hardware_warning": "⚠️ Modèle peut ne pas tenir en mémoire",
 

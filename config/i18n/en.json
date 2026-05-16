@@ -241,6 +241,7 @@
   "models.info_modified": "Modified",
   "models.info_family": "Family",
   "models.info_param_size": "Parameters",
+  "models.info_license": "License",
   "models.hardware_ok": "✅ Compatible with hardware",
   "models.hardware_warning": "⚠️ Model may not fit in memory",
 
