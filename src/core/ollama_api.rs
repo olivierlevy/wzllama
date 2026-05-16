@@ -173,9 +173,20 @@ fn get_popular_models() -> Vec<OllamaModel> {
 pub fn fetch_full_catalog() -> Result<Vec<OllamaModel>> {
     let mut models = fetch_remote_catalog()?;
     
+    // Try to scrape the library page for additional models
+    if let Ok(scraped) = scrape_library_models() {
+        use std::collections::HashSet;
+        let existing: HashSet<String> = models.iter().map(|m| m.name.clone()).collect();
+        
+        for model in scraped {
+            if !existing.contains(&model.name) {
+                models.push(model);
+            }
+        }
+    }
+    
     // Add models from popular list that aren't already included
-    use std::collections::HashSet;
-    let existing: HashSet<String> = models.iter().map(|m| m.name.clone()).collect();
+    let existing: std::collections::HashSet<String> = models.iter().map(|m| m.name.clone()).collect();
     
     for model in get_popular_models() {
         if !existing.contains(&model.name) {
@@ -235,6 +246,48 @@ pub fn merge_models(local: &[OllamaModel], remote: &[OllamaModel]) -> Vec<(Ollam
         }
     }
     all
+}
+
+/// Scrape ollama.com/library to get a comprehensive list of models
+pub fn scrape_library_models() -> Result<Vec<OllamaModel>> {
+    let url = "https://ollama.com/library";
+    let client = Client::builder().timeout(std::time::Duration::from_secs(15)).build()?;
+    let html = client.get(url).send().context("Failed to fetch ollama library page")?.text()?;
+    
+    use scraper::{Html, Selector};
+    
+    let document = Html::parse_document(&html);
+    
+    // Select all links to models in the library grid
+    // The library page uses links like /library/qwen3, /library/llama3.1, etc.
+    let link_selector = Selector::parse("a[href^='/library/']")
+        .map_err(|e| anyhow::anyhow!("Invalid selector: {}", e))?;
+    
+    let mut models = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    
+    for element in document.select(&link_selector) {
+        if let Some(href) = element.value().attr("href") {
+            // Extract model name from href like /library/qwen3 or /library/llama3.1:8b
+            let name = href.trim_start_matches("/library/");
+            // Filter out non-model links like "/library" itself or empty names
+            if !name.is_empty() && name.len() > 1 && !seen.contains(name) {
+                // Skip links that look like paths but not model names (very long or containing special chars)
+                if name.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-' || c == ':' || c == '_') {
+                    seen.insert(name.to_string());
+                    models.push(OllamaModel {
+                        name: name.to_string(),
+                        model: name.to_string(),
+                        modified_at: None,
+                        size: None,
+                        details: None,
+                    });
+                }
+            }
+        }
+    }
+    
+    Ok(models)
 }
 
 pub fn run_benchmark() -> Result<()> {

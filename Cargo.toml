@@ -32,3 +32,5 @@ libc = "0.2"
 # tui-term = "0.3"  # Commented out due to enumset_derive incompatibility
 # Keep dialoguer for CLI fallback and tools
 dialoguer = "0.12"
+# HTML scraper for ollama library
+scraper = "0.21"
