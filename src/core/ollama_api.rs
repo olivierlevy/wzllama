@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use colored::Colorize;
+use serde_json::json;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct OllamaModel {
@@ -32,6 +33,18 @@ pub struct ModelDetails {
     #[serde(default)] pub family: Option<String>,
     #[serde(default)] #[allow(dead_code)] pub parameter_size: Option<String>,
     #[serde(default)] #[allow(dead_code)] pub quantization_level: Option<String>,
+}
+
+/// Response from /api/show endpoint
+#[derive(Debug, Deserialize, Clone)]
+pub struct ModelShowResponse {
+    #[serde(default)] pub license: Option<String>,
+    #[serde(default)] pub modelfile: Option<String>,
+    #[serde(default)] pub parameters: Option<String>,
+    #[serde(default)] pub template: Option<String>,
+    #[serde(default)] pub system: Option<String>,
+    #[serde(default)] pub details: Option<ModelDetails>,
+    #[serde(default)] pub model_info: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -127,6 +140,42 @@ pub fn fetch_remote_catalog() -> Result<Vec<OllamaModel>> {
     let resp = client.get(url).send().context("Catalogue injoignable")?;
     let data: OllamaTagsResponse = resp.json().context("Parsing catalogue échoué")?;
     Ok(data.models)
+}
+
+/// Get detailed model information from local Ollama server using POST /api/show
+pub fn show_model(model_name: &str) -> Result<ModelShowResponse> {
+    let url = "http://localhost:11434/api/show";
+    let client = Client::builder().timeout(std::time::Duration::from_secs(5)).build()?;
+    let resp = client.post(url)
+        .json(&json!({ "name": model_name }))
+        .send()
+        .context("Local Ollama show failed")?;
+    let data: ModelShowResponse = resp.json().context("Parsing /api/show failed")?;
+    Ok(data)
+}
+
+/// Get detailed model information from remote Ollama catalog using POST /api/show
+pub fn show_remote_model(model_name: &str) -> Result<ModelShowResponse> {
+    let url = "https://ollama.com/api/show";
+    let client = Client::builder().timeout(std::time::Duration::from_secs(10)).build()?;
+    let resp = client.post(url)
+        .json(&json!({ "name": model_name }))
+        .send()
+        .context("Remote Ollama show failed")?;
+    let data: ModelShowResponse = resp.json().context("Parsing /api/show failed")?;
+    Ok(data)
+}
+
+/// Get model details - tries local first, then remote
+pub fn get_model_details(model_name: &str) -> Result<ModelShowResponse> {
+    // Try local first
+    if detect_url().is_some() {
+        if let Ok(details) = show_model(model_name) {
+            return Ok(details);
+        }
+    }
+    // Fall back to remote
+    show_remote_model(model_name)
 }
 
 /// Fusionne locaux + distants sudo doublons
