@@ -12,7 +12,7 @@ impl Tool for CodexTool {
     fn name(&self) -> &str { "Codex" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.codex.description") }
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("codex") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("codex") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
         shell::run_live("npm install -g @openai/codex")?;

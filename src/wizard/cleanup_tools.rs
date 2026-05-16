@@ -75,9 +75,9 @@ fn cleanup_is_installed(id: &str) -> bool {
         "claude_code" => shell::is_installed_quiet("claude"),
         "hermes_agent" => shell::is_installed_quiet("hermes"),
         "opencode" => shell::is_installed_quiet("opencode"),
-        "codex" => shell::is_installed_quiet("codex"),
+        "codex" => shell::is_installed_with_local_bin("codex"),
         "droid" => shell::is_installed_quiet("droid"),
-        "pi" => shell::is_installed_quiet("pi"),
+        "pi" => shell::is_installed_with_local_bin("pi"),
         "pool" => shell::is_installed_quiet("pool"),
         _ => false,
     }
@@ -121,8 +121,8 @@ fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.claude_code = shell::is_installed_quiet("claude");
     state.installed.hermes_agent = shell::is_installed_quiet("hermes");
     state.installed.opencode = shell::is_installed_quiet("opencode");
-    state.installed.codex = shell::is_installed_quiet("codex");
+    state.installed.codex = shell::is_installed_with_local_bin("codex");
     state.installed.droid = shell::is_installed_quiet("droid");
-    state.installed.pi = shell::is_installed_quiet("pi");
+    state.installed.pi = shell::is_installed_with_local_bin("pi");
     state.installed.pool = shell::is_installed_quiet("pool");
 }

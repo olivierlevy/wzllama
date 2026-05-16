@@ -12,7 +12,7 @@ impl Tool for PiTool {
     fn name(&self) -> &str { "Pi" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.pi.description") }
     fn status(&self) -> ToolStatus {
-        if shell::is_installed("pi") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("pi") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, _i18n: &I18n) -> Result<()> {
         match WzllamaState::load().last_model.as_deref() {

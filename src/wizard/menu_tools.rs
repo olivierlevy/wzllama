@@ -9,16 +9,16 @@ use crate::display;
 
 fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.docker = docker::is_installed();
-    state.installed.ollama = shell::is_installed("ollama");
-    state.installed.open_webui = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
-    state.installed.openclaw = shell::is_installed("openclaw");
-    state.installed.claude_code = shell::is_installed("claude");
-    state.installed.hermes_agent = shell::is_installed("hermes");
-    state.installed.opencode = shell::is_installed("opencode");
-    state.installed.codex = shell::is_installed("codex");
-    state.installed.droid = shell::is_installed("droid");
-    state.installed.pi = shell::is_installed("pi");
-    state.installed.pool = shell::is_installed("pool");
+    state.installed.ollama = shell::is_installed_quiet("ollama");
+    state.installed.open_webui = shell::run_quiet("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
+    state.installed.openclaw = shell::is_installed_quiet("openclaw");
+    state.installed.claude_code = shell::is_installed_quiet("claude");
+    state.installed.hermes_agent = shell::is_installed_quiet("hermes");
+    state.installed.opencode = shell::is_installed_quiet("opencode");
+    state.installed.codex = shell::is_installed_with_local_bin("codex");
+    state.installed.droid = shell::is_installed_quiet("droid");
+    state.installed.pi = shell::is_installed_with_local_bin("pi");
+    state.installed.pool = shell::is_installed_quiet("pool");
 }
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {

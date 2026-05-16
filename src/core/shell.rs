@@ -236,6 +236,17 @@ pub fn is_installed_quiet(cmd: &str) -> bool {
     run_quiet(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
 }
 
+/// Check if a command is installed, including in ~/.local/bin
+pub fn is_installed_with_local_bin(cmd: &str) -> bool {
+    if is_installed_quiet(cmd) {
+        return true;
+    }
+    // Also check ~/.local/bin
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
+    let local_bin = format!("{}/.local/bin/{}", home, cmd);
+    std::path::Path::new(&local_bin).exists()
+}
+
 /// Run a command without exiting raw mode (for internal use)
 pub fn run_quiet(cmd: &str) -> Result<(String, String)> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
