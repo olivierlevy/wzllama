@@ -36,6 +36,8 @@ impl EventHandler {
             match event::read().ok() {
                 Some(Event::Key(key)) => return AppEvent::Key(key),
                 Some(Event::Resize(w, h)) => return AppEvent::Resize(w, h),
+                // Ignore mouse events to prevent scroll wheel issues after crash
+                Some(Event::Mouse(_)) => return AppEvent::Tick,
                 _ => {}
             }
         }

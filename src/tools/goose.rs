@@ -27,8 +27,8 @@ impl Tool for GooseTool {
 impl GooseTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         display::info(&i18n.t("tool.goose.install_info"));
-        display::info("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash");
-        shell::run_live("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash")?;
+        display::info("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash");
+        shell::run_live("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash")?;
         display::success(&i18n.t("tool.goose.installed"));
         Ok(())
     }
