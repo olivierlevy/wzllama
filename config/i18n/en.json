@@ -165,6 +165,15 @@
   "tool.obsidian.uninstall_confirm": "Uninstall Obsidian?",
   "tool.obsidian.uninstalled": "Obsidian uninstalled",
 
+  "tool.goose.description": "AI agent by Block for coding tasks",
+  "tool.goose.install_info": "Installing Goose AI agent...",
+  "tool.goose.installed": "Goose installed",
+  "tool.goose.updating": "Updating Goose...",
+  "tool.goose.updated": "Goose updated",
+  "tool.goose.launch_hint": "Launching Goose (type 'exit' to quit)...",
+  "tool.goose.uninstall_confirm": "Uninstall Goose?",
+  "tool.goose.uninstalled": "Goose uninstalled",
+
   "tool.pool.description": "Poolside coding agent (https://github.com/poolsideai/pool)",
 
   "config.title": "⚙️  Recommended Configuration",

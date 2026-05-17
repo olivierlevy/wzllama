@@ -12,6 +12,7 @@ pub mod droid;
 pub mod pi;
 pub mod pool;
 pub mod obsidian;
+pub mod goose;
 
 use crate::config::{I18n, WzllamaState};
 use tool_trait::Tool;
@@ -30,6 +31,7 @@ pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
         Box::new(pi::PiTool),
         Box::new(pool::PoolTool),
         Box::new(obsidian::ObsidianTool),
+        Box::new(goose::GooseTool),
     ]
 }
 
@@ -52,6 +54,7 @@ pub fn get_available_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
             "pi" => state.installed.pi,
             "pool" => state.installed.pool,
             "obsidian" => state.installed.obsidian,
+            "goose" => state.installed.goose,
             _ => false,
         };
         ToolInfo {
@@ -88,6 +91,7 @@ pub fn get_install_command(tool_id: &str) -> Option<String> {
         "droid" => Some("ollama install droid".to_string()),
         "pi" => Some("ollama install pi".to_string()),
         "obsidian" => Some("flatpak install flathub md.obsidian.Obsidian -y".to_string()),
+        "goose" => Some("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash".to_string()),
         _ => None,
     }
 }
@@ -108,6 +112,7 @@ pub fn get_launch_command(tool_id: &str, model: Option<&str>) -> Option<String> 
         "pool" => Some("pool".to_string()),
         "copilot_cli" => Some("copilot".to_string()),
         "obsidian" => Some("obsidian".to_string()),
+        "goose" => Some("goose".to_string()),
         _ => Some(tool_id.to_string()),
     }
 }
