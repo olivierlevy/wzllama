@@ -1,34 +1,12 @@
 use anyhow::Result;
 use crate::core::shell;
+use crate::core::system::detect_distro;
 use crate::display;
 
 /// Flatpak utility tool - not exposed in menus
 pub struct FlatpakTool;
 
 impl FlatpakTool {
-    /// Detect the Linux distribution
-    pub fn detect_distro() -> &'static str {
-        if shell::run("which apt apt-get 2>/dev/null").is_ok() {
-            "debian"  // Debian, Ubuntu, Mint
-        } else if shell::run("which dnf 2>/dev/null").is_ok() {
-            "fedora"  // Fedora
-        } else if shell::run("which yum 2>/dev/null").is_ok() {
-            "rhel"    // RHEL, CentOS
-        } else if shell::run("which pacman 2>/dev/null").is_ok() {
-            "arch"    // Arch Linux, Manjaro
-        } else if shell::run("which zypper 2>/dev/null").is_ok() {
-            "opensuse"
-        } else if shell::run("which emerge 2>/dev/null").is_ok() {
-            "gentoo"
-        } else if shell::run("which xbps-install 2>/dev/null").is_ok() {
-            "void"
-        } else if std::path::Path::new("/etc/nixos/configuration.nix").exists() {
-            "nixos"
-        } else {
-            "unknown"
-        }
-    }
-    
     /// Install Flatpak on any Linux distribution
     pub fn install() -> Result<()> {
         if shell::run("flatpak --version").is_ok() {
@@ -37,7 +15,7 @@ impl FlatpakTool {
         
         display::info("Installing Flatpak...");
         
-        match Self::detect_distro() {
+        match detect_distro() {
             "debian" => {
                 shell::run_live("sudo apt update && sudo apt install -y flatpak")?;
             }
