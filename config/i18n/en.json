@@ -79,6 +79,8 @@
   "url.refresh_hint": "Ctrl+Alt+R to force cache refresh if the page doesn't load correctly.",
 
   "ollama.not_installed": "Ollama is not installed",
+  "ollama.required_mandatory": "Ollama is REQUIRED for wzllama to function",
+  "ollama.required_mandatory_exit": "Ollama is required. Please install it and restart wzllama.",
   "ollama.install_now": "Install Ollama?",
   "ollama.installed": "Ollama installed",
   "ollama.not_running": "Ollama is not running",

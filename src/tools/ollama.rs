@@ -85,6 +85,7 @@ impl OllamaTool {
     pub fn ensure_running(i18n: &I18n) -> Result<()> {
         if !shell::is_installed("ollama") {
             display::warning(&i18n.t("ollama.not_installed"));
+            display::warning(&i18n.t("ollama.required_mandatory"));
             if Confirm::new()
                 .with_prompt(i18n.t("ollama.install_now"))
                 .default(true)
@@ -96,9 +97,9 @@ impl OllamaTool {
 
                 // La config env est déjà générée par install()
                 display::success(&i18n.t("config.generated_env"));
-                return Ok(());
+            } else {
+                anyhow::bail!("{}", i18n.t("ollama.required_mandatory_exit"));
             }
-            return Ok(());
         }
 
         // Check la santé d'Ollama

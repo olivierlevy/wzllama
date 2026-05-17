@@ -13,6 +13,7 @@ pub mod pi;
 pub mod pool;
 pub mod obsidian;
 pub mod goose;
+pub mod flatpak; // Utility tool, not exposed in menus
 
 use crate::config::{I18n, WzllamaState};
 use tool_trait::Tool;
