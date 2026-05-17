@@ -10,13 +10,35 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     // Récupérer les modèles locaux
     let local = ollama_api::detect_url().and_then(|u| ollama_api::fetch_local_models(&u).ok()).unwrap_or_default();
     
-    // Si des modèles sont déjà installés, proposer de les use
+    // Menu principal - choisir entre modèles installés ou téléchargement
+    display::section(&i18n.t("menu.main.models"));
+    
+    let mut items: Vec<String> = vec![i18n.t("models.download_adapted")];
+    
     if !local.is_empty() {
-        return run_with_installed_models(i18n, state, hw, local);
+        items.push(i18n.t("models.use_installed"));
     }
     
-    // Sinon, proposer les derniers modèles du catalogue
-    run_catalog_selection(i18n, state, hw)
+    items.push(i18n.t("models.download_catalog"));
+    items.push(i18n.t("menu.back"));
+    
+    let sel = match Select::new()
+        .with_prompt(&i18n.t("models.choose_action"))
+        .items(&items)
+        .default(0)
+        .interact_opt()?
+    {
+        Some(s) => s,
+        None => return Ok(()),
+    };
+    
+    match sel {
+        0 => run_download_adapted(i18n, state, hw),
+        1 if !local.is_empty() => run_with_installed_models(i18n, state, hw, local),
+        n if n == items.len() - 2 && local.is_empty() => run_with_installed_models(i18n, state, hw, local),
+        n if n == items.len() - 1 => Ok(()),
+        _ => run_catalog_selection(i18n, state, hw),
+    }
 }
 
 fn run_with_installed_models(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, local: Vec<ollama_api::OllamaModel>) -> Result<()> {
@@ -52,6 +74,82 @@ fn run_with_installed_models(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
     let chosen = &local[sel];
     state.set_last_model(&chosen.name);
     display::success(&i18n.t_with_vars("models.manage_selected", &[("model", &chosen.name)]));
+    Ok(())
+}
+
+/// Models adapted to user's hardware and usage profiles
+fn run_download_adapted(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
+    let _ = hw; // Reserved for future hardware-specific adaptations
+    display::section(&i18n.t("models.adapted_title"));
+    
+    // Load recommended models from config
+    let config = crate::config::env::EnvConfig::load();
+    
+    // Usage profiles with recommended model sizes
+    let usages = vec![
+        ("chat", i18n.t("usage.mixed"), &config.models.chat),
+        ("code", i18n.t("usage.code"), &config.models.code),
+        ("book", i18n.t("usage.book"), &config.models.book),
+        ("agent", i18n.t("usage.agent"), &config.models.agent),
+    ];
+    
+    let mut items: Vec<String> = usages.iter().map(|(id, label, model)| {
+        format!("{} - {} ({})", label, model, id)
+    }).collect();
+    
+    items.push(i18n.t("menu.back"));
+    
+    let sel = match Select::new()
+        .with_prompt(&i18n.t("models.adapted_choose"))
+        .items(&items)
+        .default(0)
+        .interact_opt()?
+    {
+        Some(s) => s,
+        None => return Ok(()),
+    };
+    
+    if sel == items.len() - 1 {
+        return Ok(());
+    }
+    
+    let model_name = usages[sel].2.clone();
+    
+    // Check if model exists locally
+    let local = ollama_api::detect_url().and_then(|u| ollama_api::fetch_local_models(&u).ok()).unwrap_or_default();
+    let is_installed = local.iter().any(|m| m.name == *model_name);
+    
+    if is_installed {
+        state.set_last_model(&model_name);
+        display::success(&i18n.t_with_vars("models.already_installed", &[("model", &model_name.as_str())]));
+        return Ok(());
+    }
+    
+    // Download the model
+    if !ollama_api::detect_url().is_some() {
+        display::warning(&i18n.t("ollama.not_running"));
+        if Confirm::new().with_prompt(i18n.t("ollama.start_now")).default(true).interact()? {
+            OllamaTool::start()?;
+        } else {
+            return Ok(());
+        }
+    }
+    
+    let confirm = Confirm::new()
+        .with_prompt(&i18n.t_with_vars("models.download_adapted_confirm", &[("model", &model_name.as_str())]))
+        .default(true)
+        .interact()?;
+    
+    if confirm {
+        display::info(&format!("📥 {}", i18n.t_with_vars("config.downloading", &[("model", &model_name.as_str())])));
+        if let Err(e) = ollama_api::pull_model(&model_name) {
+            display::warning(&format!("{}: {}", i18n.t("tool.install_failed"), e));
+        } else {
+            state.set_last_model(&model_name);
+            display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &model_name.as_str())]));
+        }
+    }
+    
     Ok(())
 }
 
