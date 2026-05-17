@@ -156,8 +156,27 @@ impl OllamaTool {
         // Install systemd drop-in for environment variables
         // Use bash explicitly for heredoc compatibility across all shells (fish, zsh, bash)
         shell::run("sudo mkdir -p /etc/systemd/system/ollama.service.d")?;
-        // Write override.conf using printf for reliability
-        shell::run_quiet("printf '[Service]\\nEnvironment=\"OLLAMA_MODELS=/home/ollama\"\\nEnvironment=\"OLLAMA_ORIGINS=*\"\\n' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null")?;
+        
+        // Build environment variables from config
+        let config = crate::config::env::EnvConfig::load();
+        let mut env_lines = vec!["[Service]".to_string()];
+        env_lines.push("Environment=\"OLLAMA_MODELS=/home/ollama\"".to_string());
+        env_lines.push(format!("Environment=\"OLLAMA_ORIGINS={}\"", config.ollama.origins));
+        env_lines.push(format!("Environment=\"OLLAMA_KEEP_ALIVE={}\"", config.ollama.keep_alive));
+        env_lines.push(format!("Environment=\"OLLAMA_NUM_PARALLEL={}\"", config.ollama.num_parallel));
+        env_lines.push(format!("Environment=\"OLLAMA_MAX_LOADED_MODELS={}\"", config.ollama.max_loaded_models));
+        env_lines.push(format!("Environment=\"OLLAMA_FLASH_ATTENTION={}\"", if config.ollama.flash_attention { 1 } else { 0 }));
+        env_lines.push(format!("Environment=\"OLLAMA_KV_CACHE_TYPE={}\"", config.ollama.kv_cache_type));
+        env_lines.push(format!("Environment=\"OLLAMA_CONTEXT_LENGTH={}\"", config.ollama.context_length));
+        if config.ollama.max_vram > 0 {
+            env_lines.push(format!("Environment=\"OLLAMA_MAX_VRAM={}\"", config.ollama.max_vram));
+        }
+        if !config.ollama.cuda_visible_devices.is_empty() {
+            env_lines.push(format!("Environment=\"CUDA_VISIBLE_DEVICES={}\"", config.ollama.cuda_visible_devices));
+        }
+        
+        let override_content = env_lines.join("\\n");
+        shell::run_quiet(&format!("printf '{}' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null", override_content))?;
         shell::run_quiet("sudo systemctl daemon-reload")?;
         
         shell::run_live("sudo systemctl enable ollama")?;

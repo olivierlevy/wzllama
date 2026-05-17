@@ -31,6 +31,11 @@ pub struct OllamaEnv {
     pub kv_cache_type: String,
     #[serde(default = "default_context")]
     pub context_length: u32,
+    // GPU/VRAM settings
+    #[serde(default = "default_max_vram")]
+    pub max_vram: u64,
+    #[serde(default = "default_cuda_device")]
+    pub cuda_visible_devices: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -66,6 +71,8 @@ fn default_num_parallel() -> u32 { 4 }
 fn default_max_loaded() -> u32 { 3 }
 fn default_kv_cache() -> String { "q8_0".into() }
 fn default_context() -> u32 { 16384 }
+fn default_max_vram() -> u64 { 0 }  // 0 = auto
+fn default_cuda_device() -> String { "".into() }  // empty = all GPUs
 
 impl Default for EnvConfig {
     fn default() -> Self {
@@ -80,6 +87,8 @@ impl Default for EnvConfig {
                 flash_attention: true,
                 kv_cache_type: default_kv_cache(),
                 context_length: default_context(),
+                max_vram: default_max_vram(),
+                cuda_visible_devices: default_cuda_device(),
             },
             providers: ProvidersEnv {
                 openai: ProviderEnv {
@@ -176,7 +185,15 @@ impl EnvConfig {
         content.push_str(&format!("export OLLAMA_MAX_LOADED_MODELS={}\n", self.ollama.max_loaded_models));
         content.push_str(&format!("export OLLAMA_FLASH_ATTENTION={}\n", if self.ollama.flash_attention { 1 } else { 0 }));
         content.push_str(&format!("export OLLAMA_KV_CACHE_TYPE={}\n", self.ollama.kv_cache_type));
-        content.push_str(&format!("export OLLAMA_CONTEXT_LENGTH={}\n\n", self.ollama.context_length));
+        content.push_str(&format!("export OLLAMA_CONTEXT_LENGTH={}\n", self.ollama.context_length));
+        // GPU/VRAM settings
+        if self.ollama.max_vram > 0 {
+            content.push_str(&format!("export OLLAMA_MAX_VRAM={}\n", self.ollama.max_vram));
+        }
+        if !self.ollama.cuda_visible_devices.is_empty() {
+            content.push_str(&format!("export CUDA_VISIBLE_DEVICES='{}'\n", self.ollama.cuda_visible_devices));
+        }
+        content.push('\n');
         
         content.push_str("# ═══ Providers ════════════════════════════\n");
         content.push_str(&format!("export OPENAI_API_KEY='{}'\n", self.providers.openai.api_key));
