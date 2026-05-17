@@ -19,6 +19,13 @@ fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.droid = shell::is_installed_quiet("droid");
     state.installed.pi = shell::is_installed_with_local_bin("pi");
     state.installed.pool = shell::is_installed_quiet("pool");
+    
+    // Obsidian - check flatpak first, then binary
+    state.installed.obsidian = if shell::run("flatpak --version").is_ok() {
+        shell::run_quiet("flatpak info md.obsidian.Obsidian").is_ok()
+    } else {
+        shell::is_installed_quiet("obsidian") || std::path::Path::new("/app/bin/obsidian").exists()
+    };
 }
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {

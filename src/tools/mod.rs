@@ -112,7 +112,7 @@ pub fn get_launch_command(tool_id: &str, model: Option<&str>) -> Option<String> 
         "pi" => Some("ollama launch pi".to_string()),
         "pool" => Some("pool".to_string()),
         "copilot_cli" => Some("copilot".to_string()),
-        "obsidian" => Some("obsidian".to_string()),
+        "obsidian" => Some("flatpak run md.obsidian.Obsidian".to_string()),
         "goose" => Some("goose".to_string()),
         _ => Some(tool_id.to_string()),
     }

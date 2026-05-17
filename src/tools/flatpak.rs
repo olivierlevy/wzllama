@@ -80,6 +80,10 @@ impl FlatpakTool {
     
     /// Check if a flatpak app is installed
     pub fn is_installed(app_id: &str) -> bool {
+        // Flatpak must be installed first
+        if shell::run("flatpak --version").is_err() {
+            return false;
+        }
         shell::run(&format!("flatpak info {}", app_id)).is_ok()
     }
     

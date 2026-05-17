@@ -24,14 +24,19 @@ impl Tool for ObsidianTool {
 impl ObsidianTool {
     /// Check if Obsidian is installed, also updates state
     pub fn get_status(state: &WzllamaState) -> ToolStatus {
-        // First check state - if marked as installed, verify it's still installed
-        let _ = state;  // Available for future use if needed
-        
+        // Vérifier d'abord si flatpak est disponible et si l'app est installée
         #[cfg(target_os = "linux")]
         {
+            // Si flatpak n'est pas installé, obsidian ne peut pas être installé via flatpak
+            if shell::run("flatpak --version").is_ok() {
+                if FlatpakTool::is_installed("md.obsidian.Obsidian") {
+                    return ToolStatus::Installed;
+                }
+            }
+            
+            // Vérifier les autres méthodes d'installation
             let currently_installed = shell::run("which obsidian").is_ok() 
-                || std::path::Path::new("/app/bin/obsidian").exists()
-                || FlatpakTool::is_installed("md.obsidian.Obsidian");
+                || std::path::Path::new("/app/bin/obsidian").exists();
             ToolStatus::from_installed(currently_installed)
         }
         #[cfg(target_os = "macos")]
@@ -57,15 +62,18 @@ impl ObsidianTool {
         
         #[cfg(target_os = "linux")]
         {
-            // Ensure Flatpak is installed first
-            FlatpakTool::install()?;
+            // Ensure Flatpak is installed first, return error if cannot install
+            if !shell::run("flatpak --version").is_ok() {
+                display::info("Flatpak not found. Attempting to install...");
+                FlatpakTool::install().map_err(|e| {
+                    display::warning(&format!("Could not install Flatpak: {}", e));
+                    anyhow::anyhow!("Flatpak is required to install Obsidian. Install it manually first.")
+                })?;
+            }
             
             // Install Obsidian via Flatpak
             display::info("Installing Obsidian via Flatpak...");
-            match FlatpakTool::install_app("md.obsidian.Obsidian") {
-                Ok(_) => display::success(&i18n.t("tool.obsidian.installed")),
-                Err(e) => display::warning(&format!("Installation failed: {}", e)),
-            }
+            FlatpakTool::install_app("md.obsidian.Obsidian")?;
         }
         
         #[cfg(target_os = "macos")]
