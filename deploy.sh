@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Option --clean pour un build propre
+CLEAN=false
+if [ "$1" = "--clean" ]; then
+    CLEAN=true
+fi
+
 echo "══════════════════════════════════════════════════"
 echo "  📦 wzllama - Installation complète"
 echo "══════════════════════════════════════════════════"
@@ -9,6 +15,10 @@ echo ""
 # ─── 1. Compilation ─────────────────────────────────
 echo "🔨 Étape 1/4 : Compilation..."
 if command -v cargo &>/dev/null; then
+    if [ "$CLEAN" = true ]; then
+        echo "   🧹 Nettoyage complet..."
+        cargo clean 2>/dev/null
+    fi
     cargo build --release 2>/dev/null
     echo "   ✅ Compilation terminée"
 else
