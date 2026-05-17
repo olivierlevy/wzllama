@@ -159,6 +159,12 @@
   "tool.pi.uninstall_confirm": "Uninstall Pi?",
   "tool.pi.uninstalled": "Pi uninstalled",
 
+  "tool.obsidian.description": "Local-first knowledge base and note-taking app",
+  "tool.obsidian.install_info": "Installing Obsidian - a powerful local note-taking app with AI capabilities",
+  "tool.obsidian.installed": "Obsidian installed",
+  "tool.obsidian.uninstall_confirm": "Uninstall Obsidian?",
+  "tool.obsidian.uninstalled": "Obsidian uninstalled",
+
   "tool.pool.description": "Poolside coding agent (https://github.com/poolsideai/pool)",
 
   "config.title": "⚙️  Recommended Configuration",

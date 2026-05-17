@@ -29,6 +29,8 @@ pub struct InstalledTools {
     pub pi: bool,
     #[serde(default)]
     pub pool: bool,
+    #[serde(default)]
+    pub obsidian: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -87,6 +89,7 @@ pub fn mark_installed(tool: &str, state: &mut WzllamaState) {
         "droid" => state.installed.droid = true,
         "pi" => state.installed.pi = true,
         "pool" => state.installed.pool = true,
+        "obsidian" => state.installed.obsidian = true,
         _ => {}
     }
     let _ = save(state);

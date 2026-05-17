@@ -160,6 +160,12 @@
   "tool.pi.uninstall_confirm": "Désinstaller Pi ?",
   "tool.pi.uninstalled": "Pi désinstallé",
 
+  "tool.obsidian.description": "Base de connaissances locale et application de prise de notes",
+  "tool.obsidian.install_info": "Installation d'Obsidian - application de prise de notes puissante avec IA",
+  "tool.obsidian.installed": "Obsidian installé",
+  "tool.obsidian.uninstall_confirm": "Désinstaller Obsidian ?",
+  "tool.obsidian.uninstalled": "Obsidian désinstallé",
+
   "tool.pool.description": "Agent de codage de Poolside (https://github.com/poolsideai/pool)",
 
 
