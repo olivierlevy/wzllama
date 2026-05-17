@@ -3,6 +3,7 @@ use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
+use crate::tools::flatpak::FlatpakTool;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 
 pub struct ObsidianTool;
@@ -27,7 +28,7 @@ impl ObsidianTool {
         {
             if shell::run("which obsidian").is_ok() 
                 || std::path::Path::new("/app/bin/obsidian").exists()
-                || shell::run("flatpak info md.obsidian.Obsidian").is_ok() {
+                || FlatpakTool::is_installed("md.obsidian.Obsidian") {
                 ToolStatus::Installed
             } else {
                 ToolStatus::NotInstalled
@@ -53,21 +54,20 @@ impl ObsidianTool {
         shell::run("ollama list | grep nomic-embed-text").is_ok()
     }
     
-    /// Install Obsidian automatically (no confirmation)
+    /// Install Obsidian automatically
     pub fn install(i18n: &I18n) -> Result<()> {
         display::info(&i18n.t("tool.obsidian.install_info"));
         
         #[cfg(target_os = "linux")]
         {
-            // Try flatpak first (recommended for Linux)
-            if shell::run("which flatpak").is_ok() {
-                display::info("Installing Obsidian via Flatpak...");
-                match shell::run_live("flatpak install flathub md.obsidian.Obsidian -y") {
-                    Ok(_) => display::success(&i18n.t("tool.obsidian.installed")),
-                    Err(e) => display::warning(&format!("Flatpak install failed: {}", e)),
-                }
-            } else {
-                display::warning("Flatpak not found. Please install Obsidian manually from https://obsidian.md/download");
+            // Ensure Flatpak is installed first
+            FlatpakTool::install()?;
+            
+            // Install Obsidian via Flatpak
+            display::info("Installing Obsidian via Flatpak...");
+            match FlatpakTool::install_app("md.obsidian.Obsidian") {
+                Ok(_) => display::success(&i18n.t("tool.obsidian.installed")),
+                Err(e) => display::warning(&format!("Installation failed: {}", e)),
             }
         }
         
@@ -96,7 +96,7 @@ impl ObsidianTool {
                 shell::run_live("sudo apt remove obsidian -y")?;
             }
             // Try flatpak
-            else if shell::run("flatpak info md.obsidian.Obsidian").is_ok() {
+            else if FlatpakTool::is_installed("md.obsidian.Obsidian") {
                 display::info("Removing Obsidian via Flatpak...");
                 shell::run_live("flatpak uninstall md.obsidian.Obsidian -y")?;
             }
@@ -158,7 +158,7 @@ impl ObsidianTool {
         {
             if shell::run("which obsidian").is_ok() {
                 shell::run("obsidian &")?;
-            } else if shell::run("flatpak info md.obsidian.Obsidian").is_ok() {
+            } else if FlatpakTool::is_installed("md.obsidian.Obsidian") {
                 shell::run("flatpak run md.obsidian.Obsidian &")?;
             }
         }

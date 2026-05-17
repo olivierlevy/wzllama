@@ -6,11 +6,92 @@ use crate::display;
 pub struct FlatpakTool;
 
 impl FlatpakTool {
+    /// Detect the Linux distribution
+    pub fn detect_distro() -> &'static str {
+        if shell::run("which apt apt-get 2>/dev/null").is_ok() {
+            "debian"  // Debian, Ubuntu, Mint
+        } else if shell::run("which dnf 2>/dev/null").is_ok() {
+            "fedora"  // Fedora
+        } else if shell::run("which yum 2>/dev/null").is_ok() {
+            "rhel"    // RHEL, CentOS
+        } else if shell::run("which pacman 2>/dev/null").is_ok() {
+            "arch"    // Arch Linux, Manjaro
+        } else if shell::run("which zypper 2>/dev/null").is_ok() {
+            "opensuse"
+        } else if shell::run("which emerge 2>/dev/null").is_ok() {
+            "gentoo"
+        } else if shell::run("which xbps-install 2>/dev/null").is_ok() {
+            "void"
+        } else if std::path::Path::new("/etc/nixos/configuration.nix").exists() {
+            "nixos"
+        } else {
+            "unknown"
+        }
+    }
+    
+    /// Install Flatpak on any Linux distribution
+    pub fn install() -> Result<()> {
+        if shell::run("flatpak --version").is_ok() {
+            return Ok(());  // Already installed
+        }
+        
+        display::info("Installing Flatpak...");
+        
+        match Self::detect_distro() {
+            "debian" => {
+                shell::run_live("sudo apt update && sudo apt install -y flatpak")?;
+            }
+            "fedora" => {
+                shell::run_live("sudo dnf install -y flatpak")?;
+            }
+            "rhel" => {
+                shell::run_live("sudo yum install -y flatpak")?;
+            }
+            "arch" => {
+                shell::run_live("sudo pacman -S --noconfirm flatpak")?;
+            }
+            "opensuse" => {
+                shell::run_live("sudo zypper install -y flatpak")?;
+            }
+            "gentoo" => {
+                display::warning("On Gentoo, enable the ~amd64 keyword and run: emerge sys-apps/flatpak");
+                anyhow::bail!("Manual installation required on Gentoo");
+            }
+            "void" => {
+                shell::run_live("sudo xbps-install -S flatpak")?;
+            }
+            "nixos" => {
+                display::warning("On NixOS, add 'services.flatpak.enable = true;' to /etc/nixos/configuration.nix and run: sudo nixos-rebuild switch");
+                anyhow::bail!("Manual configuration required on NixOS");
+            }
+            _ => {
+                display::warning("Unknown distribution. Please install Flatpak manually.");
+                anyhow::bail!("Cannot install Flatpak on unknown distribution");
+            }
+        }
+        
+        // Add Flathub repository
+        display::info("Adding Flathub repository...");
+        if shell::run("flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo").is_ok() {
+            display::success("Flatpak installed and Flathub added!");
+        } else {
+            display::warning("Flatpak installed but could not add Flathub repository");
+        }
+        
+        Ok(())
+    }
+    
     /// Install a flatpak application
-    pub fn install(app_id: &str) -> Result<()> {
-        // Check if flatpak is installed
-        if shell::run("which flatpak").is_err() {
-            anyhow::bail!("Flatpak is not installed. Install it with: sudo apt install flatpak");
+    pub fn install_app(app_id: &str) -> Result<()> {
+        // Ensure Flatpak is installed first
+        if shell::run("flatpak --version").is_err() {
+            Self::install()?;
+        }
+        
+        // Check if already installed
+        if Self::is_installed(app_id) {
+            display::info(&format!("{} is already installed", app_id));
+            return Ok(());
         }
         
         display::info(&format!("Installing {} via Flatpak...", app_id));
