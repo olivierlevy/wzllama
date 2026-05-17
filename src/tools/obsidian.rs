@@ -109,7 +109,28 @@ impl ObsidianTool {
     
     pub fn launch(i18n: &I18n) -> Result<()> {
         display::info("📝 Obsidian is a local-first knowledge base");
-        display::info("💡 Tip: Use with local LLM models for AI-powered note-taking");
+        println!();
+        display::info(&i18n.t("tool.obsidian.llm_setup"));
+        display::info(&i18n.t("tool.obsidian.llm_step1"));
+        display::info(&i18n.t("tool.obsidian.llm_step2"));
+        display::info(&i18n.t("tool.obsidian.llm_step3"));
+        display::info(&i18n.t("tool.obsidian.llm_step4"));
+        display::info(&i18n.t("tool.obsidian.llm_step5"));
+        println!();
+        display::info(&i18n.t("tool.obsidian.embedding_model"));
+        
+        // Check if Ollama is running
+        if shell::run("curl -s http://localhost:11434/api/tags > /dev/null 2>&1").is_ok() {
+            display::success(&i18n.t("tool.obsidian.ollama_running"));
+        } else {
+            display::warning(&i18n.t("tool.obsidian.ollama_not_running"));
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            display::info(&i18n.t("tool.obsidian.cors_hint"));
+        }
+        
         println!();
         
         #[cfg(target_os = "linux")]
