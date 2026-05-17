@@ -10,7 +10,7 @@ impl Tool for CopilotCliTool {
     fn id(&self) -> &str { "copilot_cli" }
     fn name(&self) -> &str { "Copilot CLI" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.copilot.description") }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed("gh-copilot") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {

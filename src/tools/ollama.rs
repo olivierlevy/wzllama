@@ -12,7 +12,7 @@ impl Tool for OllamaTool {
     fn name(&self) -> &str { "Ollama" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.ollama.description") }
 
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed("ollama") { ToolStatus::Installed }
         else { ToolStatus::NotInstalled }
     }

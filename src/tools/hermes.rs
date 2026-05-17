@@ -11,7 +11,7 @@ impl Tool for HermesTool {
     fn id(&self) -> &str { "hermes_agent" }
     fn name(&self) -> &str { "Hermes Agent" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.hermes.description") }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed_with_local_bin("hermes") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {

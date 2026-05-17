@@ -8,6 +8,12 @@ pub enum ToolStatus {
     NotInstalled,
 }
 
+impl ToolStatus {
+    pub fn from_installed(installed: bool) -> Self {
+        if installed { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+    }
+}
+
 pub trait Tool {
     fn id(&self) -> &str;
     fn name(&self) -> &str;
@@ -15,11 +21,11 @@ pub trait Tool {
     
     /// Returns the installation status of the tool
     #[allow(dead_code)]
-    fn status(&self) -> ToolStatus;
+    fn status(&self, _state: &WzllamaState) -> ToolStatus;
     
     /// Returns an internationalized status message
     fn status_message(&self, i18n: &I18n) -> String {
-        match self.status() {
+        match self.status(&WzllamaState::default()) {
             ToolStatus::Installed => i18n.t("tool.installed"),
             ToolStatus::NotInstalled => i18n.t("tool.not_installed"),
         }

@@ -12,7 +12,7 @@ impl Tool for OpenWebUITool {
     fn id(&self) -> &str { "open_webui" }
     fn name(&self) -> &str { "Open WebUI" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openwebui.description") }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         // Check if container exists with docker inspect (more reliable)
         // If Docker is not running, return NotInstalled (menu will launch ensure_ready)
         if !docker::is_running() {

@@ -13,7 +13,7 @@ impl Tool for OpenClawTool {
     fn name(&self) -> &str { "OpenClaw" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openclaw.description") }
     fn supports_fleets(&self) -> bool { true }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed_with_local_bin("openclaw") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {

@@ -11,7 +11,7 @@ impl Tool for ClaudeCodeTool {
     fn id(&self) -> &str { "claude_code" }
     fn name(&self) -> &str { "Claude Code" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed_with_local_bin("claude") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {

@@ -11,7 +11,7 @@ impl Tool for OpenCodeTool {
     fn id(&self) -> &str { "opencode" }
     fn name(&self) -> &str { "OpenCode" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.opencode.description") }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed_with_local_bin("opencode") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {

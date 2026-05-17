@@ -62,7 +62,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         if tool.requires_docker() {
             docker::ensure_ready(i18n)?;
             // Réévaluer le statut après le démarrage de Docker
-            let current_status = tool.status();
+            let current_status = tool.status(state);
             // Si l'outil n'était pas marqué comme installé mais le conteneur existe
             if !tool_info.installed && current_status == ToolStatus::Installed {
                 // L'outil est maintenant installé, le lancer

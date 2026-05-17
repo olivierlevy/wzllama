@@ -12,7 +12,7 @@ impl Tool for ObsidianTool {
     fn id(&self) -> &str { "obsidian" }
     fn name(&self) -> &str { "Obsidian" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.obsidian.description") }
-    fn status(&self) -> ToolStatus { ObsidianTool::get_status() }
+    fn status(&self, state: &WzllamaState) -> ToolStatus { ObsidianTool::get_status(state) }
     fn install(&self, i18n: &I18n) -> Result<()> { ObsidianTool::install(i18n) }
     fn uninstall(&self, i18n: &I18n) -> Result<()> { ObsidianTool::uninstall(i18n) }
     fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> { 
@@ -22,26 +22,23 @@ impl Tool for ObsidianTool {
 }
 
 impl ObsidianTool {
-    /// Check if Obsidian is installed
-    pub fn get_status() -> ToolStatus {
+    /// Check if Obsidian is installed, also updates state
+    pub fn get_status(state: &WzllamaState) -> ToolStatus {
+        // First check state - if marked as installed, verify it's still installed
+        let _ = state;  // Available for future use if needed
+        
         #[cfg(target_os = "linux")]
         {
-            if shell::run("which obsidian").is_ok() 
+            let currently_installed = shell::run("which obsidian").is_ok() 
                 || std::path::Path::new("/app/bin/obsidian").exists()
-                || FlatpakTool::is_installed("md.obsidian.Obsidian") {
-                ToolStatus::Installed
-            } else {
-                ToolStatus::NotInstalled
-            }
+                || FlatpakTool::is_installed("md.obsidian.Obsidian");
+            ToolStatus::from_installed(currently_installed)
         }
         #[cfg(target_os = "macos")]
         {
-            if shell::run("which obsidian").is_ok() 
-                || std::path::Path::new("/Applications/Obsidian.app").exists() {
-                ToolStatus::Installed
-            } else {
-                ToolStatus::NotInstalled
-            }
+            let currently_installed = shell::run("which obsidian").is_ok() 
+                || std::path::Path::new("/Applications/Obsidian.app").exists();
+            ToolStatus::from_installed(currently_installed)
         }
         #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {

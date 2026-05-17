@@ -10,7 +10,7 @@ impl Tool for GooseTool {
     fn id(&self) -> &str { "goose" }
     fn name(&self) -> &str { "Goose" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.goose.description") }
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed("goose") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
