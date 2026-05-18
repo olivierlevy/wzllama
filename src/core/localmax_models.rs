@@ -474,7 +474,12 @@ pub fn search_models_fuzzy(q: &str) -> Result<Vec<SearchResult>> {
 
 impl LocalMaxModel {
     pub fn to_ollama_model(&self) -> crate::core::ollama_api::OllamaModel {
-        let ollama_name = hf_to_ollama_name(&self.hf_id);
+        // If hf_id already looks like an Ollama name (contains ':'), use it directly
+        let ollama_name = if self.hf_id.contains(':') {
+            self.hf_id.clone()
+        } else {
+            hf_to_ollama_name(&self.hf_id)
+        };
         crate::core::ollama_api::OllamaModel {
             name: ollama_name.clone(),
             model: ollama_name,
@@ -485,11 +490,20 @@ impl LocalMaxModel {
     }
     
     pub fn to_ollama_name(&self) -> String {
-        hf_to_ollama_name(&self.hf_id)
+        // If hf_id already looks like an Ollama name (contains ':'), use it directly
+        if self.hf_id.contains(':') {
+            self.hf_id.clone()
+        } else {
+            hf_to_ollama_name(&self.hf_id)
+        }
     }
     
     /// Check if the HF model maps directly to an Ollama model of the same family
     pub fn is_direct_ollama_mapping(&self) -> bool {
+        // If already an Ollama name (contains ':'), it's a direct local model
+        if self.hf_id.contains(':') {
+            return true;
+        }
         let hf_lower = self.hf_id.to_lowercase();
         // Known direct mappings (HF model ID contains the same name as Ollama)
         hf_lower.contains("qwen")
