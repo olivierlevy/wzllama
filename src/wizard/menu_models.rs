@@ -59,9 +59,14 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     // Also add local models that are NOT in the localmaxxing database
     // These are models the user has installed but we don't have performance data for
-    let localmax_names: std::collections::HashSet<&str> = models.iter().map(|m| m.hf_id.as_str()).collect();
+    // First, get all ollama names that correspond to localmax models
+    let localmax_ollama_names: std::collections::HashSet<String> = models.iter()
+        .filter(|m| m.is_direct_ollama_mapping())
+        .map(|m| m.to_ollama_name())
+        .collect();
+    
     let local_only_models: Vec<_> = local.iter()
-        .filter(|lm| !localmax_names.contains(lm.name.as_str()))
+        .filter(|lm| !localmax_ollama_names.contains(&lm.name))
         .map(|lm| {
             // Create a minimal LocalMaxModel for local-only models
             let mut model = LocalMaxModel::default();
@@ -110,16 +115,27 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         });
         for model in &sorted_installed {
             let display_name = model.display_name.as_ref().unwrap_or(&model.hf_id);
-            let params = model.params.map_or(String::new(), |p| {
-                let rounded = (p / 7.0).round() * 7.0;
-                if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
-                else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
-                else if (rounded - 30.0).abs() < 0.1 { "30b".to_string() }
-                else if (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
-                else if (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
-                else if (rounded - 70.0).abs() < 0.1 { "72b".to_string() }
-                else { format!("{:.0}b", rounded) }
-            });
+            let params = model.params.map_or_else(
+                || {
+                    // Try to extract params from hf_id for local-only models
+                    if model.hf_id.contains(':') {
+                        // Ollama name like "qwen2.5:3b" - extract after ":"
+                        model.hf_id.split(':').nth(1).unwrap_or("").to_string()
+                    } else {
+                        localmax_models::extract_param_size(&model.hf_id)
+                    }
+                },
+                |p| {
+                    let rounded = (p / 7.0).round() * 7.0;
+                    if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
+                    else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
+                    else if (rounded - 30.0).abs() < 0.1 { "30b".to_string() }
+                    else if (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
+                    else if (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
+                    else if (rounded - 70.0).abs() < 0.1 { "72b".to_string() }
+                    else { format!("{:.0}b", rounded) }
+                }
+            );
             let hw_compat = model.hardware_compatibility(hw);
             let display = format!("✅ {} [{}] {} (installed) {}", display_name, params, model.organization, hw_compat);
             main_items.push((display, Some(model.clone())));

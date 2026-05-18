@@ -158,7 +158,7 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
 }
 
 /// Extract parameter size from model name (e.g., "14b", "72b", "30b", "1.5b")
-fn extract_param_size(hf_lower: &str) -> String {
+pub fn extract_param_size(hf_lower: &str) -> String {
     // Common pattern: number followed by 'b' (e.g., 7b, 14b, 30b, 32b, 72b, 1.5b)
     // Use simple string parsing instead of regex
     
