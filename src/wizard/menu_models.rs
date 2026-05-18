@@ -116,9 +116,12 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         main_items.push((display, None)); // None means it's a submenu header
     }
     
+    // Add legend for hardware compatibility indicators
+    main_items.push((format!("─── 🟢=Excellent 🟡=OK 🟠=Low 🔴=Not recommended ───"), None));
+    
     main_items.push((i18n.t("menu.back"), None));
     
-    // Show main menu
+    'outer: loop {
     let display_items: Vec<String> = main_items.iter().map(|(d, _)| d.clone()).collect();
     
     let sel = match Select::new()
@@ -134,7 +137,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     // Handle selection
     if sel == display_items.len() - 1 {
-        // Back button
+        // Back button - exit to main menu
         return Ok(());
     }
     
@@ -143,19 +146,18 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     // If it's an installed model, handle it directly
     if let Some(model) = model_opt {
         handle_model_selection(i18n, state, hw, model, &local_names)?;
-        return Ok(());
+        continue 'outer;
     }
     
     // Otherwise it's an organization submenu - show models from that org
-    // Find which organization was selected
     let header_idx = if !installed_models.is_empty() { installed_models.len() } else { 0 };
     let org_index = sel - header_idx - 1; // -1 for the separator line
     
     if org_index as usize >= orgs.len() {
-        return Ok(());
+        continue 'outer;
     }
     
-    let (org, org_models) = orgs[org_index as usize];
+    let (org, org_models) = orgs[org_index as usize].clone();
     
     // Sort models in this organization by popularity (benchmark runs)
     let mut sorted_models = org_models.clone();
@@ -166,7 +168,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     });
     
     // Show organization models submenu
-    show_org_models_menu(i18n, state, hw, &sorted_models, org, &local_names)
+    show_org_models_menu(i18n, state, hw, &sorted_models, org, &local_names)?;
+    }
 }
 
 /// Handle model selection - determine if installed or needs download
@@ -217,60 +220,64 @@ fn show_org_models_menu(
 ) -> Result<()> {
     display::section(&format!("🏢 {} models", org_name));
     
-    // Build display items
-    let mut model_items: Vec<(String, LocalMaxModel)> = vec![];
-    
-    for model in models {
-        let display_name = model.display_name.as_ref().unwrap_or(&model.hf_id);
-        let params = model.params.map_or(String::new(), |p| {
-            let rounded = (p / 7.0).round() * 7.0;
-            if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
-            else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
-            else if (rounded - 30.0).abs() < 0.1 { "30b".to_string() }
-            else if (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
-            else if (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
-            else if (rounded - 70.0).abs() < 0.1 { "72b".to_string() }
-            else { format!("{:.0}b", rounded) }
-        });
-        let ollama_name = model.to_ollama_name();
+    'org_loop: loop {
+        // Build display items
+        let mut model_items: Vec<(String, LocalMaxModel)> = vec![];
         
-        // Only show installed icon if direct mapping AND actually installed
-        let is_direct = model.is_direct_ollama_mapping();
-        let is_installed = is_direct && local_names.contains(ollama_name.as_str());
-        let icon = if is_installed { "✅" } else { "📥" };
+        for model in models {
+            let display_name = model.display_name.as_ref().unwrap_or(&model.hf_id);
+            let params = model.params.map_or(String::new(), |p| {
+                let rounded = (p / 7.0).round() * 7.0;
+                if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
+                else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
+                else if (rounded - 30.0).abs() < 0.1 { "30b".to_string() }
+                else if (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
+                else if (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
+                else if (rounded - 70.0).abs() < 0.1 { "72b".to_string() }
+                else { format!("{:.0}b", rounded) }
+            });
+            let ollama_name = model.to_ollama_name();
+            
+            // Only show installed icon if direct mapping AND actually installed
+            let is_direct = model.is_direct_ollama_mapping();
+            let is_installed = is_direct && local_names.contains(ollama_name.as_str());
+            let icon = if is_installed { "✅" } else { "📥" };
+            
+            let fallback_indicator = if is_direct {
+                String::new()
+            } else {
+                format!(" → {}", ollama_name).yellow().to_string()
+            };
+            
+            let hw_compat = model.hardware_compatibility(hw);
+            let display = format!("{} {} [{}]{} {}", icon, display_name, params, fallback_indicator, hw_compat);
+            model_items.push((display, model.clone()));
+        }
         
-        let fallback_indicator = if is_direct {
-            String::new()
-        } else {
-            format!(" → {}", ollama_name).yellow().to_string()
+        let display_items: Vec<String> = model_items.iter().map(|(d, _)| d.clone()).collect();
+        let mut all_items = display_items.clone();
+        all_items.push(i18n.t("menu.back"));
+        
+        let sel = match Select::new()
+            .with_prompt(&i18n.t("menu.select"))
+            .items(&all_items)
+            .default(0)
+            .max_length(20)
+            .interact_opt()?
+        {
+            Some(s) => s,
+            None => return Ok(()),
         };
         
-        let hw_compat = model.hardware_compatibility(hw);
-        let display = format!("{} {} [{}]{} {}", icon, display_name, params, fallback_indicator, hw_compat);
-        model_items.push((display, model.clone()));
+        if sel == all_items.len() - 1 {
+            // Back button - return to parent (organization list)
+            return Ok(());
+        }
+        
+        let chosen = &model_items[sel].1;
+        handle_model_selection(i18n, state, hw, chosen, local_names)?;
+        // After handling, continue the loop to show the org menu again
     }
-    
-    let display_items: Vec<String> = model_items.iter().map(|(d, _)| d.clone()).collect();
-    let mut all_items = display_items.clone();
-    all_items.push(i18n.t("menu.back"));
-    
-    let sel = match Select::new()
-        .with_prompt(&i18n.t("menu.select"))
-        .items(&all_items)
-        .default(0)
-        .max_length(20)
-        .interact_opt()?
-    {
-        Some(s) => s,
-        None => return Ok(()),
-    };
-    
-    if sel == all_items.len() - 1 {
-        return Ok(());
-    }
-    
-    let chosen = &model_items[sel].1;
-    handle_model_selection(i18n, state, hw, chosen, local_names)
 }
 
 /// Sous-menu d'actions pour un modèle installé
