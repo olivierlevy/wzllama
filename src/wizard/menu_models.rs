@@ -80,6 +80,9 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     // Build main menu items
     let mut main_items = vec![];
     
+    // Add legend for hardware compatibility indicators at the top (visible on first page)
+    main_items.push((format!("─── 🟢=Excellent 🟡=OK 🟠=Low 🔴=Not recommended ───"), None));
+    
     // Add installed models section if any (sorted by popularity)
     if !installed_models.is_empty() {
         let mut sorted_installed = installed_models.clone();
@@ -115,9 +118,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let display = format!("🏢 {} ({})", org, i18n.t_with_vars("models.localmaxxing_org_count", &[("count", &count.to_string())]));
         main_items.push((display, None)); // None means it's a submenu header
     }
-    
-    // Add legend for hardware compatibility indicators
-    main_items.push((format!("─── 🟢=Excellent 🟡=OK 🟠=Low 🔴=Not recommended ───"), None));
     
     main_items.push((i18n.t("menu.back"), None));
     
@@ -255,7 +255,12 @@ fn show_org_models_menu(
         }
         
         let display_items: Vec<String> = model_items.iter().map(|(d, _)| d.clone()).collect();
-        let mut all_items = display_items.clone();
+        let mut all_items = vec![];
+        
+        // Add legend at the top of org submenu
+        all_items.push("─── 🟢=Excellent 🟡=OK 🟠=Low 🔴=Not recommended ──".to_string());
+        
+        all_items.extend(display_items);
         all_items.push(i18n.t("menu.back"));
         
         let sel = match Select::new()
@@ -269,12 +274,18 @@ fn show_org_models_menu(
             None => return Ok(()),
         };
         
+        // Skip legend row (index 0) and back button (last index)
+        if sel == 0 {
+            continue 'org_loop; // Skip legend, show menu again
+        }
+        
         if sel == all_items.len() - 1 {
             // Back button - return to parent (organization list)
             return Ok(());
         }
         
-        let chosen = &model_items[sel].1;
+        // Adjust index for legend row (-1 to skip legend)
+        let chosen = &model_items[sel - 1].1;
         handle_model_selection(i18n, state, hw, chosen, local_names)?;
         // After handling, continue the loop to show the org menu again
     }
