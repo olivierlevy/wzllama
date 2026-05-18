@@ -45,6 +45,9 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 "72b" => "qwen2.5:72b",
                 "32b" => "qwen2.5:32b",
                 "14b" => "qwen2.5:14b",
+                "7b" => "qwen2.5:7b",
+                "3b" => "qwen2.5:3b",
+                "1.5b" => "qwen2.5:1.5b",
                 _ => "qwen2.5:latest",
             }.to_string()
         } else if hf_lower.contains("coder") {
@@ -97,11 +100,18 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
         } else {
             format!("llama3:{}", param_size)
         }
-    } else if hf_lower.contains("mistral") {
+    } else if hf_lower.contains("mistral") || hf_lower.contains("ministral") {
         if hf_lower.contains("mixtral") {
             "mixtral:8x7b".to_string()
         } else if hf_lower.contains("codestral") {
             "codestral:latest".to_string()
+        } else if hf_lower.contains("ministral") {
+            // Ministral models - use ministral-3 as in Ollama library
+            match param_size.as_str() {
+                "3b" => "ministral-3:3b",
+                "8b" => "ministral-3:8b",
+                _ => "ministral-3:3b",
+            }.to_string()
         } else {
             "mistral:latest".to_string()
         }
@@ -147,10 +157,22 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
     }
 }
 
-/// Extract parameter size from model name (e.g., "14b", "72b", "30b")
+/// Extract parameter size from model name (e.g., "14b", "72b", "30b", "1.5b")
 fn extract_param_size(hf_lower: &str) -> String {
-    // Common pattern: number followed by 'b' (e.g., 7b, 14b, 30b, 32b, 72b)
+    // Common pattern: number followed by 'b' (e.g., 7b, 14b, 30b, 32b, 72b, 1.5b)
     // Use simple string parsing instead of regex
+    
+    // First check for decimal like "1.5b" - keep as-is
+    if let Some(start) = hf_lower.find(|c: char| c.is_ascii_digit() || c == '.') {
+        if let Some(end) = hf_lower[start..].find('b') {
+            let num_str = &hf_lower[start..start + end];
+            if num_str.contains('.') {
+                // Return the decimal size directly (e.g., "1.5b")
+                return num_str.to_string() + "b";
+            }
+        }
+    }
+    
     let mut best_match = 0u32;
     
     for part in hf_lower.split(|c: char| !c.is_ascii_digit()) {
@@ -179,8 +201,9 @@ fn get_qwen_variant(hf_lower: &str) -> &'static str {
     else { "" }
 }
 
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize, Default)]
 pub struct LocalMaxModel {
+    #[serde(default)]
     pub id: String,
     #[serde(rename = "hfId", default)]
     pub hf_id: String,
@@ -209,7 +232,7 @@ pub struct LocalMaxModel {
     pub pipeline_tag: Option<String>,
     // Unknown fields from API are silently ignored via flatten
     #[serde(flatten)]
-    extras: std::collections::BTreeMap<String, serde_json::Value>,
+    pub extras: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default, Serialize)]
@@ -475,6 +498,7 @@ impl LocalMaxModel {
             || hf_lower.contains("gemma")
             || hf_lower.contains("llama")
             || hf_lower.contains("mistral")
+            || hf_lower.contains("ministral")
             || hf_lower.contains("mixtral")
             || hf_lower.contains("codestral")
     }

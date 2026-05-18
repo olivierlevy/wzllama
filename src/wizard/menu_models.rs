@@ -57,6 +57,23 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         .cloned()
         .collect();
     
+    // Also add local models that are NOT in the localmaxxing database
+    // These are models the user has installed but we don't have performance data for
+    let localmax_names: std::collections::HashSet<&str> = models.iter().map(|m| m.hf_id.as_str()).collect();
+    let local_only_models: Vec<_> = local.iter()
+        .filter(|lm| !localmax_names.contains(lm.name.as_str()))
+        .map(|lm| {
+            // Create a minimal LocalMaxModel for local-only models
+            let mut model = LocalMaxModel::default();
+            model.hf_id = lm.name.clone();
+            model.display_name = Some(lm.name.clone());
+            model.organization = "local".to_string();
+            model
+        })
+        .collect();
+    
+    let all_installed: Vec<_> = installed_models.into_iter().chain(local_only_models).collect();
+    
     // Build organization groups for non-installed models
     let mut groups: HashMap<String, Vec<LocalMaxModel>> = HashMap::new();
     for model in &models {
@@ -84,8 +101,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     main_items.push((format!("─── 🟢=Excellent 🟡=OK 🟠=Low 🔴=Not recommended ───"), None));
     
     // Add installed models section if any (sorted by popularity)
-    if !installed_models.is_empty() {
-        let mut sorted_installed = installed_models.clone();
+    if !all_installed.is_empty() {
+        let mut sorted_installed = all_installed.clone();
         sorted_installed.sort_by(|a, b| {
             let a_pop = a._count.as_ref().map_or(0, |c| c.benchmark_runs);
             let b_pop = b._count.as_ref().map_or(0, |c| c.benchmark_runs);
@@ -150,7 +167,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     }
     
     // Otherwise it's an organization submenu - show models from that org
-    let header_idx = if !installed_models.is_empty() { installed_models.len() } else { 0 };
+    let header_idx = if !all_installed.is_empty() { all_installed.len() } else { 0 };
     let org_index = sel - header_idx - 1; // -1 for the separator line
     
     if org_index as usize >= orgs.len() {
