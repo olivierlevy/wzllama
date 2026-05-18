@@ -48,14 +48,9 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     }
     
     // Separate installed models from all models
-    // Only models with hf_id as ollama name (containing ':') are truly "installed" from the database
-    // Other HF models like "Qwen/Qwen2.5-Coder-14B-Instruct" are NOT the same as "qwen2.5-coder:14b"
+    // A model is "installed" if its ollama_name matches a locally installed model
     let installed_models: Vec<_> = models.iter()
         .filter(|m| {
-            // Only consider as installed if hf_id is already an ollama name (contains ':')
-            if !m.hf_id.contains(':') {
-                return false;
-            }
             let ollama_name = m.to_ollama_name();
             local_names.contains(ollama_name.as_str())
         })
@@ -64,9 +59,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     // Also add local models that are NOT in the localmaxxing database
     // These are models the user has installed but we don't have performance data for
-    // First, get all ollama names that correspond to localmax models
+    // Get ALL ollama names from the localmaxxing database (not just direct mappings)
     let localmax_ollama_names: std::collections::HashSet<String> = models.iter()
-        .filter(|m| m.is_direct_ollama_mapping())
         .map(|m| m.to_ollama_name())
         .collect();
     
@@ -86,11 +80,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     let all_installed: Vec<_> = installed_models.into_iter().chain(local_only_models).collect();
     
     // Build organization groups for non-installed models
-    // Only models with hf_id containing ':' (ollama names) are truly installed
+    // A model is "installed" if its ollama_name matches a locally installed model
     let mut groups: HashMap<String, Vec<LocalMaxModel>> = HashMap::new();
     for model in &models {
-        // A model is only "installed" if its hf_id is already an ollama name
-        let is_installed = model.hf_id.contains(':') && local_names.contains(&model.hf_id.as_str());
+        let ollama_name = model.to_ollama_name();
+        let is_installed = local_names.contains(ollama_name.as_str());
         if !is_installed {
             let org = model.organization.clone();
             groups.entry(org).or_default().push(model.clone());
