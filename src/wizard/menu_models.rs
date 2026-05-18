@@ -20,6 +20,39 @@ fn is_cache_from_today() -> bool {
     false
 }
 
+/// Convert an OllamaModel to a LocalMaxModel by finding matching entry in models list
+/// or creating a minimal one for local-only models
+fn ollama_to_localmax_model(
+    ollama_model: &ollama_api::OllamaModel,
+    models: &[LocalMaxModel],
+) -> LocalMaxModel {
+    let ollama_name = &ollama_model.name;
+    
+    // Try to find matching model in localmaxxing database
+    let matching_model = models.iter().find(|m| {
+        // Check if hf_id directly matches (already ollama name)
+        if m.hf_id == *ollama_name {
+            return true;
+        }
+        // Check if ollama_name conversion matches
+        let converted_name = m.to_ollama_name();
+        converted_name == *ollama_name
+    });
+    
+    match matching_model {
+        Some(m) => m.clone(),
+        None => {
+            // Create a minimal LocalMaxModel for local-only models
+            LocalMaxModel {
+                hf_id: ollama_name.clone(),
+                display_name: Some(ollama_name.clone()),
+                organization: "local".to_string(),
+                ..Default::default()
+            }
+        }
+    }
+}
+
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     // Only refresh cache if it doesn't exist or is older than 7 days
     let cache_from_today = is_cache_from_today();
@@ -47,37 +80,59 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         return Ok(());
     }
     
-    // Separate installed models from all models
-    // A model is "installed" if its ollama_name matches a locally installed model
-    let installed_models: Vec<_> = models.iter()
-        .filter(|m| {
-            let ollama_name = m.to_ollama_name();
-            local_names.contains(ollama_name.as_str())
-        })
-        .cloned()
-        .collect();
+    // Build installed models list - iterate over local models and find matches in localmaxxing
+    let mut installed_items: Vec<(String, LocalMaxModel)> = vec![];
     
-    // Also add local models that are NOT in the localmaxxing database
-    // These are models the user has installed but we don't have performance data for
-    // Get ALL ollama names from the localmaxxing database (not just direct mappings)
-    let localmax_ollama_names: std::collections::HashSet<String> = models.iter()
-        .map(|m| m.to_ollama_name())
-        .collect();
+    for ollama_model in &local {
+        let local_model = ollama_to_localmax_model(ollama_model, &models);
+        
+        // Extract params from ollama name
+        let params = ollama_model.name.split(':')
+            .nth(1)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| localmax_models::extract_param_size(&local_model.hf_id));
+        
+        let hw_compat = local_model.hardware_compatibility(hw);
+        let name_colored = match hw_compat {
+            "🟢" => ollama_model.name.green().to_string(),
+            "🟡" => ollama_model.name.yellow().to_string(),
+            "🟠" => {
+                let c = colored::Color::TrueColor { r: 245, g: 158, b: 11 };
+                (&ollama_model.name as &str).color(c).to_string()
+            },
+            _ => (&ollama_model.name as &str).red().to_string(),  // 🔴
+        };
+        
+        let display = format!(
+            "✅ {} [{}] {} (installed)",
+            name_colored,
+            params,
+            local_model.organization
+        );
+        installed_items.push((display, local_model));
+    }
     
-    let local_only_models: Vec<_> = local.iter()
-        .filter(|lm| !localmax_ollama_names.contains(&lm.name))
-        .map(|lm| {
-            // Create a minimal LocalMaxModel for local-only models
-            LocalMaxModel {
-                hf_id: lm.name.clone(),
-                display_name: Some(lm.name.clone()),
-                organization: "local".to_string(),
-                ..Default::default()
-            }
-        })
-        .collect();
+    // Sort installed models by hardware compatibility
+    installed_items.sort_by(|a, b| {
+        let a_compat = a.1.hardware_compatibility(hw);
+        let b_compat = b.1.hardware_compatibility(hw);
+        let a_priority = match a_compat {
+            "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
+        };
+        let b_priority = match b_compat {
+            "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
+        };
+        a_priority.cmp(&b_priority)
+    });
     
-    let all_installed: Vec<_> = installed_models.into_iter().chain(local_only_models).collect();
+    // Build main menu items
+    let mut main_items = vec![];
+    
+    // Add installed models to main menu
+    let installed_count = installed_items.len();
+    for (display, model) in &installed_items {
+        main_items.push((display.clone(), Some(model.clone())));
+    }
     
     // Build organization groups for non-installed models
     // A model is "installed" if its ollama_name matches a locally installed model
@@ -98,77 +153,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let b_popularity: u32 = b.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
         b_popularity.cmp(&a_popularity)
     });
-    
-    // Build main menu items
-    let mut main_items = vec![];
-    
-    // Note: Hardware compatibility colors are applied directly to model names (no legend needed)
-    
-    // Add installed models section if any (sorted by hardware compatibility, then popularity)
-    if !all_installed.is_empty() {
-        let mut sorted_installed = all_installed.clone();
-        sorted_installed.sort_by(|a, b| {
-            let a_compat = a.hardware_compatibility(hw);
-            let b_compat = b.hardware_compatibility(hw);
-            // Assign numeric priority: 🟢=0 (best), 🟡=1, 🟠=2, 🔴=3 (worst)
-            let a_priority = match a_compat {
-                "🟢" => 0,
-                "🟡" => 1,
-                "🟠" => 2,
-                _ => 3,
-            };
-            let b_priority = match b_compat {
-                "🟢" => 0,
-                "🟡" => 1,
-                "🟠" => 2,
-                _ => 3,
-            };
-            // Sort by compatibility priority first, then by popularity
-            match a_priority.cmp(&b_priority) {
-                std::cmp::Ordering::Equal => {
-                    let a_pop = a._count.as_ref().map_or(0, |c| c.benchmark_runs);
-                    let b_pop = b._count.as_ref().map_or(0, |c| c.benchmark_runs);
-                    b_pop.cmp(&a_pop)
-                }
-                other => other,
-            }
-        });
-        for model in &sorted_installed {
-            let display_name = model.display_name.as_ref().unwrap_or(&model.hf_id);
-            let params = model.params.map_or_else(
-                || {
-                    // Try to extract params from hf_id for local-only models
-                    if model.hf_id.contains(':') {
-                        // Ollama name like "qwen2.5:3b" - extract after ":"
-                        model.hf_id.split(':').nth(1).unwrap_or("").to_string()
-                    } else {
-                        localmax_models::extract_param_size(&model.hf_id)
-                    }
-                },
-                |p| {
-                    let rounded = (p / 7.0).round() * 7.0;
-                    if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
-                    else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
-                    else if (rounded - 30.0).abs() < 0.1 || (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
-                    else if (rounded - 70.0).abs() < 0.1 || (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
-                    else { format!("{:.0}b", rounded) }
-                }
-            );
-            let hw_compat = model.hardware_compatibility(hw);
-            // Color the display name based on hardware compatibility
-            let display_name_colored = match hw_compat {
-                "🟢" => display_name.green().to_string(),
-                "🟡" => display_name.yellow().to_string(),
-                "🟠" => {
-                    let c = colored::Color::TrueColor { r: 245, g: 158, b: 11 };
-                    (display_name as &str).color(c).to_string()
-                },
-                _ => (display_name as &str).red().to_string(),  // 🔴
-            };
-            let display = format!("✅ {} [{}] {} (installed)", display_name_colored, params, model.organization);
-            main_items.push((display, Some(model.clone())));
-        }
-    }
     
     // Add separator and organization submenu
     main_items.push((format!("─── {} ───", i18n.t("models.localmaxxing_by_org")), None));
@@ -216,7 +200,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     // Calculate indices for special menu items
     // Structure: installed models, org separator, orgs, llmfit separator, llmfit recommendation, back
-    let installed_count = all_installed.len();
     let orgs_count = orgs.len();
     // Indices: 0..installed_count are installed models, then org separator at installed_count
     // then orgs at installed_count+1 .. installed_count+orgs_count+1
