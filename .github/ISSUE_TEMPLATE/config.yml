@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/olivierlevy/wzllama#readme
+    about: Read the documentation
+  - name: 💬 Discussions
+    url: https://github.com/olivierlevy/wzllama/discussions
+    about: Ask questions and discuss ideas
