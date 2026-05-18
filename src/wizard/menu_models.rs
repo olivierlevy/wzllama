@@ -69,20 +69,26 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         }
     }
     
-    // Sort organizations by their best model's params
+    // Sort organizations by popularity (total benchmark runs)
     let mut orgs: Vec<_> = groups.iter().collect();
     orgs.sort_by(|a, b| {
-        let a_best = a.1.iter().map(|m| m.params.unwrap_or(0.0)).fold(0.0, f64::max);
-        let b_best = b.1.iter().map(|m| m.params.unwrap_or(0.0)).fold(0.0, f64::max);
-        b_best.partial_cmp(&a_best).unwrap_or(std::cmp::Ordering::Equal)
+        let a_popularity: u32 = a.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
+        let b_popularity: u32 = b.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
+        b_popularity.cmp(&a_popularity)
     });
     
     // Build main menu items
     let mut main_items = vec![];
     
-    // Add installed models section if any
+    // Add installed models section if any (sorted by popularity)
     if !installed_models.is_empty() {
-        for model in &installed_models {
+        let mut sorted_installed = installed_models.clone();
+        sorted_installed.sort_by(|a, b| {
+            let a_pop = a._count.as_ref().map_or(0, |c| c.benchmark_runs);
+            let b_pop = b._count.as_ref().map_or(0, |c| c.benchmark_runs);
+            b_pop.cmp(&a_pop)
+        });
+        for model in &sorted_installed {
             let display_name = model.display_name.as_ref().unwrap_or(&model.hf_id);
             let params = model.params.map_or(String::new(), |p| {
                 let rounded = (p / 7.0).round() * 7.0;
@@ -150,12 +156,12 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     let (org, org_models) = orgs[org_index as usize];
     
-    // Sort models in this organization by params
+    // Sort models in this organization by popularity (benchmark runs)
     let mut sorted_models = org_models.clone();
     sorted_models.sort_by(|a, b| {
-        let a_params = a.params.unwrap_or(0.0);
-        let b_params = b.params.unwrap_or(0.0);
-        b_params.partial_cmp(&a_params).unwrap_or(std::cmp::Ordering::Equal)
+        let a_pop = a._count.as_ref().map_or(0, |c| c.benchmark_runs);
+        let b_pop = b._count.as_ref().map_or(0, |c| c.benchmark_runs);
+        b_pop.cmp(&a_pop)
     });
     
     // Show organization models submenu
