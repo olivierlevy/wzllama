@@ -100,7 +100,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 else if (rounded - 70.0).abs() < 0.1 { "72b".to_string() }
                 else { format!("{:.0}b", rounded) }
             });
-            let display = format!("✅ {} [{}] {} (installed)", display_name, params, model.organization);
+            let hw_compat = model.hardware_compatibility(hw);
+            let display = format!("✅ {} [{}] {} (installed) {}", display_name, params, model.organization, hw_compat);
             main_items.push((display, Some(model.clone())));
         }
     }
@@ -244,7 +245,8 @@ fn show_org_models_menu(
             format!(" → {}", ollama_name).yellow().to_string()
         };
         
-        let display = format!("{} {} [{}]{}", icon, display_name, params, fallback_indicator);
+        let hw_compat = model.hardware_compatibility(hw);
+        let display = format!("{} {} [{}]{} {}", icon, display_name, params, fallback_indicator, hw_compat);
         model_items.push((display, model.clone()));
     }
     

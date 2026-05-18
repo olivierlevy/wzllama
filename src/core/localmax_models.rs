@@ -502,6 +502,33 @@ impl LocalMaxModel {
             "No data".to_string()
         }
     }
+
+    /// Returns hardware compatibility indicator (like Canirun.ai)
+    /// 🟢 = Excellent (runs comfortably)
+    /// 🟡 = OK (runs with some constraints)
+    /// 🟠 = Low (may have issues)
+    /// 🔴 = Not recommended
+    pub fn hardware_compatibility(&self, hw: &crate::core::HardwareInfo) -> &'static str {
+        let params_b = self.params.unwrap_or(7.0) as u32;
+        
+        // Estimate VRAM needed for the model (GGUF Q4_K_M approximation)
+        // Rule of thumb: ~1.5-2x the model size in VRAM, or ~2x in RAM for CPU
+        let vram_needed_gb = (params_b as f64) * 1.8; // ~1.8GB per B parameter
+        
+        let total_vram_gb = hw.total_vram_mb as f64 / 1024.0;
+        
+        if total_vram_gb >= vram_needed_gb {
+            "🟢" // Excellent - plenty of VRAM
+        } else if total_vram_gb >= vram_needed_gb * 0.7 {
+            "🟡" // OK - enough VRAM for smaller context
+        } else if total_vram_gb >= vram_needed_gb * 0.4 {
+            "🟠" // Low - might need CPU offload or small context
+        } else if hw.ram_gb >= vram_needed_gb * 2.5 {
+            "🟠" // Can run on CPU with enough RAM
+        } else {
+            "🔴" // Not recommended
+        }
+    }
 }
 
 /// Returns popular fallback models when API is unavailable
