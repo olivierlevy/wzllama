@@ -4,7 +4,6 @@ pub mod menu_cleanup;
 pub mod menu_config;
 pub mod menu_fleets;
 pub mod menu_main;
-pub mod menu_manage_models;
 pub mod menu_models;
 pub mod menu_tools;
 pub mod menu_usage;

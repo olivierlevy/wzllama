@@ -1,5 +1,5 @@
 use wzllama::tools::tool_trait::{Tool, ToolStatus};
-use wzllama::config::i18n::I18n;
+use wzllama::config::{I18n, WzllamaState};
 use anyhow::Result;
 
 // Mock tool for testing
@@ -23,7 +23,7 @@ impl Tool for MockTool {
         self.description.to_string()
     }
     
-    fn status(&self) -> ToolStatus {
+    fn status(&self, _state: &wzllama::config::WzllamaState) -> ToolStatus {
         if self.installed {
             ToolStatus::Installed
         } else {
@@ -51,6 +51,10 @@ impl Tool for MockTool {
     }
 }
 
+fn create_test_state() -> WzllamaState {
+    WzllamaState::default()
+}
+
 #[test]
 fn test_tool_status_installed() {
     let tool = MockTool {
@@ -59,8 +63,9 @@ fn test_tool_status_installed() {
         description: "A test tool",
         installed: true,
     };
+    let state = create_test_state();
     
-    assert_eq!(tool.status(), ToolStatus::Installed);
+    assert_eq!(tool.status(&state), ToolStatus::Installed);
 }
 
 #[test]
@@ -71,8 +76,9 @@ fn test_tool_status_not_installed() {
         description: "A test tool",
         installed: false,
     };
+    let state = create_test_state();
     
-    assert_eq!(tool.status(), ToolStatus::NotInstalled);
+    assert_eq!(tool.status(&state), ToolStatus::NotInstalled);
 }
 
 #[test]

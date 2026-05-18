@@ -33,6 +33,8 @@ pub struct InstalledTools {
     pub obsidian: bool,
     #[serde(default)]
     pub goose: bool,
+    #[serde(default)]
+    pub llmfit: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -93,6 +95,7 @@ pub fn mark_installed(tool: &str, state: &mut WzllamaState) {
         "pool" => state.installed.pool = true,
         "obsidian" => state.installed.obsidian = true,
         "goose" => state.installed.goose = true,
+        "llmfit" => state.installed.llmfit = true,
         _ => {}
     }
     let _ = save(state);

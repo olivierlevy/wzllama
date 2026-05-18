@@ -8,7 +8,6 @@ use crate::tools::ollama::OllamaTool;
 use crate::wizard::menu_cleanup;
 use crate::wizard::menu_config;
 use crate::wizard::menu_fleets;
-use crate::wizard::menu_manage_models;
 use crate::wizard::menu_models;
 use crate::wizard::menu_tools;
 use crate::wizard::menu_usage;
@@ -140,7 +139,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let mut items = vec![
             current_i18n.t("menu.main.usage"),
             current_i18n.t("menu.main.models"),
-            current_i18n.t("menu.main.manage_models"),
             current_i18n.t("menu.main.tools"),
         ];
 
@@ -168,19 +166,18 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 
         let has_fleets = !fleets.is_empty();
         
-        // Menu indices (without fleets): usage(0), models(1), manage_models(2), tools(3), cleanup(4), config(5), language(6), quit(7)
-        // Menu indices (with fleets):    usage(0), models(1), manage_models(2), tools(3), fleets(4), cleanup(5), config(6), language(7), quit(8)
-        let cleanup_idx = 4 + has_fleets as usize;  // 4 without fleets, 5 with fleets
-        let config_idx = 5 + has_fleets as usize;   // 5 without fleets, 6 with fleets
-        let language_idx = 6 + has_fleets as usize; // 6 without fleets, 7 with fleets
-        let quit_idx = 7 + has_fleets as usize;     // 7 without fleets, 8 with fleets
+        // Menu indices (without fleets): usage(0), models(1), tools(2), cleanup(3), config(4), language(5), quit(6)
+        // Menu indices (with fleets):    usage(0), models(1), tools(2), fleets(3), cleanup(4), config(5), language(6), quit(7)
+        let cleanup_idx = 3 + has_fleets as usize;  // 3 without fleets, 4 with fleets
+        let config_idx = 4 + has_fleets as usize;   // 4 without fleets, 5 with fleets
+        let language_idx = 5 + has_fleets as usize; // 5 without fleets, 6 with fleets
+        let quit_idx = 6 + has_fleets as usize;     // 6 without fleets, 7 with fleets
         
         match choice {
             0 => menu_usage::run(current_i18n, state, hw)?,
             1 => menu_models::run(current_i18n, state, hw)?,
-            2 => menu_manage_models::run(current_i18n, state, hw)?,
-            3 => menu_tools::run(current_i18n, state, hw)?,
-            n if has_fleets && n == 4 => menu_fleets::run(current_i18n, state, hw)?,
+            2 => menu_tools::run(current_i18n, state, hw)?,
+            n if has_fleets && n == 3 => menu_fleets::run(current_i18n, state, hw)?,
             n if n == cleanup_idx => menu_cleanup::run(current_i18n, state)?,
             n if n == config_idx => menu_config::run(current_i18n, state)?,
             n if n == language_idx => {

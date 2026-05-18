@@ -28,6 +28,7 @@ fn test_hardware_info_with_gpu() {
             GpuInfo { name: "RTX 4090".into(), vram_mb: 24576 },
             GpuInfo { name: "RTX A6000".into(), vram_mb: 49152 },
         ],
+        available_disk_gb: 500.0,
     };
     
     assert!(hw.has_gpu());
@@ -44,6 +45,7 @@ fn test_hardware_info_no_gpu() {
         ram_gb: 16.0,
         total_vram_mb: 0,
         gpus: vec![],
+        available_disk_gb: 500.0,
     };
     
     assert!(!hw.has_gpu());
@@ -67,6 +69,7 @@ fn test_hardware_info_serialization() {
         ram_gb: 32.0,
         total_vram_mb: 16384,
         gpus: vec![GpuInfo { name: "RTX 4090".into(), vram_mb: 24576 }],
+        available_disk_gb: 500.0,
     };
     
     let json = serde_json::to_string(&hw).unwrap();
@@ -97,6 +100,7 @@ fn test_total_vram_calculation() {
             GpuInfo { name: "GPU1".into(), vram_mb: 4096 },
             GpuInfo { name: "GPU2".into(), vram_mb: 8192 },
         ],
+        available_disk_gb: 500.0,
     };
     
     let total: u64 = hw.gpus.iter().map(|g| g.vram_mb).sum();

@@ -32,6 +32,7 @@
   "menu.usage.choose": "Choisissez votre usage :",
 
   "menu.back": "↩️  Retour",
+  "menu.select": "Sélectionnez un élément :",
 
   "menu.models.install_new": "📥 Installer un nouveau modèle depuis le catalogue",
 
@@ -294,6 +295,25 @@
   "models.cloud_ready": "Modèle cloud prêt à l'emploi",
   "models.catalog_custom": "📝 Entrer un nom de modèle personnalisé...",
   "models.catalog_custom_prompt": "Nom du modèle (ex: qwen3:30b, gpt-oss:120b) :",
+  "models.show_leaderboard": "📊 Voir le leaderboard communautaire (performances réelles)",
+  "models.choose_usage": "🎯 Choisir le type d'usage",
+  "models.leaderboard_title": "Leaderboard - Performances réelles (localmaxxing.com)",
+  "models.leaderboard_choose_preset": "Choisissez un hardware pour comparer :",
+  "models.leaderboard_fetch": "Chargement des données pour",
+  "models.leaderboard_unavailable": "Leaderboard non disponible (vérifiez votre connexion)",
+  "models.leaderboard_choose_model": "Choisissez un modèle à installer :",
+  "models.show_localmaxxing": "🚀 Modèles avec performances réelles (localmaxxing.com)",
+  "models.localmaxxing_title": "Modèles Localmaxxing - Performances mesurées",
+  "models.localmaxxing_loading": "Chargement des modèles...",
+  "models.localmaxxing_empty": "Aucun modèle disponible",
+  "models.localmaxxing_select": "Choisissez un modèle à installer :",
+  "models.localmaxxing_error": "Erreur lors du chargement",
+  "models.localmaxxing_download_error": "Erreur lors du téléchargement",
+  "models.localmaxxing_fallback": "Utiliser le catalogue Ollama standard ?",
+  "models.leaderboard_fallback": "💡 Proposition de modèles populaires comme alternative",
+
+  "menu.previous_page": "← Page précédente",
+  "menu.next_page": "Page suivante →",
 
   "fleet.title": "🤖 Flotte d'agents IA",
   "fleet.resources": "📊 Ressources :",
@@ -398,6 +418,15 @@
   "usage.fast_agents.description": "💬 Chatbots, interactions rapides",
   "usage.mixed.label": "🎯 Usage général",
   "usage.mixed.description": "🛠️  Code, écriture, recherche",
+  "usage.code.label": "💻 Code",
+  "usage.code.description": "👨‍💻 Programmation, débogage",
+  "usage.book.label": "📖 Livre/Texte",
+  "usage.book.description": "📚 Lecture, résumé, écriture",
+  "usage.agent.label": "🤖 Agent",
+  "usage.agent.description": "🏃 Agents autonomes, automatisation",
+  "usage.choose_title": "Type d'usage",
+  "usage.choose": "Choisissez votre usage :",
+  "press_enter_to_continue": "Appuyez sur Entrée pour continuer...",
 
   "screen.information.title": "📖 À propos de wzllama",
   "screen.models.title": "🤖 Choisir un modèle IA",
@@ -405,5 +434,10 @@
   "screen.cleanup.title": "🧹 Nettoyage",
   "screen.config.title": "⚙️ Configuration",
   "screen.language.title": "🌍 Changer de langue",
-  "screen.quit.title": "❌ Quitter"
+  "screen.quit.title": "❌ Quitter",
+
+  "tool.llmfit.description": "Outil d'entraînement et d'évaluation de modèles LLM",
+  "tool.llmfit.run": "Lancement de LLMFit...",
+  "tool.llmfit.uninstall_confirm": "Désinstaller LLMFit ?",
+  "tool.llmfit.uninstalled": "LLMFit désinstallé"
 }

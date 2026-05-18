@@ -14,6 +14,7 @@ pub mod pool;
 pub mod obsidian;
 pub mod goose;
 pub mod flatpak; // Utility tool, not exposed in menus
+pub mod llmfit;
 
 use crate::config::{I18n, WzllamaState};
 use tool_trait::Tool;
@@ -33,6 +34,7 @@ pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
         Box::new(pool::PoolTool),
         Box::new(obsidian::ObsidianTool),
         Box::new(goose::GooseTool),
+        Box::new(llmfit::LLMFitTool),
     ]
 }
 
@@ -56,6 +58,7 @@ pub fn get_available_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
             "pool" => state.installed.pool,
             "obsidian" => state.installed.obsidian,
             "goose" => state.installed.goose,
+            "llmfit" => state.installed.llmfit,
             _ => false,
         };
         ToolInfo {
@@ -93,6 +96,7 @@ pub fn get_install_command(tool_id: &str) -> Option<String> {
         "pi" => Some("ollama install pi".to_string()),
         "obsidian" => Some("flatpak install flathub md.obsidian.Obsidian -y".to_string()),
         "goose" => Some("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash".to_string()),
+        "llmfit" => Some("uv tool install -U llmfit".to_string()),
         _ => None,
     }
 }
@@ -114,6 +118,7 @@ pub fn get_launch_command(tool_id: &str, model: Option<&str>) -> Option<String> 
         "copilot_cli" => Some("copilot".to_string()),
         "obsidian" => Some("flatpak run md.obsidian.Obsidian".to_string()),
         "goose" => Some("goose".to_string()),
+        "llmfit" => Some("uvx llmfit".to_string()),
         _ => Some(tool_id.to_string()),
     }
 }

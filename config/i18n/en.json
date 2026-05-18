@@ -32,6 +32,7 @@
   "menu.usage.choose": "Choose your usage:",
 
   "menu.back": "↩️  Back",
+  "menu.select": "Select an item:",
 
   "menu.models.install_new": "📥 Install a new model from catalog",
   "menu.models.choose": "Choose a model:",
@@ -292,6 +293,25 @@
   "models.cloud_ready": "Cloud model ready to use",
   "models.catalog_custom": "📝 Enter custom model name...",
   "models.catalog_custom_prompt": "Model name (e.g., qwen3:30b, gpt-oss:120b):",
+  "models.show_leaderboard": "📊 View community leaderboard (real-world performance)",
+  "models.choose_usage": "🎯 Choose usage type",
+  "models.leaderboard_title": "Leaderboard - Real-world Performance (localmaxxing.com)",
+  "models.leaderboard_choose_preset": "Select hardware to compare:",
+  "models.leaderboard_fetch": "Loading data for",
+  "models.leaderboard_unavailable": "Leaderboard unavailable (check your connection)",
+  "models.leaderboard_choose_model": "Choose a model to install:",
+  "models.show_localmaxxing": "🚀 Models with real performance (localmaxxing.com)",
+  "models.localmaxxing_title": "Localmaxxing Models - Measured Performance",
+  "models.localmaxxing_loading": "Loading models...",
+  "models.localmaxxing_empty": "No models available",
+  "models.localmaxxing_select": "Choose a model to install:",
+  "models.localmaxxing_error": "Error loading models",
+  "models.localmaxxing_download_error": "Download error",
+  "models.localmaxxing_fallback": "Use standard Ollama catalog instead?",
+  "models.leaderboard_fallback": "💡 Suggesting popular models as alternative",
+
+  "menu.previous_page": "← Previous page",
+  "menu.next_page": "Next page →",
 
   "fleet.title": "🤖 AI Agent Fleet",
   "fleet.resources": "📊 Resources:",
@@ -396,12 +416,25 @@
   "usage.fast_agents.description": "💬 Chatbots, quick interactions",
   "usage.mixed.label": "🎯 General use",
   "usage.mixed.description": "🛠️  Code, writing, research",
-
+  "usage.code.label": "💻 Code",
+  "usage.code.description": "👨‍💻 Programming, debugging",
+  "usage.book.label": "📖 Book/Text",
+  "usage.book.description": "📚 Reading, summarization, writing",
+  "usage.agent.label": "🤖 Agent",
+  "usage.agent.description": "🏃 Autonomous agents, automation",
+  "usage.choose_title": "Usage type",
+  "usage.choose": "Choose your usage:",
+  "press_enter_to_continue": "Press Enter to continue...",
   "screen.information.title": "📖 About wzllama",
   "screen.models.title": "🤖 Choose an AI model",
   "screen.tools.title": "🛠️ Launch a tool",
   "screen.cleanup.title": "🧹 Cleanup",
   "screen.config.title": "⚙️ Configuration",
   "screen.language.title": "🌍 Change language",
-  "screen.quit.title": "❌ Quit"
+  "screen.quit.title": "❌ Quit",
+
+  "tool.llmfit.description": "LLM training and evaluation tool",
+  "tool.llmfit.run": "Launching LLMFit...",
+  "tool.llmfit.uninstall_confirm": "Uninstall LLMFit?",
+  "tool.llmfit.uninstalled": "LLMFit uninstalled"
 }

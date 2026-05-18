@@ -34,3 +34,5 @@ libc = "0.2"
 dialoguer = "0.12"
 # HTML scraper for ollama library
 scraper = "0.21"
+# Model recommendation and hardware detection
+llmfit-core = { git = "https://github.com/AlexsJones/llmfit" }
