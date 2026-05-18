@@ -442,5 +442,18 @@
   "tool.llmfit.description": "Outil d'entraînement et d'évaluation de modèles LLM",
   "tool.llmfit.run": "Lancement de LLMFit...",
   "tool.llmfit.uninstall_confirm": "Désinstaller LLMFit ?",
-  "tool.llmfit.uninstalled": "LLMFit désinstallé"
+  "tool.llmfit.uninstalled": "LLMFit désinstallé",
+  "llmfit.not_installed": "LLMFit n'est pas installé",
+  "llmfit.install_now": "Installer LLMFit ?",
+  "llmfit.required_for_mcp": "LLMFit est requis pour l'intégration MCP. Veuillez l'installer.",
+  "llmfit.starting_mcp": "Démarrage du service MCP LLMFit...",
+  "llmfit.mcp_started": "Service MCP LLMFit démarré",
+  "models.llmfit_title": "Recommandations LLMFit",
+  "models.llmfit_recommendations": "🚀 Obtenir des modèles optimisés pour le hardware",
+  "models.llmfit_not_running": "Le serveur HTTP LLMFit n'est pas lancé",
+  "models.llmfit_start_now": "Lancer le serveur HTTP LLMFit ?",
+  "models.llmfit_start_error": "Échec du lancement de LLMFit",
+  "models.llmfit_fetch_error": "Échec de la récupération des recommandations LLMFit",
+  "models.llmfit_empty": "Aucune recommandation LLMFit disponible",
+  "models.set_as_default": "Définir comme modèle par défaut ?"
 }

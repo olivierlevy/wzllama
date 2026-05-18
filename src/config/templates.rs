@@ -47,7 +47,7 @@ pub fn ensure() -> Result<()> {
     if i18n_source.exists() {
         for entry in fs::read_dir(&i18n_source)? {
             let entry = entry?;
-            if entry.path().extension().map_or(false, |e| e == "json") {
+            if entry.path().extension().is_some_and(|e| e == "json") {
                 let dest = user_i18n.join(entry.file_name());
                 if !dest.exists() { fs::copy(entry.path(), &dest)?; }
             }
@@ -115,7 +115,7 @@ pub fn reset_all() -> Result<()> {
     }
     for entry in fs::read_dir(paths::i18n_dir())? {
         let p = entry?.path();
-        if p.extension().map_or(false, |e| e == "json") && p.exists() {
+        if p.extension().is_some_and(|e| e == "json") && p.exists() {
             fs::rename(&p, p.with_extension("json.bak"))?;
         }
     }

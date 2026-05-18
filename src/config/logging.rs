@@ -39,7 +39,7 @@ pub fn install_embedded_i18n() -> Result<()> {
             for entry in std::fs::read_dir(embedded_path)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.extension().map_or(false, |e| e == "json") {
+                if path.extension().is_some_and(|e| e == "json") {
                     let content = std::fs::read_to_string(&path)?;
                     std::fs::write(i18n_dir.join(path.file_name().unwrap()), content)?;
                 }

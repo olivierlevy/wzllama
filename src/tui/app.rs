@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::config::{WzllamaState, I18n};
 use crate::core::hardware::HardwareInfo;
 use crate::core::ollama_api;
@@ -140,7 +142,7 @@ impl App {
                 if count > 0 {
                     self.selected_model = Some(match self.selected_model {
                         None => 0,
-                        Some(i) if i == 0 => count - 1,
+                        Some(0) => count - 1,
                         Some(i) => i.saturating_sub(1),
                     });
                 }
@@ -148,7 +150,7 @@ impl App {
                 let count = self.get_current_screen_item_count();
                 self.selected_tool = Some(match self.selected_tool {
                     None => 0,
-                    Some(i) if i == 0 => count - 1,
+                    Some(0) => count - 1,
                     Some(i) => i - 1,
                 });
             }
@@ -239,11 +241,9 @@ impl App {
                 }
                 Screen::Quit => {
                     self.should_quit = true;
-                    return;
                 }
                 Screen::Information => {
                     // Information screen shows static content, no content selection needed
-                    return;
                 }
                 _ => {}
             }

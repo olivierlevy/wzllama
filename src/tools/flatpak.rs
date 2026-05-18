@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::Result;
 use crate::core::shell;
 use crate::core::system::detect_distro;

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use colored::*;
 use crossterm::terminal::size;
 
@@ -69,7 +71,7 @@ pub fn format_number(n: u64) -> String {
     let len = s.len();
     let mut result = String::new();
     for (i, c) in s.chars().enumerate() {
-        if i > 0 && (len - i) % 3 == 0 { result.push(' '); }
+        if i > 0 && (len - i).is_multiple_of(3) { result.push(' '); }
         result.push(c);
     }
     result

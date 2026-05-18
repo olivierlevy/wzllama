@@ -64,7 +64,7 @@ impl OllamaTool {
     /// Setup ollama user and directory for models (called when ollama is not installed)
     pub fn setup_ollama_user_dir() -> Result<()> {
         // Create ollama user if not exists
-        if !shell::run("id -u ollama >/dev/null 2>&1").is_ok() {
+        if shell::run("id -u ollama >/dev/null 2>&1").is_err() {
             shell::run("sudo useradd -r -s /bin/false ollama")?;
         }
         
@@ -118,15 +118,14 @@ impl OllamaTool {
                 Self::start()?;
                 display::success(&i18n.t("ollama.started"));
                 
-                if !Self::is_autostart_enabled() {
-                    if Confirm::new()
+                if !Self::is_autostart_enabled()
+                    && Confirm::new()
                         .with_prompt(i18n.t("ollama.enable_autostart"))
                         .default(true)
                         .interact()?
-                    {
-                        Self::enable_autostart()?;
-                        display::success(&i18n.t("ollama.autostart_enabled"));
-                    }
+                {
+                    Self::enable_autostart()?;
+                    display::success(&i18n.t("ollama.autostart_enabled"));
                 }
             }
         }
@@ -212,7 +211,7 @@ impl OllamaTool {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
-                display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", &m)]));
+                display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama run {}", m);
                 println!("{}", cmd); shell::exec(&cmd);
             }

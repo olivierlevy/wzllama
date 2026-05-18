@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "llmfit": {
+      "command": "llmfit",
+      "args": ["serve", "--mcp"],
+      "env": {}
+    }
+  }
+}

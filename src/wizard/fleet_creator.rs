@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::Result;
 use colored::*;
 use dialoguer::{Confirm, Input};
@@ -113,7 +115,7 @@ pub fn create_fleet(
     orchestrator_name: &str,
     agents: &[(String, String, String, u32, f32, String)],
 ) -> Result<String> {
-    let project_name: String = ask_project_name(&i18n, usage_type)?;
+    let project_name: String = ask_project_name(i18n, usage_type)?;
 
     println!("\n{}", "═".repeat(50).cyan());
     println!("{}", i18n.t("fleet.commands_to_run").bold());

@@ -82,6 +82,7 @@ wzllama will detect your hardware, offer to install Ollama, and suggest models s
 | Tool | Description | Transport |
 |------|-------------|-----------|
 | **Ollama** | Local AI model server | Native |
+| **LLMFit** | LLM training and evaluation tool with MCP support | Native / MCP |
 | **Open WebUI** | Web interface for AI models | Docker |
 | **OpenClaw** | Personal AI assistant (100+ skills, fleet support) | Ollama |
 | **Claude Code** | Anthropic coding agent with sub-agents | NPM |
@@ -94,6 +95,29 @@ wzllama will detect your hardware, offer to install Ollama, and suggest models s
 | **Pool** | Poolside coding agent | Native |
 
 → Full tool reference: [docs/tools.md](docs/tools.md)
+
+### LLMFit MCP Integration
+
+LLMFit can be used as an MCP (Model Context Protocol) server, making it available to AI agents like Claude Desktop:
+
+```bash
+# Install llmfit (done automatically by wzllama)
+uv tool install -U llmfit
+
+# MCP configuration for Claude Desktop (claude_desktop_config.json):
+{
+  "mcpServers": {
+    "llmfit": {
+      "command": "llmfit",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}
+```
+
+Available MCP tools: `get_system_specs`, `recommend_models`, `search_models`, `plan_hardware`, `get_runtimes`, `get_installed_models`.
+
+→ MCP documentation: [config/mcp/README.md](config/mcp/README.md)
 
 ---
 

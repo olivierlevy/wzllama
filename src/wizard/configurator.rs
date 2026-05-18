@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::Result;
 use colored::*;
 use dialoguer::Select;
@@ -19,7 +21,7 @@ pub fn display_and_choose(
     println!("\n   {}\n{}", i18n.t("config.modelfile"), config.generate_modelfile().dimmed());
 
     // Menu d'action
-    let custom_name = format!("wzllama-{}", TaskType::from_str(usage_type).to_str());
+    let custom_name = format!("wzllama-{}", TaskType::parse_from_str(usage_type).to_str());
     
     let items = vec![
         i18n.t("config.action_chat"),

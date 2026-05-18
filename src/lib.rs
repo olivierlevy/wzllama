@@ -7,4 +7,9 @@ pub mod cli;
 pub mod display;
 pub mod error;
 
-pub use tui::{App, Screen, Navigation};
+// Re-export commonly used types
+pub use tui::App;
+#[allow(unused)]
+pub use tui::Screen;
+#[allow(unused)]
+pub use tui::Navigation;

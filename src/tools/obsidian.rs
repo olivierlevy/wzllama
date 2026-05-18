@@ -23,15 +23,15 @@ impl Tool for ObsidianTool {
 
 impl ObsidianTool {
     /// Check if Obsidian is installed, also updates state
-    pub fn get_status(state: &WzllamaState) -> ToolStatus {
+    pub fn get_status(_state: &WzllamaState) -> ToolStatus {
         // Vérifier d'abord si flatpak est disponible et si l'app est installée
         #[cfg(target_os = "linux")]
         {
             // Si flatpak n'est pas installé, obsidian ne peut pas être installé via flatpak
-            if shell::run("flatpak --version").is_ok() {
-                if FlatpakTool::is_installed("md.obsidian.Obsidian") {
-                    return ToolStatus::Installed;
-                }
+            if shell::run("flatpak --version").is_ok()
+                && FlatpakTool::is_installed("md.obsidian.Obsidian")
+            {
+                return ToolStatus::Installed;
             }
             
             // Vérifier les autres méthodes d'installation
@@ -63,7 +63,7 @@ impl ObsidianTool {
         #[cfg(target_os = "linux")]
         {
             // Ensure Flatpak is installed first, return error if cannot install
-            if !shell::run("flatpak --version").is_ok() {
+            if shell::run("flatpak --version").is_err() {
                 display::info("Flatpak not found. Attempting to install...");
                 FlatpakTool::install().map_err(|e| {
                     display::warning(&format!("Could not install Flatpak: {}", e));

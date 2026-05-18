@@ -1,0 +1,21 @@
+[Unit]
+Description=LLMFit Model Recommendation Server
+Documentation=https://github.com/AlexsJones/llmfit
+After=network.target
+
+[Service]
+Type=simple
+User=%USER%
+Group=%USER%
+WorkingDirectory=/home/%USER%
+ExecStart=/home/%USER%/.local/bin/llmfit serve --port 8787
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PATH=/home/%USER%/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target

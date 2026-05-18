@@ -26,7 +26,7 @@ log = "0.4"
 env_logger = "0.11"
 colored = "3.1"
 which = "8.0"
-reqwest = { version = "0.13.3", features = ["blocking", "json"] }
+reqwest = { version = "0.12", features = ["blocking", "json"] }
 # TUI with ratatui
 ratatui = "0.26"
 crossterm = "0.27"

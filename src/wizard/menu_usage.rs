@@ -1,8 +1,6 @@
 use anyhow::Result;
 use colored::*;
 use dialoguer::{Select, Confirm};
-use std::collections::HashMap;
-use std::io::Write;
 use crate::config::{I18n, WzllamaState};
 use crate::core::{hardware::HardwareInfo, ollama_api, localmax_models};
 use crate::display;
@@ -14,7 +12,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     display::section(&i18n.t("usage.choose_title"));
     
     // Types d'usage disponibles
-    let usage_types = vec![
+    let usage_types = [
         (i18n.t("usage.code.label"), i18n.t("usage.code.description"), "code"),
         (i18n.t("usage.book.label"), i18n.t("usage.book.description"), "book"),
         (i18n.t("usage.agent.label"), i18n.t("usage.agent.description"), "agent"),
@@ -29,7 +27,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     all_items.push(i18n.t("menu.back"));
     
     let sel = match Select::new()
-        .with_prompt(&i18n.t("usage.choose"))
+        .with_prompt(i18n.t("usage.choose"))
         .items(&all_items)
         .default(0)
         .interact_opt()?
@@ -109,10 +107,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 let rounded = (p / 7.0).round() * 7.0; // Round to nearest 7B
                 if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
                 else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
-                else if (rounded - 30.0).abs() < 0.1 { "30b".to_string() }
-                else if (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
-                else if (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
-                else if (rounded - 70.0).abs() < 0.1 { "72b".to_string() }
+                else if (rounded - 30.0).abs() < 0.1 || (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
+                else if (rounded - 70.0).abs() < 0.1 || (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
                 else { format!("{:.0}b", rounded) }
             });
             let ollama_name = model.to_ollama_name();
@@ -133,7 +129,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     all_items.push(i18n.t("menu.back"));
     
     let sel = match Select::new()
-        .with_prompt(&i18n.t("models.localmaxxing_select"))
+        .with_prompt(i18n.t("models.localmaxxing_select"))
         .items(&all_items)
         .default(0)
         .max_length(20)
@@ -155,7 +151,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     show_model_details(i18n, &model, hw);
     
     let confirm = Confirm::new()
-        .with_prompt(&i18n.t_with_vars("config.download_confirm", &[("model", &model_name)]))
+        .with_prompt(i18n.t_with_vars("config.download_confirm", &[("model", &model_name)]))
         .default(false)
         .interact()?;
     

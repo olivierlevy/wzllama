@@ -6,7 +6,9 @@ mod ui;
 mod terminal;
 
 pub use app::App;
+#[allow(unused_imports)]
+pub use screens::Screen;
+#[allow(unused_imports)]
 pub use app::Navigation;
 pub use ui::run_tui;
-pub use screens::Screen;
 pub use terminal::TerminalState;

@@ -12,8 +12,6 @@ use crate::config::{WzllamaState, I18n};
 use std::io::stdout;
 use std::process::Command;
 use std::os::unix::process::CommandExt;
-use std::sync::{Arc, Mutex};
-use std::thread;
 use crossterm::event::KeyCode;
 extern crate libc;
 
@@ -23,153 +21,150 @@ pub fn run_tui(state: WzllamaState, hw: crate::core::hardware::HardwareInfo, i18
     let mut ctrl_d_count = 0;
     let mut terminal = Terminal::new(ratatui::backend::CrosstermBackend::new(std::io::stdout()))?;
     
-    'tui_loop: loop {
-        if !app.should_quit {
-            crossterm::terminal::enable_raw_mode()?;
-            terminal.hide_cursor()?;
-        }
+    if !app.should_quit {
+        crossterm::terminal::enable_raw_mode()?;
+        terminal.hide_cursor()?;
+    }
+    
+    // Clear screen at startup to remove terminal artifacts
+    let _ = crossterm::execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All));
+    
+    // Main TUI interaction loop
+    loop {
+        // Always draw on each iteration
+        terminal.draw(|frame| {
+            render_app(frame, &mut app);
+        })?;
         
-        // Clear screen at startup to remove terminal artifacts
-        let _ = crossterm::execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All));
-        
-        // Inner loop for TUI interaction
-        loop {
-            // Always draw on each iteration
-            terminal.draw(|frame| {
-                render_app(frame, &mut app);
-            })?;
-            
-            match event_handler.next() {
-                AppEvent::Key(key) => {
-                    if key.kind == crossterm::event::KeyEventKind::Press {
-                        // Check for Ctrl-C: typically 'c' with CONTROL modifier
-                        let is_ctrl_c = matches!(key.code, KeyCode::Char('c') | KeyCode::Char('C')) 
-                            && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
-                        
-                        // Check for Ctrl-D
-                        let is_ctrl_d = matches!(key.code, KeyCode::Char('d') | KeyCode::Char('D')) 
-                            && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
-                        
-                        if is_ctrl_c {
+        match event_handler.next() {
+            AppEvent::Key(key) => {
+                if key.kind == crossterm::event::KeyEventKind::Press {
+                    // Check for Ctrl-C: typically 'c' with CONTROL modifier
+                    let is_ctrl_c = matches!(key.code, KeyCode::Char('c') | KeyCode::Char('C')) 
+                        && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
+                    
+                    // Check for Ctrl-D
+                    let is_ctrl_d = matches!(key.code, KeyCode::Char('d') | KeyCode::Char('D')) 
+                        && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL);
+                    
+                    if is_ctrl_c {
+                        app.should_quit = true;
+                    } else if is_ctrl_d {
+                        ctrl_d_count += 1;
+                        if ctrl_d_count >= 2 {
                             app.should_quit = true;
-                        } else if is_ctrl_d {
-                            ctrl_d_count += 1;
-                            if ctrl_d_count >= 2 {
-                                app.should_quit = true;
-                            }
-                        } else {
-                            ctrl_d_count = 0; // Reset counter on other keys
-                            
-                            // Handle terminal screen input
-                            if app.current_screen == Screen::Terminal && !app.sidebar_focus {
-                                match key.code {
-                                    KeyCode::Esc => {
-                                        // Return to sidebar mode
-                                        app.sidebar_focus = true;
-                                        app.exec_command = None; // Clear any pending command
-                                        app.terminal_input.clear();
+                        }
+                    } else {
+                        ctrl_d_count = 0; // Reset counter on other keys
+                        
+                        // Handle terminal screen input
+                        if app.current_screen == Screen::Terminal && !app.sidebar_focus {
+                            match key.code {
+                                KeyCode::Esc => {
+                                    // Return to sidebar mode
+                                    app.sidebar_focus = true;
+                                    app.exec_command = None; // Clear any pending command
+                                    app.terminal_input.clear();
+                                }
+                                KeyCode::Enter => {
+                                    // If there's a pending exec_command, copy it to input first
+                                    if let Some(ref cmd) = app.exec_command {
+                                        app.terminal_input = cmd.clone();
+                                        app.exec_command = None;
                                     }
-                                    KeyCode::Enter => {
-                                        // If there's a pending exec_command, copy it to input first
-                                        if let Some(ref cmd) = app.exec_command {
-                                            app.terminal_input = cmd.clone();
-                                            app.exec_command = None;
+                                    
+                                    // Execute the command in the buffer
+                                    let cmd = app.terminal_input.clone();
+                                    if !cmd.is_empty() {
+                                        // Afficher la commande immédiatement
+                                        {
+                                            let mut out = app.terminal.output.lock().unwrap();
+                                            out.push_str(&format!("$ {}\n", cmd));
                                         }
                                         
-                                        // Execute the command in the buffer
-                                        let cmd = app.terminal_input.clone();
-                                        if !cmd.is_empty() {
-                                            // Afficher la commande immédiatement
-                                            {
+                                        // Exécution SYNCHRONÈQUE avec capture d'erreur
+                                        // Utiliser sh directement, pas le shell utilisateur
+                                        let result = std::process::Command::new("/bin/sh")
+                                            .args(["-c", &cmd])
+                                            .current_dir(std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))
+                                            .output();
+                                        
+                                        match result {
+                                            Ok(output) => {
+                                                let stdout = String::from_utf8_lossy(&output.stdout);
+                                                let stderr = String::from_utf8_lossy(&output.stderr);
                                                 let mut out = app.terminal.output.lock().unwrap();
-                                                out.push_str(&format!("$ {}\n", cmd));
-                                            }
-                                            
-                                            // Exécution SYNCHRONÈQUE avec capture d'erreur
-                                            // Utiliser sh directement, pas le shell utilisateur
-                                            let result = std::process::Command::new("/bin/sh")
-                                                .args(["-c", &cmd])
-                                                .current_dir(std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))
-                                                .output();
-                                            
-                                            match result {
-                                                Ok(output) => {
-                                                    let stdout = String::from_utf8_lossy(&output.stdout);
-                                                    let stderr = String::from_utf8_lossy(&output.stderr);
-                                                    let mut out = app.terminal.output.lock().unwrap();
-                                                    let pwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
-                                                    out.push_str(&format!("[pwd: {}]\n", pwd.display()));
-                                                    if !stdout.is_empty() {
-                                                        out.push_str(&stdout);
-                                                        out.push('\n');
-                                                    } else {
-                                                        out.push_str("(no stdout)\n");
-                                                    }
-                                                    if !stderr.is_empty() {
-                                                        out.push_str("stderr: ");
-                                                        out.push_str(&stderr);
-                                                        out.push('\n');
-                                                    }
-                                                    if output.status.code() != Some(0) {
-                                                        out.push_str(&format!("[exit code: {}]\n", output.status.code().unwrap_or(-1)));
-                                                    }
+                                                let pwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
+                                                out.push_str(&format!("[pwd: {}]\n", pwd.display()));
+                                                if !stdout.is_empty() {
+                                                    out.push_str(&stdout);
+                                                    out.push('\n');
+                                                } else {
+                                                    out.push_str("(no stdout)\n");
                                                 }
-                                                Err(e) => {
-                                                    let mut out = app.terminal.output.lock().unwrap();
-                                                    out.push_str(&format!("Error executing command: {}\n", e));
+                                                if !stderr.is_empty() {
+                                                    out.push_str("stderr: ");
+                                                    out.push_str(&stderr);
+                                                    out.push('\n');
+                                                }
+                                                if output.status.code() != Some(0) {
+                                                    out.push_str(&format!("[exit code: {}]\n", output.status.code().unwrap_or(-1)));
                                                 }
                                             }
-                                            app.terminal_input.clear();
+                                            Err(e) => {
+                                                let mut out = app.terminal.output.lock().unwrap();
+                                                out.push_str(&format!("Error executing command: {}\n", e));
+                                            }
                                         }
+                                        app.terminal_input.clear();
                                     }
-                                    KeyCode::Backspace => {
-                                        app.terminal_input.pop();
-                                    }
-                                    KeyCode::Char(c) => {
-                                        app.terminal_input.push(c);
-                                    }
-                                    _ => {}
                                 }
-                            } else if let Some(nav) = key_to_nav(key) {
-                                app.navigate(nav);
+                                KeyCode::Backspace => {
+                                    app.terminal_input.pop();
+                                }
+                                KeyCode::Char(c) => {
+                                    app.terminal_input.push(c);
+                                }
+                                _ => {}
                             }
+                        } else if let Some(nav) = key_to_nav(key) {
+                            app.navigate(nav);
                         }
                     }
                 }
-                AppEvent::Resize(_w, _h) => {
-                    // Resize is handled by the next draw cycle automatically
-                }
-                AppEvent::Tick => app.tick(),
             }
-            
-            if app.should_quit {
-                break;
+            AppEvent::Resize(_w, _h) => {
+                // Resize is handled by the next draw cycle automatically
             }
+            AppEvent::Tick => app.tick(),
         }
         
-        // Execute the command if Terminal screen was selected
-        if let Some(cmd) = &app.exec_command {
-            terminal.show_cursor()?;
-            crossterm::terminal::disable_raw_mode()?;
-            let _ = crossterm::execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All));
-            println!();
-            
-            if cmd == "bash" {
-                // Exec bash directly (remplace le processus TUI)
-                // Le terminal a été remis en mode normal par disable_raw_mode()
-                let _ = Command::new("/bin/bash").exec();
-            } else {
-                // Other commands - replace process
-                shell::spawn_and_exit(cmd);
-            }
-            
-            // After shell returns, normal exit
+        if app.should_quit {
             break;
         }
-        
-        // Normal exit (Quit screen)
-        break;
     }
+    
+    // Execute the command if Terminal screen was selected
+    if let Some(cmd) = &app.exec_command {
+        terminal.show_cursor()?;
+        crossterm::terminal::disable_raw_mode()?;
+        let _ = crossterm::execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All));
+        println!();
+        
+        if cmd == "bash" {
+            // Exec bash directly (remplace le processus TUI)
+            // Le terminal a été remis en mode normal par disable_raw_mode()
+            let _ = Command::new("/bin/bash").exec();
+        } else {
+            // Other commands - replace process
+            shell::spawn_and_exit(cmd);
+        }
+    }
+    
+    terminal.show_cursor()?;
+    let _ = crossterm::terminal::disable_raw_mode();
+    let _ = crossterm::execute!(stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All));
+    println!();
     
     terminal.show_cursor()?;
     let _ = crossterm::terminal::disable_raw_mode();
@@ -264,13 +259,13 @@ fn render_sidebar(frame: &mut Frame, app: &App, area: Rect) {
             Line::from(vec![
                 Span::styled("💾 RAM ", Style::default().fg(Color::Cyan)),
                 Span::styled("█".repeat(((ram_ratio * 10.0) as usize).min(10)), Style::default().fg(Color::Yellow)),
-                Span::styled("░".repeat((10 - (ram_ratio * 10.0) as usize).max(0)), Style::default().fg(Color::DarkGray)),
+                Span::styled("░".repeat(10 - (ram_ratio * 10.0) as usize ), Style::default().fg(Color::DarkGray)),
                 Span::styled(format!("  {:.1}/{:.1} Go", ram_avail, ram_total), Style::default().fg(Color::White)),
             ]),
             Line::from(vec![
                 Span::styled("🎮 GPU ", Style::default().fg(Color::Cyan)),
                 Span::styled("█".repeat(((vram_ratio * 10.0) as usize).min(10)), Style::default().fg(Color::Green)),
-                Span::styled("░".repeat((10 - (vram_ratio * 10.0) as usize).max(0)), Style::default().fg(Color::DarkGray)),
+                Span::styled("░".repeat(10 - (vram_ratio * 10.0) as usize ), Style::default().fg(Color::DarkGray)),
                 Span::styled(format!("  {:.1}/{:.1} Go", vram_avail, vram_total), Style::default().fg(Color::White)),
             ]),
             Line::from(Span::styled("🤖 Current Model", Style::default().fg(Color::Magenta))),

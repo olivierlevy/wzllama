@@ -57,7 +57,7 @@ impl DroidTool {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
-                display::run(&i18n.t_with_vars("tool.droid.run_model", &[("model", &m)]));
+                display::run(&i18n.t_with_vars("tool.droid.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch droid --model {}", m);
                 println!("{}", cmd); shell::exec(&cmd);
             }

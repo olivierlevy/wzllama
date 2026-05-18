@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{Context, Result};
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
@@ -78,11 +80,9 @@ pub fn run_live(cmd: &str) -> Result<()> {
     let stdout_handle = if let Some(stdout) = child.stdout.take() {
         let reader = BufReader::new(stdout);
         Some(thread::spawn(move || {
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    if !line.trim().is_empty() {
-                        println!("   {}", line.dimmed());
-                    }
+            for line in reader.lines().map_while(Result::ok) {
+                if !line.trim().is_empty() {
+                    println!("   {}", line.dimmed());
                 }
             }
         }))
@@ -93,12 +93,10 @@ pub fn run_live(cmd: &str) -> Result<()> {
     let stderr_handle = if let Some(stderr) = child.stderr.take() {
         let reader = BufReader::new(stderr);
         Some(thread::spawn(move || {
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    if !line.trim().is_empty() {
-                        // Afficher les barres de progression et messages
-                        println!("   {}", line.dimmed());
-                    }
+            for line in reader.lines().map_while(Result::ok) {
+                if !line.trim().is_empty() {
+                    // Afficher les barres de progression et messages
+                    println!("   {}", line.dimmed());
                 }
             }
         }))
@@ -154,7 +152,7 @@ pub fn run_sync_with_output(cmd: &str, output: &Arc<Mutex<String>>) -> Result<()
 
 pub fn run_cmd(cmd: &str) -> Result<()> {
     exit_raw_mode();
-    println!("{}", format!("{}", cmd).bright_black());
+    println!("{}", cmd.to_string().bright_black());
     let _ = run(cmd);
     Ok(())
 }

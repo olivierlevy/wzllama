@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{Result, bail};
 use dialoguer::Confirm;
 use std::path::Path;
@@ -117,7 +119,7 @@ pub fn ensure_ready(i18n: &I18n) -> Result<()> {
             // Wait for Docker to really be ready - up to 30 seconds
             // Check with or without sudo (try both)
             let mut ready = false;
-            for i in 1..=60 {
+            for _i in 1..=60 {
                 std::thread::sleep(std::time::Duration::from_millis(500));
                 // Try docker ps -a without sudo first
                 if shell::run("docker ps -a >/dev/null 2>&1").is_ok() {
@@ -127,7 +129,7 @@ pub fn ensure_ready(i18n: &I18n) -> Result<()> {
             }
             if !ready {
                 // Try with sudo
-                for i in 1..=30 {
+                for _i in 1..=30 {
                     std::thread::sleep(std::time::Duration::from_millis(500));
                     if shell::run("sudo docker ps -a >/dev/null 2>&1").is_ok() {
                         ready = true;

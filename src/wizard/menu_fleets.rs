@@ -1,5 +1,4 @@
 use anyhow::Result;
-use colored::*;
 use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::HardwareInfo;
@@ -53,7 +52,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let (name, _) = fleets.iter().nth(sel).unwrap();
         state.set_last_fleet(name);
         println!("\n🦞 {}", i18n.t("fleet.launching"));
-        let _ = OpenClawTool::run_fleet(i18n, &name);
+        let _ = OpenClawTool::run_fleet(i18n, name);
     }
     Ok(())
 }

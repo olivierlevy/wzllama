@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use crate::core::{shell, ollama_api};
 use crate::display;
 
@@ -36,7 +36,7 @@ impl OllamaDoctor {
         }
         
         // 4. Démarrer si nécessaire
-        if !ollama_api::detect_url().is_some() {
+        if ollama_api::detect_url().is_none() {
             shell::run("sudo systemctl start ollama")?;
             for _ in 0..10 {
                 if ollama_api::detect_url().is_some() { break; }
@@ -48,7 +48,7 @@ impl OllamaDoctor {
         Ok(fixes)
     }
     
-    fn generate_key(key_path: &PathBuf) -> Result<()> {
+    fn generate_key(key_path: &Path) -> Result<()> {
         if let Some(parent) = key_path.parent() {
             std::fs::create_dir_all(parent)?;
         }

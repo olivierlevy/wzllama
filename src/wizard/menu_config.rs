@@ -144,7 +144,7 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
 
         match sel {
             0 => {
-                let options = vec![("4K", "4096"), ("8K", "8192"), ("16K", "16384"), ("32K", "32768"), ("64K", "65536")];
+                let options = [("4K", "4096"), ("8K", "8192"), ("16K", "16384"), ("32K", "32768"), ("64K", "65536")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
                 let s = match Select::new().with_prompt("Contexte").items(&labels).default(2).max_length(10).interact_opt()? {
                     Some(v) => v,
@@ -153,7 +153,7 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
                 config.ollama.context_length = options[s].1.parse().unwrap_or(16384);
             }
             1 => {
-                let options = vec![("f16", "f16"), ("q8_0", "q8_0"), ("q4_0", "q4_0")];
+                let options = [("f16", "f16"), ("q8_0", "q8_0"), ("q4_0", "q4_0")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
                 let s = match Select::new().with_prompt("Cache KV").items(&labels).default(1).max_length(10).interact_opt()? {
                     Some(v) => v,

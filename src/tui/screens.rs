@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use strum_macros::EnumIter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]

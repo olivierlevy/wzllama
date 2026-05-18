@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -66,7 +68,7 @@ pub fn get_available_languages() -> Vec<LanguageMeta> {
     if let Ok(entries) = std::fs::read_dir(&i18n_path) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |e| e == "json") {
+            if path.is_file() && path.extension().is_some_and(|e| e == "json") {
                 if let Ok(content) = std::fs::read_to_string(&path) {
                     if let Ok(file) = serde_json::from_str::<I18nFile>(&content) {
                         languages.push(file.language);
@@ -81,7 +83,7 @@ pub fn get_available_languages() -> Vec<LanguageMeta> {
         if let Ok(entries) = std::fs::read_dir("config/i18n") {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.is_file() && path.extension().map_or(false, |e| e == "json") {
+                if path.is_file() && path.extension().is_some_and(|e| e == "json") {
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         if let Ok(file) = serde_json::from_str::<I18nFile>(&content) {
                             languages.push(file.language);

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::core::hardware::HardwareInfo;
 use crate::core::ollama_api::OllamaModel;
 use crate::config::I18n;
@@ -10,7 +12,7 @@ pub enum TaskType {
 }
 
 impl TaskType {
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_from_str(s: &str) -> Self {
         match s {
             "agents" => TaskType::MultiAgent { agent_count: 4 },
             "book" => TaskType::BookWriting,
@@ -179,7 +181,7 @@ pub fn score_model(model: &OllamaModel, usage: &str, hw: &HardwareInfo) -> f32 {
     };
     for kw in keywords { if name.contains(kw) || family.contains(kw) { score += 0.1; } }
 
-    score.min(1.0).max(0.0)
+    score.clamp(0.0, 1.0)
 }
 
 /// Check if a model is a cloud model
@@ -213,15 +215,15 @@ pub fn recommend_config(hw: &HardwareInfo, task: &TaskType, model: &OllamaModel,
     };
 
     let (num_ctx, kv, flash, temp, prompt): (u32, String, bool, f32, Option<String>) = match task {
-        TaskType::QuickChat => (max_ctx.min(8192).max(2048), "f16".into(), false, 0.8, Some(i18n.t("config.prompt.quick_chat"))),
-        TaskType::BookWriting => (max_ctx.min(65536).max(8192), "q8_0".into(), true, 0.7, Some(i18n.t("config.prompt.book_writing"))),
-        TaskType::LargeCodeProject => (max_ctx.min(32768).max(8192), "q8_0".into(), true, 0.3, Some(i18n.t("config.prompt.code_project"))),
+        TaskType::QuickChat => (max_ctx.clamp(2048, 8192), "f16".into(), false, 0.8, Some(i18n.t("config.prompt.quick_chat"))),
+        TaskType::BookWriting => (max_ctx.clamp(8192, 65536), "q8_0".into(), true, 0.7, Some(i18n.t("config.prompt.book_writing"))),
+        TaskType::LargeCodeProject => (max_ctx.clamp(8192, 32768), "q8_0".into(), true, 0.3, Some(i18n.t("config.prompt.code_project"))),
         TaskType::MultiAgent { agent_count } => {
             let ctx = (max_ctx / *agent_count as u32).min(4096);
             (ctx, "q4_0".into(), true, 0.9, Some(i18n.t_with_vars("config.prompt.multi_agent", &[("count", &agent_count.to_string())])))
         },
-        TaskType::Rag => (max_ctx.min(16384).max(4096), "q8_0".into(), true, 0.5, Some(i18n.t("config.prompt.rag"))),
-        TaskType::Mixed => (max_ctx.min(16384).max(4096), "q8_0".into(), max_ctx > 8192, 0.7, None),
+        TaskType::Rag => (max_ctx.clamp(4096, 16384), "q8_0".into(), true, 0.5, Some(i18n.t("config.prompt.rag"))),
+        TaskType::Mixed => (max_ctx.clamp(4096, 16384), "q8_0".into(), max_ctx > 8192, 0.7, None),
     };
 
     let (num_ctx, kv, flash) = if num_ctx < 2048 { (2048, "q4_0".into(), true) } else { (num_ctx, kv, flash) };

@@ -73,7 +73,7 @@ impl PiTool {
         match model {
             Some(m) => {
                 display::comment(&format!("pi --model ollama/{}", m));
-                display::run(&i18n.t_with_vars("tool.pi.run_model", &[("model", &m)]));
+                display::run(&i18n.t_with_vars("tool.pi.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch pi --model {}", m);
                 println!("{}", cmd); shell::exec(&cmd);
             }

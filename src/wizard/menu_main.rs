@@ -4,7 +4,7 @@ use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::{hardware::HardwareInfo, system, ollama_api};
 use crate::display;
-use crate::tools::ollama::OllamaTool;
+use crate::tools::{llmfit::LLMFitTool, ollama::OllamaTool};
 use crate::wizard::menu_cleanup;
 use crate::wizard::menu_config;
 use crate::wizard::menu_fleets;
@@ -97,6 +97,7 @@ pub fn display_hardware(hw: &HardwareInfo, i18n: &I18n) {
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     let current_i18n = i18n;
     OllamaTool::ensure_running(current_i18n)?;
+    LLMFitTool::ensure_running(current_i18n)?;
     setup_models::ensure_first_models(current_i18n, hw, state)?;
     
     // Enter alternate screen buffer for fixed interface

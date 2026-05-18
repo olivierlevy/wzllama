@@ -3,7 +3,7 @@ pub fn tokens_book(pages: u32) -> u64 { (pages as u64) * 550 }
 #[allow(dead_code)]
 pub fn tokens_code(loc: u32) -> u64 { (loc as u64) * 8 }
 #[allow(dead_code)]
-pub fn chunks(tokens: u64, chunk_size: u64) -> u64 { (tokens + chunk_size - 1) / chunk_size }
+pub fn chunks(tokens: u64, chunk_size: u64) -> u64 { tokens.div_ceil(chunk_size) }
 
 #[allow(dead_code)]
 pub fn time_minutes(tokens: u64, tokens_per_second: f64) -> (f64, f64) {

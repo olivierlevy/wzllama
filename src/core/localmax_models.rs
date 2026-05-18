@@ -1,5 +1,6 @@
+#![allow(dead_code)]
+
 use anyhow::Result;
-use colored::Colorize;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde::Serialize;
@@ -121,7 +122,7 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
         // Dynamic fallback for unknown models
         // Try to find a reasonable Ollama equivalent based on size and type
         let is_coder = hf_lower.contains("coder") || hf_lower.contains("code");
-        let is_instruct = hf_lower.contains("instruct");
+        let _is_instruct = hf_lower.contains("instruct");
         
         // Map to the best available Ollama model of similar size and purpose
         let base_recommendation = if is_coder {
@@ -177,7 +178,7 @@ pub fn extract_param_size(hf_lower: &str) -> String {
     
     for part in hf_lower.split(|c: char| !c.is_ascii_digit()) {
         if let Ok(num) = part.parse::<u32>() {
-            if num >= 1 && num <= 1000 {
+            if (1..=1000).contains(&num) {
                 best_match = num;
             }
         }
@@ -392,11 +393,10 @@ pub fn fetch_models_by_search(query: &str, limit: u32) -> Result<Vec<LocalMaxMod
             if let Ok(responses) = serde_json::from_str::<Vec<LocalMaxResponse>>(&data) {
                 let models: Vec<LocalMaxModel> = responses.into_iter().flat_map(|r| r.all_models()).collect();
                 // Filter by query if not empty
-                if !models.is_empty() {
-                    if query.is_empty() || query == "performance" {
+                if !models.is_empty()
+                    && (query.is_empty() || query == "performance") {
                         return Ok(models);
                     }
-                }
             }
         }
     }
@@ -559,10 +559,8 @@ impl LocalMaxModel {
             "🟢" // Excellent - plenty of VRAM
         } else if total_vram_gb >= vram_needed_gb * 0.7 {
             "🟡" // OK - enough VRAM for smaller context
-        } else if total_vram_gb >= vram_needed_gb * 0.4 {
+        } else if total_vram_gb >= vram_needed_gb * 0.4 || hw.ram_gb >= vram_needed_gb * 2.5 {
             "🟠" // Low - might need CPU offload or small context
-        } else if hw.ram_gb >= vram_needed_gb * 2.5 {
-            "🟠" // Can run on CPU with enough RAM
         } else {
             "🔴" // Not recommended
         }
