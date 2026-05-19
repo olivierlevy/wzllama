@@ -455,5 +455,6 @@
   "models.llmfit_start_error": "Échec du lancement de LLMFit",
   "models.llmfit_fetch_error": "Échec de la récupération des recommandations LLMFit",
   "models.llmfit_empty": "Aucune recommandation LLMFit disponible",
-  "models.set_as_default": "Définir comme modèle par défaut ?"
+  "models.set_as_default": "Définir comme modèle par défaut ?",
+  "models.manage_already_installed": "✅ Modèle déjà installé"
 }

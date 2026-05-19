@@ -73,6 +73,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         return Ok(());
     }
     
+    // Récupérer les modèles locaux installés
+    let local_models = ollama_api::get_models();
+    let local_names: std::collections::HashSet<&str> = local_models.iter().map(|m| m.name.as_str()).collect();
+    
     // Group models by organization and sort by params descending
     let mut groups: std::collections::HashMap<String, Vec<localmax_models::LocalMaxModel>> = std::collections::HashMap::new();
     for model in models {
@@ -81,7 +85,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     }
     
     // Build display items with organization headers
-    let mut model_items: Vec<(String, localmax_models::LocalMaxModel, String)> = vec![]; // (display, model, org)
+    let mut model_items: Vec<(String, localmax_models::LocalMaxModel, String, bool)> = vec![]; // (display, model, org, is_installed)
     
     // Sort organizations by their best model's params
     let mut orgs: Vec<_> = groups.iter().collect();
@@ -90,6 +94,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let b_best = b.1.iter().map(|m| m.params.unwrap_or(0.0)).fold(0.0, f64::max);
         b_best.partial_cmp(&a_best).unwrap_or(std::cmp::Ordering::Equal)
     });
+    
+    // First, collect installed models separately
+    let mut installed_items: Vec<(String, localmax_models::LocalMaxModel, String)> = vec![];
+    let mut available_items: Vec<(String, localmax_models::LocalMaxModel, String)> = vec![];
     
     for (org, models) in orgs {
         // Sort models in this org by params desc
@@ -119,12 +127,23 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 format!(" → Ollama: {}", ollama_name).yellow().to_string()
             };
             
-            let display = format!("{} [{}] {} {}", display_name, params, org, fallback_indicator);
-            model_items.push((display, model, org.clone()));
+            let is_installed = local_names.contains(ollama_name.as_str());
+            let status = if is_installed { " ✅ (installed)".green().to_string() } else { String::new() };
+            let display = format!("{} [{}] {}{} {}", display_name, params, org, status, fallback_indicator);
+            
+            if is_installed {
+                installed_items.push((display, model, org.clone()));
+            } else {
+                available_items.push((display, model, org.clone()));
+            }
         }
     }
     
-    let display_items: Vec<String> = model_items.iter().map(|(d, _, _)| d.clone()).collect();
+    // Combine: installed first, then available
+    model_items.extend(installed_items.into_iter().map(|(d, m, o)| (d, m, o, true)));
+    model_items.extend(available_items.into_iter().map(|(d, m, o)| (d, m, o, false)));
+    
+    let display_items: Vec<String> = model_items.iter().map(|(d, _, _, _)| d.clone()).collect();
     let mut all_items = display_items.clone();
     all_items.push(i18n.t("menu.back"));
     
@@ -145,22 +164,36 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     let chosen = &model_items[sel].1;
     let model_name = chosen.to_ollama_name();
+    let is_installed = model_items[sel].3;
     
     // Show model details
     let model = chosen.to_ollama_model();
     show_model_details(i18n, &model, hw);
     
-    let confirm = Confirm::new()
-        .with_prompt(i18n.t_with_vars("config.download_confirm", &[("model", &model_name)]))
-        .default(false)
-        .interact()?;
-    
-    if confirm {
-        if let Err(e) = ollama_api::pull_model(&model_name) {
-            display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
-        } else {
+    if is_installed {
+        // Model already installed - offer to set as default
+        display::info(&i18n.t("models.manage_already_installed"));
+        if Confirm::new()
+            .with_prompt(i18n.t_with_vars("models.set_as_default", &[("model", &model_name)]))
+            .default(true)
+            .interact()?
+        {
             state.set_last_model(&model_name);
-            display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &model_name)]));
+            display::success(&i18n.t_with_vars("models.manage_selected", &[("model", &model_name)]));
+        }
+    } else {
+        let confirm = Confirm::new()
+            .with_prompt(i18n.t_with_vars("config.download_confirm", &[("model", &model_name)]))
+            .default(false)
+            .interact()?;
+        
+        if confirm {
+            if let Err(e) = ollama_api::pull_model(&model_name) {
+                display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
+            } else {
+                state.set_last_model(&model_name);
+                display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &model_name)]));
+            }
         }
     }
     

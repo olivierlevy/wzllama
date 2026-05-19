@@ -452,5 +452,6 @@
   "models.llmfit_start_error": "Failed to start LLMFit",
   "models.llmfit_fetch_error": "Failed to fetch LLMFit recommendations",
   "models.llmfit_empty": "No LLMFit recommendations available",
-  "models.set_as_default": "Set as default model?"
+  "models.set_as_default": "Set as default model?",
+  "models.manage_already_installed": "✅ Model already installed"
 }
