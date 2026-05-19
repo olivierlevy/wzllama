@@ -1,15 +1,14 @@
 pub mod config;
 pub mod core;
-pub mod tui;
+// TUI mode disabled - keeping module for future reference
+// pub mod tui;
 pub mod wizard;
 pub mod tools;
 pub mod cli;
 pub mod display;
 pub mod error;
 
-// Re-export commonly used types
-pub use tui::App;
-#[allow(unused)]
-pub use tui::Screen;
-#[allow(unused)]
-pub use tui::Navigation;
+// TUI re-exports commented out - CLI wizard is the primary interface
+// pub use tui::App;
+// pub use tui::Screen;
+// pub use tui::Navigation;

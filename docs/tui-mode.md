@@ -1,168 +1,48 @@
 # Mode TUI (Terminal User Interface)
 
-## Vue d'ensemble
+> **Note**: Le mode TUI est actuellement désactivé. Le code est conservé pour référence future, mais l'interface CLI wizard reste l'interface principale.
 
-Le mode TUI (Terminal User Interface) utilise `ratatui` et `crossterm` pour une interface plus riche avec widgets temps réel.
+## État actuel
 
-## Activation
+Le mode TUI (`--tui`) a été désactivé au profit de l'interface CLI wizard interactif. 
 
-```bash
-# Activer le mode TUI
-wzllama --tui
+### Pourquoi le désactiver ?
 
-# Le mode TUI nécessite un terminal suffisamment grand
-# (recommendé: 80x25 minimum)
-```
+- L'interface CLI utilise `dialoguer` et est plus légère
+- Moins de dépendances (pas de `ratatui`/`crossterm` requis)
+- Compatible avec plus de terminaux
+- Plus simple à maintenir
 
-## Architecture TUI
+## Code conservé
 
-### Point d'entrée
-
-```
-src/tui/mod.rs
-└── pub fn run_tui(state, hardware, i18n)
-```
-
-### Structure du code
+Le code source TUI est conservé dans `src/tui/` pour référence future:
 
 ```
 src/tui/
 ├── mod.rs          # run_tui() entry point
-├── app.rs          # Application state machine
+├── app.rs          # Application state machine  
 ├── ui.rs           # Rendering functions
-├── event.rs        # Event handling (keyboard, mouse)
+├── event.rs        # Event handling
 ├── screens.rs      # Screen enum and navigation
-├── widgets.rs      # Custom widgets (ResourceBar, etc.)
+├── widgets.rs      # Custom widgets
 └── terminal.rs     # Terminal setup/cleanup
 ```
 
-## Application State (src/tui/app.rs)
+## Réactivation future
+
+Pour réactiver le TUI, il suffit de:
+
+1. Décommenter `mod tui;` dans `src/main.rs` et `src/lib.rs`
+2. Décommenter le flag `--tui` dans `src/cli.rs`
+3. Rebrancher sur la logique TUI dans `cli.rs`
 
 ```rust
-pub struct App {
-    pub state: WzllamaState,
-    pub hardware: HardwareInfo,
-    pub i18n: I18n,
-    pub screen: Screen,
-    pub should_exit: bool,
-    // ... autres champs
-}
+// src/main.rs
+mod tui; // Décommenter
 
-pub enum Screen {
-    Main,
-    Models,
-    Tools,
-    Fleets,
-    Cleanup,
-    Config,
-    Language,
-    Quit,
-}
+// src/cli.rs  
+#[arg(long, global = true)]
+pub tui: bool, // Décommenter
+
+// Et décommenter la logique dans execute()
 ```
-
-## Événements et navigation
-
-### Gestion des événements
-
-```rust
-// src/tui/event.rs
-pub fn handle_event(app: &mut App, event: Event) -> Result<()> {
-    match event {
-        Event::Key(key) => match key.code {
-            KeyCode::Up => app.previous(),
-            KeyCode::Down => app.next(),
-            KeyCode::Enter => app.select(),
-            KeyCode::Esc => app.go_back(),
-            _ => {}
-        },
-        // ... mouse events
-    }
-}
-```
-
-### Navigation entre écrans
-
-```rust
-impl App {
-    pub fn go_to(&mut self, screen: Screen) {
-        self.screen = screen;
-    }
-    
-    pub fn go_back(&mut self) {
-        self.screen = match self.screen {
-            Screen::Main => Screen::Quit,
-            _ => Screen::Main,
-        };
-    }
-}
-```
-
-## Rendu TUI (src/tui/ui.rs)
-
-```rust
-pub fn render(app: &mut App, frame: &mut Frame) {
-    match app.screen {
-        Screen::Main => render_main(app, frame),
-        Screen::Models => render_models(app, frame),
-        Screen::Tools => render_tools(app, frame),
-        // ...
-    }
-}
-```
-
-### Layout principal
-
-```
-┌─────────────────────────────────────────────────────┐
-│ Header: Titre + Status bar                           │
-├─────────────────────────────────────────────────────┤
-│                                                       │
-│  [   Menu Principal / Sous-menu   ]                  │
-│                                                       │
-│  -> Choix 1                                      │
-│  -> Choix 2                                      │
-│  -> Quitter                                       │
-│                                                       │
-├─────────────────────────────────────────────────────┤
-│ Footer: Infos système                                │
-└─────────────────────────────────────────────────────┘
-```
-
-## Différences TUI vs Wizard
-
-| Aspect | Wizard (CLI) | TUI |
-|--------|-------------|-----|
-| Bibliothèque | dialoguer | ratatui/crossterm |
-| Affichage | Ligne par ligne | Widgets temps réel |
-| Navigation | ←→ Enter | ↑↓ Enter |
-| Escape | Retour menu | Retour/Quitter |
-| Terminal min | 40x10 | 60x20 recommandé |
-| State | Menue par menu | State machine unifiée |
-
-## Widgets personnalisés (src/tui/widgets.rs)
-
-### ResourceBar
-
-Affiche les ressources système avec barres de progression:
-
-```rust
-pub struct ResourceBar {
-    pub label: String,
-    pub current: f64,
-    pub total: f64,
-    pub color: Color,
-}
-```
-
-## Performance et optimisation
-
-Le TUI est plus gourmand en ressources mais offre:
-- Mise à jour temps réel des ressources
-- Affichage fixe sans clignotement
-- Navigation fluide entre écrans
-
-## Limitations actuelles
-
-- Pas de mode compact si terminal trop petit
-- Certaines fonctions du wizard pas encore dans TUI
-- Le TUI est en développement actif
