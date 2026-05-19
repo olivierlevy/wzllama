@@ -6,6 +6,20 @@ use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache, llmfit_api::{self, LLMFitModel}};
 use crate::display;
 
+/// Enter alternate screen buffer (keeps content fixed)
+fn enter_alternate_screen() {
+    print!("\x1b[?1049h");
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+}
+
+/// Exit alternate screen buffer
+fn exit_alternate_screen() {
+    print!("\x1b[?1049l");
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+}
+
 fn is_cache_from_today() -> bool {
     let home = dirs::home_dir().unwrap_or_default();
     let cache_path = home.join(".wzllama/cache/localmax_tree.json");
@@ -76,13 +90,24 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     
     if models.is_empty() {
         display::warning(&i18n.t("models.localmaxxing_empty"));
+        exit_alternate_screen();
         return Ok(());
     }
 
+    // Enter alternate screen buffer for clean redraw
+    enter_alternate_screen();
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+    
     'outer: loop {
         // Refresh local models to detect newly installed models
         let local = ollama_api::get_models();
         let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
+        
+        // Clear screen for clean redraw (alternate screen buffer)
+        print!("\x1b[2J\x1b[H");
+        use std::io::Write;
+        std::io::stdout().flush().ok();
         
         // Rebuild installed models list
         let mut installed_items: Vec<(String, LocalMaxModel)> = vec![];
@@ -170,11 +195,15 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             .interact_opt()?
         {
             Some(s) => s,
-            None => return Ok(()),
+            None => {
+                exit_alternate_screen();
+                return Ok(());
+            }
         };
         
         // Handle selection
         if sel == display_items.len() - 1 {
+            exit_alternate_screen();
             return Ok(());
         }
         
