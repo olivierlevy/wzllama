@@ -3,7 +3,7 @@ use dialoguer::{Select, Confirm};
 use colored::Colorize;
 use std::collections::HashMap;
 use crate::config::{I18n, WzllamaState};
-use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache, llmfit_api::{self, LLMFitModel}};
+use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache};
 use crate::display;
 
 /// Enter alternate screen buffer (keeps content fixed)
@@ -181,8 +181,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             main_items.push((display, None));
         }
         
-        main_items.push((format!("─── {} ───", i18n.t("models.llmfit_title")), None));
-        main_items.push((format!("🚀 {}", i18n.t("models.llmfit_recommendations")), None));
         main_items.push((i18n.t("menu.back"), None));
         
         let display_items: Vec<String> = main_items.iter().map(|(d, _)| d.clone()).collect();
@@ -211,14 +209,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         
         if let Some(model) = model_opt {
             handle_model_selection(i18n, state, hw, model, &local_names)?;
-            continue 'outer;
-        }
-        
-        let orgs_count = orgs.len();
-        let llmfit_actual_index = installed_count + orgs_count + 2;
-        
-        if sel == llmfit_actual_index {
-            show_llmfit_models_menu(i18n, state, hw, &local_names)?;
             continue 'outer;
         }
         
@@ -544,206 +534,4 @@ fn show_model_details(i18n: &I18n, model: &ollama_api::OllamaModel, hw: &Hardwar
         },
         _ => println!("  {} ❌ {}", "Hardware:".red(), "May not fit in memory".red()),
     }
-}
-
-/// Show LLMFit recommended models based on hardware
-fn show_llmfit_models_menu(
-    i18n: &I18n,
-    state: &mut WzllamaState,
-    hw: &HardwareInfo,
-    local_names: &std::collections::HashSet<&str>,
-) -> Result<()> {
-    display::section(&i18n.t("models.llmfit_recommendations"));
-    
-    // Try to ensure LLMFit is running
-    if !llmfit_api::LLMFitClient::new().is_running() {
-        display::warning(&i18n.t("models.llmfit_not_running"));
-        if Confirm::new()
-            .with_prompt(i18n.t("models.llmfit_start_now"))
-            .default(true)
-            .interact()?
-        {
-            if let Err(e) = llmfit_api::start_server(None) {
-                display::error(&format!("{}: {}", i18n.t("models.llmfit_start_error"), e));
-                return Ok(());
-            }
-            std::thread::sleep(std::time::Duration::from_secs(1));
-        } else {
-            return Ok(());
-        }
-    }
-    
-    let client = llmfit_api::LLMFitClient::new();
-    
-    // Fetch top models from llmfit
-    let models = match client.get_top_models(Some(20), None, None) {
-        Ok(m) => m,
-        Err(e) => {
-            display::error(&format!("{}: {}", i18n.t("models.llmfit_fetch_error"), e));
-            return Ok(());
-        }
-    };
-    
-    if models.is_empty() {
-        display::warning(&i18n.t("models.llmfit_empty"));
-        return Ok(());
-    }
-    
-    show_llmfit_model_selection(i18n, state, hw, &models, local_names)
-}
-
-/// Helper to get fit_level priority for sorting
-fn llmfit_fit_priority(fit_level: &str) -> u8 {
-    match fit_level {
-        "perfect" => 0,
-        "good" => 1,
-        "marginal" => 2,
-        "too_tight" | "low" => 3,
-        _ => 4,
-    }
-}
-
-/// Show LLMFit model selection submenu
-fn show_llmfit_model_selection(
-    i18n: &I18n,
-    state: &mut WzllamaState,
-    hw: &HardwareInfo,
-    models: &[LLMFitModel],
-    local_names: &std::collections::HashSet<&str>,
-) -> Result<()> {
-    // Sort models by fit_level (perfect=0 to too_tight=3)
-    let mut sorted_models = models.to_vec();
-    sorted_models.sort_by(|a, b| {
-        let a_priority = llmfit_fit_priority(&a.fit_level);
-        let b_priority = llmfit_fit_priority(&b.fit_level);
-        a_priority.cmp(&b_priority)
-    });
-    
-    loop {
-        let mut model_items: Vec<(String, LLMFitModel)> = vec![];
-        
-        for model in &sorted_models {
-            let is_installed = local_names.contains(&model.name.as_str());
-            let icon = if is_installed { "✅" } else { "📥" };
-            
-            // Color the model name based on fit_level like canirun.ai
-            // LLMFit uses: perfect, good, marginal, too_tight
-            // Using colored's color method with true color support
-            let model_name_colored = match model.fit_level.as_str() {
-                "perfect" => {
-                    let c = colored::Color::TrueColor { r: 34, g: 197, b: 94 };
-                    (&model.name as &str).color(c).to_string()
-                },
-                "good" => {
-                    let c = colored::Color::TrueColor { r: 74, g: 222, b: 128 };
-                    (&model.name as &str).color(c).to_string()
-                },
-                "marginal" => {
-                    let c = colored::Color::TrueColor { r: 245, g: 158, b: 11 };
-                    (&model.name as &str).color(c).to_string()
-                },
-                "too_tight" | "low" => {
-                    let c = colored::Color::TrueColor { r: 239, g: 68, b: 68 };
-                    (&model.name as &str).color(c).to_string()
-                },
-                // Fallback for unknown values
-                _ => (&model.name as &str).white().to_string(),
-            };
-            
-            let status = if is_installed { "installed" } else { &model.run_mode_label };
-            let display = format!(
-                "{} {} [{}] {} - {:.0} TPS {} ({})",
-                icon, model_name_colored, model.parameter_count, model.provider,
-                model.estimated_tps, model.runtime_label, status
-            );
-            model_items.push((display, model.clone()));
-        }
-        
-        let display_items: Vec<String> = model_items.iter().map(|(d, _)| d.clone()).collect();
-        let mut all_items = vec![];
-        all_items.extend(display_items);
-        all_items.push(i18n.t("menu.back"));
-        
-        let sel = match Select::new()
-            .with_prompt(i18n.t("menu.select"))
-            .items(&all_items)
-            .default(0)
-            .max_length(20)
-            .interact_opt()?
-        {
-            Some(s) => s,
-            None => return Ok(()),
-        };
-        
-        if sel == all_items.len() - 1 {
-            return Ok(()); // Back
-        }
-        
-        let chosen = &model_items[sel].1;
-        handle_llmfit_model_selection(i18n, state, hw, chosen, local_names)?;
-        // After handling, continue loop to show menu again
-    }
-}
-
-/// Handle LLMFit model selection
-fn handle_llmfit_model_selection(
-    i18n: &I18n,
-    state: &mut WzllamaState,
-    _hw: &HardwareInfo,
-    model: &LLMFitModel,
-    local_names: &std::collections::HashSet<&str>,
-) -> Result<()> {
-    let is_installed = local_names.contains(&model.name.as_str());
-    
-    if is_installed {
-        // Model already installed - show info and actions
-        display::section(&format!("✅ {} (installed)", model.name));
-        println!("  Provider: {}", model.provider);
-        println!("  Parameters: {}", model.parameter_count);
-        println!("  Context: {}", model.context_length);
-        println!("  Estimated TPS: {:.1}", model.estimated_tps);
-        println!("  Runtime: {}", model.runtime_label);
-        println!("  Best Quant: {}", model.best_quant);
-        let score_pct = model.utilization_pct * 100.0;
-        println!("  Hardware utilization: {:.0}%", score_pct);
-        
-        // Set as default option
-        if Confirm::new()
-            .with_prompt(i18n.t("models.set_as_default"))
-            .default(false)
-            .interact()?
-        {
-            state.set_last_model(&model.name);
-            display::success(&format!("{}: {}", i18n.t("models.manage_selected"), model.name));
-        }
-    } else {
-        // Model not installed - offer to download
-        display::section(&format!("📥 {} (not installed)", model.name));
-        println!("  Provider: {}", model.provider);
-        println!("  Parameters: {}", model.parameter_count);
-        println!("  Memory required: {:.1} GB", model.memory_required_gb);
-        println!("  Estimated TPS: {:.1}", model.estimated_tps);
-        println!("  Runtime: {}", model.runtime_label);
-        
-        let confirm = Confirm::new()
-            .with_prompt(format!("{} {} ?", i18n.t("config.download_confirm"), model.name))
-            .default(true)
-            .interact()?;
-        
-        if confirm {
-            if model.provider == "ollama" {
-                if let Err(e) = ollama_api::pull_model(&model.name) {
-                    display::warning(&format!("{}: {}", i18n.t("models.download_error"), e));
-                } else {
-                    state.set_last_model(&model.name);
-                    display::success(&format!("{}: {}", i18n.t("models.downloaded_success"), model.name));
-                }
-            } else {
-                display::info(&format!("Runtime {} will be used to run this model", model.runtime_label));
-                // For non-Ollama models, we just show info for now
-            }
-        }
-    }
-    
-    Ok(())
 }
