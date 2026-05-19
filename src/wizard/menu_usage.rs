@@ -127,7 +127,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 format!(" → Ollama: {}", ollama_name).yellow().to_string()
             };
             
-            let is_installed = local_names.contains(ollama_name.as_str());
+            // Only mark as installed if it's a direct Ollama model AND the specific ollama model is installed
+            // Non-direct mappings (HF->Ollama recommendations) should not show as installed
+            // since we're recommending a different model
+            let is_installed = model.is_direct_ollama_mapping() && local_names.contains(ollama_name.as_str());
             let status = if is_installed { " ✅ (installed)".green().to_string() } else { String::new() };
             let display = format!("{} [{}] {}{} {}", display_name, params, org, status, fallback_indicator);
             

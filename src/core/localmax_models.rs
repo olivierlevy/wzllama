@@ -36,9 +36,9 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
             }.to_string()
         } else if hf_lower.contains("qwen2.5-coder") || (hf_lower.contains("coder") && hf_lower.contains("qwen2")) {
             match param_size.as_str() {
-                "32b" => "qwen2.5-coder:32b",
-                "14b" => "qwen2.5-coder:14b",
-                "7b" => "qwen2.5-coder:7b",
+                "32b" | "35b" => "qwen2.5-coder:32b",
+                "14b" | "27b" | "24b" => "qwen2.5-coder:14b",
+                "7b" | "8b" => "qwen2.5-coder:7b",
                 _ => "qwen2.5-coder:14b",
             }.to_string()
         } else if hf_lower.contains("qwen2.5") {
@@ -185,6 +185,7 @@ pub fn extract_param_size(hf_lower: &str) -> String {
     }
     
     if best_match >= 70 { "72b".to_string() }
+    else if best_match == 32 || best_match == 35 { format!("{}b", best_match) }
     else if best_match >= 30 { "30b".to_string() }
     else if best_match >= 14 { "14b".to_string() }
     else if best_match >= 8 { "8b".to_string() }
