@@ -82,12 +82,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     'outer: loop {
         // Refresh local models to detect newly installed models
         let local = ollama_api::get_models();
-        
-        // Clear previous output before re-rendering
-        print!("\x1B[2J\x1B[1;1H");
-        use std::io::Write;
-        std::io::stdout().flush().ok();
-        
         let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
         
         // Rebuild installed models list
@@ -279,13 +273,6 @@ fn show_org_models_menu(
     loop {
         // Refresh local models to detect newly installed models
         let local = ollama_api::get_models();
-        
-        // Clear previous output before re-rendering
-        print!("\x1B[2J\x1B[1;1H");
-        use std::io::Write;
-        std::io::stdout().flush().ok();
-        
-        display::section(&format!("🏢 {} models", org_name));
         let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
         
         // Build display items
@@ -360,11 +347,6 @@ fn show_org_models_menu(
 /// Sous-menu d'actions pour un modèle installé
 fn run_model_actions_menu(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, model_name: &str) -> Result<()> {
     loop {
-        // Clear screen before showing menu
-        print!("\x1B[2J\x1B[1;1H");
-        use std::io::Write;
-        std::io::stdout().flush().ok();
-        
         // Get model details
         let models = ollama_api::get_models();
         let model = models.iter().find(|m| m.name == model_name);
