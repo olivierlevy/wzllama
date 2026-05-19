@@ -63,9 +63,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         }
     }
     
-    // Récupérer les modèles locaux
-    let local = ollama_api::detect_url().and_then(|u| ollama_api::fetch_local_models(&u).ok()).unwrap_or_default();
-    let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
+    // Récupérer les modèles locaux (just to check if any exist)
+    let _local = ollama_api::detect_url().and_then(|u| ollama_api::fetch_local_models(&u).ok()).unwrap_or_default();
     
     // Fetch localmaxxing models (uses cache)
     display::section(&i18n.t("models.localmaxxing_title"));
@@ -79,181 +78,148 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         display::warning(&i18n.t("models.localmaxxing_empty"));
         return Ok(());
     }
-    
-    // Build installed models list - iterate over local models and find matches in localmaxxing
-    let mut installed_items: Vec<(String, LocalMaxModel)> = vec![];
-    
-    for ollama_model in &local {
-        let local_model = ollama_to_localmax_model(ollama_model, &models);
-        
-        // Extract params from ollama name
-        let params = ollama_model.name.split(':')
-            .nth(1)
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| localmax_models::extract_param_size(&local_model.hf_id));
-        
-        let hw_compat = local_model.hardware_compatibility(hw);
-        let name_colored = match hw_compat {
-            "🟢" => ollama_model.name.green().to_string(),
-            "🟡" => ollama_model.name.yellow().to_string(),
-            "🟠" => {
-                let c = colored::Color::TrueColor { r: 245, g: 158, b: 11 };
-                (&ollama_model.name as &str).color(c).to_string()
-            },
-            _ => (&ollama_model.name as &str).red().to_string(),  // 🔴
-        };
-        
-        let display = format!(
-            "✅ {} [{}] {} (installed)",
-            name_colored,
-            params,
-            local_model.organization
-        );
-        installed_items.push((display, local_model));
-    }
-    
-    // Sort installed models by hardware compatibility
-    installed_items.sort_by(|a, b| {
-        let a_compat = a.1.hardware_compatibility(hw);
-        let b_compat = b.1.hardware_compatibility(hw);
-        let a_priority = match a_compat {
-            "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
-        };
-        let b_priority = match b_compat {
-            "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
-        };
-        a_priority.cmp(&b_priority)
-    });
-    
-    // Build main menu items
-    let mut main_items = vec![];
-    
-    // Add installed models to main menu
-    let installed_count = installed_items.len();
-    for (display, model) in &installed_items {
-        main_items.push((display.clone(), Some(model.clone())));
-    }
-    
-    // Build organization groups for non-installed models
-    // A model is "installed" if its ollama_name matches a locally installed model
-    let mut groups: HashMap<String, Vec<LocalMaxModel>> = HashMap::new();
-    for model in &models {
-        let ollama_name = model.to_ollama_name();
-        let is_installed = local_names.contains(ollama_name.as_str());
-        if !is_installed {
-            let org = model.organization.clone();
-            groups.entry(org).or_default().push(model.clone());
-        }
-    }
-    
-    // Sort organizations by popularity (total benchmark runs)
-    let mut orgs: Vec<_> = groups.iter().collect();
-    orgs.sort_by(|a, b| {
-        let a_popularity: u32 = a.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
-        let b_popularity: u32 = b.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
-        b_popularity.cmp(&a_popularity)
-    });
-    
-    // Add separator and organization submenu
-    main_items.push((format!("─── {} ───", i18n.t("models.localmaxxing_by_org")), None));
-    
-    // Add organization submenu items
-    for (org, org_models) in &orgs {
-        let count = org_models.len();
-        let display = format!("🏢 {} ({})", org, i18n.t_with_vars("models.localmaxxing_org_count", &[("count", &count.to_string())]));
-        main_items.push((display, None)); // None means it's a submenu header
-    }
-    
-    // Add LLMFit recommendations section
-    main_items.push((format!("─── {} ───", i18n.t("models.llmfit_title")), None));
-    main_items.push((format!("🚀 {}", i18n.t("models.llmfit_recommendations")), None)); // Special handling below
-    
-    main_items.push((i18n.t("menu.back"), None));
-    
+
     'outer: loop {
-    let display_items: Vec<String> = main_items.iter().map(|(d, _)| d.clone()).collect();
-    
-    let sel = match Select::new()
-        .with_prompt(i18n.t("menu.select"))
-        .items(&display_items)
-        .default(0)
-        .max_length(20)
-        .interact_opt()?
-    {
-        Some(s) => s,
-        None => return Ok(()),
-    };
-    
-    // Handle selection
-    if sel == display_items.len() - 1 {
-        // Back button - exit to main menu
-        return Ok(());
-    }
-    
-    let (_, model_opt) = &main_items[sel];
-    
-    // If it's an installed model, handle it directly
-    if let Some(model) = model_opt {
-        handle_model_selection(i18n, state, hw, model, &local_names)?;
-        continue 'outer;
-    }
-    
-    // Calculate indices for special menu items
-    // Structure: installed models, org separator, orgs, llmfit separator, llmfit recommendation, back
-    let orgs_count = orgs.len();
-    // Indices: 0..installed_count are installed models, then org separator at installed_count
-    // then orgs at installed_count+1 .. installed_count+orgs_count+1
-    // then llmfit separator at installed_count+orgs_count+1
-    // then llmfit rec at installed_count+orgs_count+2
-    let llmfit_actual_index = installed_count + orgs_count + 2; // the LLMFit recommendation item
-    
-    // Check if LLMFit recommendations was selected
-    if sel == llmfit_actual_index {
-        show_llmfit_models_menu(i18n, state, hw, &local_names)?;
-        continue 'outer;
-    }
-    
-    // Otherwise it's an organization submenu - show models from that org
-    // Org items are from index installed_count+1 to installed_count+orgs_count
-    let org_index = sel - (installed_count + 1);
-    
-    if org_index as usize >= orgs.len() {
-        continue 'outer;
-    }
-    
-    let (org, org_models) = orgs[org_index as usize];
-    
-    // Sort models in this organization by hardware compatibility (green first, red last) then by popularity
-    let mut sorted_models = org_models.clone();
-    sorted_models.sort_by(|a, b| {
-        let a_compat = a.hardware_compatibility(hw);
-        let b_compat = b.hardware_compatibility(hw);
-        // Assign numeric priority: 🟢=0 (best), 🟡=1, 🟠=2, 🔴=3 (worst)
-        let a_priority = match a_compat {
-            "🟢" => 0,
-            "🟡" => 1,
-            "🟠" => 2,
-            _ => 3,
-        };
-        let b_priority = match b_compat {
-            "🟢" => 0,
-            "🟡" => 1,
-            "🟠" => 2,
-            _ => 3,
-        };
-        // Sort by compatibility priority first, then by popularity
-        match a_priority.cmp(&b_priority) {
-            std::cmp::Ordering::Equal => {
-                let a_pop = a._count.as_ref().map_or(0, |c| c.benchmark_runs);
-                let b_pop = b._count.as_ref().map_or(0, |c| c.benchmark_runs);
-                b_pop.cmp(&a_pop)
-            }
-            other => other,
+        // Refresh local models to detect newly installed models
+        let local = ollama_api::get_models();
+        let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
+        
+        // Rebuild installed models list
+        let mut installed_items: Vec<(String, LocalMaxModel)> = vec![];
+        for ollama_model in &local {
+            let local_model = ollama_to_localmax_model(ollama_model, &models);
+            let params = ollama_model.name.split(':')
+                .nth(1)
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| localmax_models::extract_param_size(&local_model.hf_id));
+            
+            let hw_compat = local_model.hardware_compatibility(hw);
+            let name_colored = match hw_compat {
+                "🟢" => ollama_model.name.green().to_string(),
+                "🟡" => ollama_model.name.yellow().to_string(),
+                "🟠" => {
+                    let c = colored::Color::TrueColor { r: 245, g: 158, b: 11 };
+                    (&ollama_model.name as &str).color(c).to_string()
+                },
+                _ => (&ollama_model.name as &str).red().to_string(),
+            };
+            
+            let display = format!(
+                "✅ {} [{}] {} (installed)",
+                name_colored,
+                params,
+                local_model.organization
+            );
+            installed_items.push((display, local_model));
         }
-    });
-    
-    // Show organization models submenu
-    show_org_models_menu(i18n, state, hw, &sorted_models, org, &local_names)?;
+        
+        installed_items.sort_by(|a, b| {
+            let a_priority = match a.1.hardware_compatibility(hw) {
+                "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
+            };
+            let b_priority = match b.1.hardware_compatibility(hw) {
+                "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
+            };
+            a_priority.cmp(&b_priority)
+        });
+        
+        // Rebuild organization groups
+        let mut groups: HashMap<String, Vec<LocalMaxModel>> = HashMap::new();
+        for model in &models {
+            let ollama_name = model.to_ollama_name();
+            let is_installed = local_names.contains(ollama_name.as_str());
+            if !is_installed {
+                let org = model.organization.clone();
+                groups.entry(org).or_default().push(model.clone());
+            }
+        }
+        
+        let mut orgs: Vec<_> = groups.iter().collect();
+        orgs.sort_by(|a, b| {
+            let a_popularity: u32 = a.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
+            let b_popularity: u32 = b.1.iter().map(|m| m._count.as_ref().map_or(0, |c| c.benchmark_runs)).sum();
+            b_popularity.cmp(&a_popularity)
+        });
+        
+        // Build main menu items
+        let mut main_items = vec![];
+        for (display, model) in &installed_items {
+            main_items.push((display.clone(), Some(model.clone())));
+        }
+        
+        let installed_count = installed_items.len();
+        main_items.push((format!("─── {} ───", i18n.t("models.localmaxxing_by_org")), None));
+        
+        for (org, org_models) in &orgs {
+            let count = org_models.len();
+            let display = format!("🏢 {} ({})", org, i18n.t_with_vars("models.localmaxxing_org_count", &[("count", &count.to_string())]));
+            main_items.push((display, None));
+        }
+        
+        main_items.push((format!("─── {} ───", i18n.t("models.llmfit_title")), None));
+        main_items.push((format!("🚀 {}", i18n.t("models.llmfit_recommendations")), None));
+        main_items.push((i18n.t("menu.back"), None));
+        
+        let display_items: Vec<String> = main_items.iter().map(|(d, _)| d.clone()).collect();
+        
+        let sel = match Select::new()
+            .with_prompt(i18n.t("menu.select"))
+            .items(&display_items)
+            .default(0)
+            .max_length(20)
+            .interact_opt()?
+        {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+        
+        // Handle selection
+        if sel == display_items.len() - 1 {
+            return Ok(());
+        }
+        
+        let (_, model_opt) = &main_items[sel];
+        
+        if let Some(model) = model_opt {
+            handle_model_selection(i18n, state, hw, model, &local_names)?;
+            continue 'outer;
+        }
+        
+        let orgs_count = orgs.len();
+        let llmfit_actual_index = installed_count + orgs_count + 2;
+        
+        if sel == llmfit_actual_index {
+            show_llmfit_models_menu(i18n, state, hw, &local_names)?;
+            continue 'outer;
+        }
+        
+        let org_index = sel - (installed_count + 1);
+        
+        if org_index >= orgs.len() {
+            continue 'outer;
+        }
+        
+        let (org, org_models) = orgs[org_index];
+        
+        let mut sorted_models = org_models.clone();
+        sorted_models.sort_by(|a, b| {
+            let a_priority = match a.hardware_compatibility(hw) {
+                "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
+            };
+            let b_priority = match b.hardware_compatibility(hw) {
+                "🟢" => 0, "🟡" => 1, "🟠" => 2, _ => 3,
+            };
+            match a_priority.cmp(&b_priority) {
+                std::cmp::Ordering::Equal => {
+                    let a_pop = a._count.as_ref().map_or(0, |c| c.benchmark_runs);
+                    let b_pop = b._count.as_ref().map_or(0, |c| c.benchmark_runs);
+                    b_pop.cmp(&a_pop)
+                }
+                other => other,
+            }
+        });
+        
+        show_org_models_menu(i18n, state, hw, &sorted_models, org)?;
     }
 }
 
@@ -301,11 +267,14 @@ fn show_org_models_menu(
     hw: &HardwareInfo,
     models: &[LocalMaxModel],
     org_name: &str,
-    local_names: &std::collections::HashSet<&str>,
 ) -> Result<()> {
     display::section(&format!("🏢 {} models", org_name));
     
     loop {
+        // Refresh local models to detect newly installed models
+        let local = ollama_api::get_models();
+        let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
+        
         // Build display items
         let mut model_items: Vec<(String, LocalMaxModel)> = vec![];
         
@@ -321,8 +290,8 @@ fn show_org_models_menu(
             });
             let ollama_name = model.to_ollama_name();
             
-            // A model is only "installed" if its hf_id is already an ollama name (contains ':')
-            let is_installed = model.hf_id.contains(':') && local_names.contains(&model.hf_id.as_str());
+            // Check if installed using fresh local_names
+            let is_installed = local_names.contains(ollama_name.as_str());
             let icon = if is_installed { "✅" } else { "📥" };
             
             let fallback_indicator = if is_installed {
@@ -370,7 +339,7 @@ fn show_org_models_menu(
         }
         
         let chosen = &model_items[sel].1;
-        handle_model_selection(i18n, state, hw, chosen, local_names)?;
+        handle_model_selection(i18n, state, hw, chosen, &local_names)?;
         // After handling, continue the loop to show the org menu again
     }
 }
