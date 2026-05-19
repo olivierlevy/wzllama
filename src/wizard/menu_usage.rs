@@ -127,8 +127,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 format!(" → Ollama: {}", ollama_name).yellow().to_string()
             };
             
-            // Check if installed - simple approach like menu_models.rs
-            let is_installed = local_names.contains(ollama_name.as_str());
+            // A model is only marked as installed if:
+            // 1. It's a direct mapping (HF ID contains the Ollama model name), AND
+            // 2. The exact Ollama model name exists locally
+            // Non-direct mappings are just recommendations, not actual installed models
+            let is_installed = model.is_direct_ollama_mapping() && local_names.contains(ollama_name.as_str());
             let status = if is_installed { " ✅ (installed)".green().to_string() } else { String::new() };
             let display = format!("{} [{}] {}{} {}", display_name, params, org, status, fallback_indicator);
             
