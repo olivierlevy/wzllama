@@ -113,12 +113,16 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let mut installed_items: Vec<(String, LocalMaxModel)> = vec![];
         for ollama_model in &local {
             let local_model = ollama_to_localmax_model(ollama_model, &models);
-            let params = ollama_model.name.split(':')
-                .nth(1)
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| localmax_models::extract_param_size(&local_model.hf_id));
+            // Try to extract param size from model name, fall back to extracting from hf_id
+            let extracted = ollama_models::extract_size(&ollama_model.name);
+            let params = if extracted > 0 {
+                format!("{}b", extracted)
+            } else {
+                format!("{}b", crate::core::localmax_models::extract_param_size(&local_model.hf_id).trim_end_matches('b'))
+            };
             
-            let hw_compat = local_model.hardware_compatibility(hw);
+            // Use hardware_compatibility_with_size for better accuracy with local models
+            let hw_compat = local_model.hardware_compatibility_with_size(hw, ollama_model.size);
             let name_colored = match hw_compat {
                 "🟢" => ollama_model.name.green().to_string(),
                 "🟡" => ollama_model.name.yellow().to_string(),
@@ -299,14 +303,20 @@ fn show_org_models_menu(
         
         for model in models {
             let display_name = model.display_name.as_ref().unwrap_or(&model.hf_id);
-            let params = model.params.map_or(String::new(), |p| {
-                let rounded = (p / 7.0).round() * 7.0;
-                if (rounded - 7.0).abs() < 0.1 { "7b".to_string() }
-                else if (rounded - 14.0).abs() < 0.1 { "14b".to_string() }
-                else if (rounded - 30.0).abs() < 0.1 || (rounded - 32.0).abs() < 0.1 { "30b".to_string() }
-                else if (rounded - 70.0).abs() < 0.1 || (rounded - 72.0).abs() < 0.1 { "72b".to_string() }
-                else { format!("{:.0}b", rounded) }
-            });
+            
+            // Get params from the model if available, otherwise estimate from display name
+            let params = model.params.map_or_else(
+                || {
+                    let size = ollama_models::extract_size(display_name);
+                    if size > 0 { format!("{}b", size) } else { "7b".to_string() }
+                },
+                |p| {
+                    // Convert float (e.g., 7.2) to u32 and format nicely
+                    let rounded = p.round() as u32;
+                    format!("{}b", rounded.max(1))
+                }
+            );
+            
             let ollama_name = model.to_ollama_name();
             
             // Check if installed using fresh local_names
@@ -447,13 +457,23 @@ fn show_installed_model_info(i18n: &I18n, model: &ollama_api::OllamaModel, hw: &
         }
     }
     
-    // Check la compatibilité hardware
+    // Check la compatibilité hardware using actual model size
     println!();
-    let score = ollama_models::score_model(model, "mixed", hw);
-    if score > 0.0 {
-        println!("  {}", i18n.t("models.hardware_ok"));
-    } else {
-        println!("  {}", i18n.t("models.hardware_warning"));
+    let model_for_check = LocalMaxModel::default();
+    let hw_compat = model_for_check.hardware_compatibility_with_size(hw, model.size);
+    let size_gb = model.size.unwrap_or(0) as f64 / 1_073_741_824.0;
+    let vram_gb = hw.total_vram_mb as f64 / 1024.0;
+    
+    match hw_compat {
+        "🟢" => println!("  {}", i18n.t("models.hardware_ok")),
+        "🟡" | "🟠" => {
+            if hw.has_gpu() && size_gb > vram_gb {
+                println!("  {}", "Runs with RAM fallback - slower".yellow());
+            } else {
+                println!("  {}", i18n.t("models.hardware_ok"));
+            }
+        },
+        _ => println!("  {}", i18n.t("models.hardware_warning")),
     }
 }
 
@@ -511,21 +531,24 @@ fn show_model_details(i18n: &I18n, model: &ollama_api::OllamaModel, hw: &Hardwar
     
     // Hardware compatibility check
     println!();
-    let score = ollama_models::score_model(model, "mixed", hw);
     let has_gpu = hw.has_gpu();
     let vram_gb = hw.total_vram_mb as f64 / 1024.0;
     let size_gb = model.size.unwrap_or(0) as f64 / 1_073_741_824.0;
     
-    match score {
-        s if s >= 0.8 => println!("  {} 🚀 {}", "Hardware:".green(), "Excellent fit for your system".green()),
-        s if s >= 0.5 => {
+    // For display, use the model size if available to determine compatibility
+    let model_for_check = LocalMaxModel::default();
+    let hw_compat = model_for_check.hardware_compatibility_with_size(hw, model.size);
+    
+    match hw_compat {
+        "🟢" => println!("  {} 🚀 {}", "Hardware:".green(), "Excellent fit for your system".green()),
+        "🟡" => {
             if has_gpu && size_gb > vram_gb {
                 println!("  {} ✅ {}", "Hardware:".green(), "Good fit (RAM fallback - slower)".yellow());
             } else {
                 println!("  {} ✅ {}", "Hardware:".green(), "Good fit".green());
             }
         },
-        s if s >= 0.2 => {
+        "🟠" => {
             if has_gpu && size_gb > vram_gb {
                 println!("  {} ⚠️ {}", "Hardware:".yellow(), "Fits in RAM only - slower performance".yellow());
             } else {

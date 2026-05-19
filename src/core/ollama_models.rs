@@ -76,23 +76,50 @@ pub struct FleetCapacity {
     pub vram_total_gb: f64,
 }
 
+/// Extract approximate parameter size from model name (in billions)
+/// Returns 0 if cannot determine - caller should handle this case
 pub fn extract_size(name: &str) -> u32 {
+    let lower = name.to_lowercase();
+    
+    // Known model families with their typical parameter counts
+    let family_sizes: &[(&str, u32)] = &[
+        ("qwen3.6", 35),
+        ("qwen3", 8),  // qwen3:latest is typically 8B
+        ("qwen2.5", 7),
+        ("qwen2", 7),
+        ("llama3.3", 8),
+        ("llama3.2", 3),
+        ("llama3.1", 8),
+        ("llama3", 8),
+        ("codellama", 7),
+        ("mistral", 7),
+        ("mistral-nemo", 12),
+        ("deepseek", 7),
+        ("devstral", 24),
+    ];
+    
+    // Check for known family prefixes first
+    for (family, size) in family_sizes {
+        if lower.starts_with(family) || lower.starts_with(&format!("{}-", family)) {
+            return *size;
+        }
+    }
+    
+    // Standard patterns like "3b", "7b", "70b"
     for part in name.split([':', '-', '/', '_']) {
-        // Handle formats like "3b", "3.5b", "70b", "27b", "35b"
         if let Some(size) = part.strip_suffix('b') {
-            // Handle decimal sizes like "3.5b"
             if let Ok(n) = size.parse::<f32>() {
-                return (n * 10.0).round() as u32 / 10; // Round to nearest 0.1b precision
+                return (n * 10.0).round() as u32 / 10;
             }
             if let Ok(n) = size.parse::<u32>() { return n; }
         }
     }
+    
     // Try to extract from model name patterns like "qwen3-30b" or "gpt-oss-120b"
     for part in name.split(['-', ':', '/', '_']) {
-        let lower = part.to_lowercase();
-        // Check for patterns like "30b", "120b", "27b" at end of word
-        if lower.ends_with("b") && lower.len() > 1 {
-            let num_part = &lower[..lower.len()-1];
+        let lower_part = part.to_lowercase();
+        if lower_part.ends_with("b") && lower_part.len() > 1 {
+            let num_part = &lower_part[..lower_part.len()-1];
             if let Ok(n) = num_part.parse::<f32>() {
                 return (n * 10.0).round() as u32 / 10;
             }
@@ -128,10 +155,19 @@ pub fn score_model(model: &OllamaModel, usage: &str, hw: &HardwareInfo) -> f32 {
     let vram_gb = hw.total_vram_mb as f64 / 1024.0;
     let mut score: f32 = 0.2;
     
-    // VRAM/RAM fit check - model needs ~2x its size in memory for loading
-    // GPU: prefer VRAM but fall back to RAM if needed
-    // CPU: use RAM only
-    let needs_mem = size as f64 * 2.0;
+    // VRAM/RAM fit check
+    // For quantized models (Q4_K_M, etc), memory needed ≈ model file size
+    // For full precision (FP16), memory needed ≈ 2x model file size
+    // We use model file size as the primary metric since that's what's actually loaded
+    let needs_mem = if model_gb > 0.0 {
+        // Use actual file size - this is what will be loaded into memory
+        model_gb
+    } else if size > 0 {
+        // Fallback: estimate from parameter count (Q4_K_M ≈ 0.5 GB per B params)
+        size as f64 * 0.6
+    } else {
+        0.0
+    };
     
     let (fits_memory, uses_ram) = if has_gpu {
         if needs_mem <= vram_gb {

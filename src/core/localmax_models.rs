@@ -547,11 +547,31 @@ impl LocalMaxModel {
     /// 🟠 = Low (may have issues)
     /// 🔴 = Not recommended
     pub fn hardware_compatibility(&self, hw: &crate::core::HardwareInfo) -> &'static str {
-        let params_b = self.params.unwrap_or(7.0) as u32;
+        self.hardware_compatibility_with_size(hw, None)
+    }
+    
+    /// Returns hardware compatibility indicator with optional model file size in bytes
+    pub fn hardware_compatibility_with_size(&self, hw: &crate::core::HardwareInfo, size_bytes: Option<u64>) -> &'static str {
+        // Use params if available, otherwise estimate from hf_id using extract_size
+        let params_b = if let Some(p) = self.params {
+            p as u32
+        } else {
+            crate::core::ollama_models::extract_size(&self.hf_id)
+        };
         
-        // Estimate VRAM needed for the model (GGUF Q4_K_M approximation)
-        // Rule of thumb: ~1.5-2x the model size in VRAM, or ~2x in RAM for CPU
-        let vram_needed_gb = (params_b as f64) * 1.8; // ~1.8GB per B parameter
+        // Calculate VRAM needed
+        // For quantized models (Q4_K_M, etc), memory needed ≈ model file size
+        // For full precision (FP16), memory needed ≈ 2x params size
+        let vram_needed_gb = if let Some(bytes) = size_bytes {
+            // Use actual file size as primary metric
+            bytes as f64 / 1_073_741_824.0
+        } else if params_b > 0 {
+            // Estimate from parameter count (Q4_K_M ≈ 0.6 GB per B params)
+            (params_b as f64) * 0.6
+        } else {
+            // Default estimate for unknown models
+            7.0 * 0.6 // Assume ~7B model
+        };
         
         let total_vram_gb = hw.total_vram_mb as f64 / 1024.0;
         
