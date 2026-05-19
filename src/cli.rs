@@ -11,9 +11,9 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub dry_run: bool,
 
-    /// Force TUI (Terminal User Interface) beta mode
-    #[arg(long, global = true)]
-    pub tui: bool,
+    // TUI mode is disabled - CLI wizard remains the primary interface
+    // #[arg(long, global = true)]
+    // pub tui: bool,
 
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -43,19 +43,8 @@ impl Cli {
     pub fn parse_args() -> Self { Cli::parse() }
 
     pub fn execute(&self) -> Result<()> {
-        // TUI mode:
-        // - --tui forces TUI mode
-        // - Otherwise, use wizard CLI mode (default behavior)
-        if self.tui {
-            let state = crate::config::WzllamaState::load();
-            let hardware = crate::core::hardware::detect();
-            let i18n = if let Some(ref lang) = state.language {
-                crate::config::i18n::load(lang)?
-            } else {
-                crate::config::i18n::load("fr")?
-            };
-            return crate::tui::run_tui(state, hardware, i18n);
-        }
+        // TUI mode disabled - CLI wizard remains the primary interface
+        // The --tui flag is commented out in the struct definition above
         
         match self.command.as_ref().unwrap_or(&Command::Wizard) {
             Command::Wizard if self.dry_run => {

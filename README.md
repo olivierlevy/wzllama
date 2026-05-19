@@ -33,7 +33,7 @@ Running a local AI stack usually means manually installing Ollama, hunting for c
 | ⚙️ **Centralized config** | `config.yaml` → auto-generated `~/.wzllama/env` |
 | 🚀 **Agent fleets** | Create orchestrator + reflexion + expert agent groups for OpenClaw |
 | 🌍 **i18n** | FR / EN, extensible to any language |
-| 💻 **Two UI modes** | CLI wizard (default) or rich TUI (`--tui`) |
+| 💻 **CLI wizard** | Interactive terminal interface with hardware-aware recommendations |
 
 ---
 

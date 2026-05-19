@@ -105,7 +105,6 @@ if command -v wzllama &>/dev/null; then
     echo "  Commandes disponibles :"
     echo "    wzllama              → Lancer le wizard"
     echo "    wzllama validate     → Valider les templates"
-    echo "    wzllama --tui        → Interface TUI (beta)"
     echo "    wzllama --dry-run    → Mode simulation"
     echo "    wzllama --help       → Aide complète"
     echo "    wzllama uninstall    → Désinstallation"
