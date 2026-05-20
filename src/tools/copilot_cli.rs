@@ -22,6 +22,8 @@ impl Tool for CopilotCliTool {
     fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
         CopilotCliTool::launch(i18n)
     }
+    
+    fn supports_agentic(&self) -> bool { true }
 }
 
 impl CopilotCliTool {

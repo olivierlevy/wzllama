@@ -27,12 +27,6 @@ env_logger = "0.11"
 colored = "3.1"
 which = "8.0"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
-# TUI with ratatui
-ratatui = "0.26"
-crossterm = "0.27"
-unicode-width = "0.1"
-strum = "0.26"
-strum_macros = "0.26"
 # Unix libc for fork/exec
 libc = "0.2"
 # Terminal PTY for embedded terminal (optional - for future use)

@@ -94,7 +94,7 @@ fn test_default_usages_weights() {
     let config = templates::load_usages();
     
     // Vérifie que tous les usages ont un poids par défaut
-    for (_, spec) in &config.usages {
+    for spec in config.usages.values() {
         assert!(spec.weights.contains_key("default"));
     }
     

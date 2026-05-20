@@ -26,6 +26,8 @@ impl Tool for ClaudeCodeTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         ClaudeCodeTool::launch(i18n, state, model)
     }
+    
+    fn supports_agentic(&self) -> bool { true }
 }
 
 impl ClaudeCodeTool {

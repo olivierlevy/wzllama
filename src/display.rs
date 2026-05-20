@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
 use colored::*;
-use crossterm::terminal::size;
 
 /// Get terminal size, returns default (80, 24) if unavailable
 pub fn get_terminal_size() -> (u16, u16) {
-    size().unwrap_or((80, 24))
+    (80, 24)
 }
 
 /// Calculate max items for a menu based on available terminal lines
@@ -21,6 +20,19 @@ pub fn header(title: &str) {
 
 pub fn section(title: &str) {
     println!("\n{}\n{}", "─".repeat(40).dimmed(), title.bold());
+}
+
+/// Clear screen and home cursor
+pub fn clear_screen() {
+    print!("\x1b[2J\x1b[H");
+    use std::io::Write;
+    std::io::stdout().flush().ok();
+}
+
+/// Affiche le header complet avec ressources (pour sous-menus)
+pub fn header_with_resources(title: &str, ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String], default_model: Option<&str>) {
+    header(title);
+    resources_with_bars(ram_total, ram_avail, vram_total, vram_avail, running, default_model);
 }
 
 pub fn success(msg: &str) {
@@ -77,8 +89,8 @@ pub fn format_number(n: u64) -> String {
     result
 }
 
-/// Affiche les ressources système avec barres de progression
-pub fn resources_with_bars(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String]) {
+/// Affiche les ressources système avec barres de progression et modèle par défaut
+pub fn resources_with_bars(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String], default_model: Option<&str>) {
     let ram_used = ram_total - ram_avail;
     let ram_pct = if ram_total > 0.0 { ram_avail / ram_total * 100.0 } else { 0.0 };
     
@@ -89,13 +101,14 @@ pub fn resources_with_bars(ram_total: f64, ram_avail: f64, vram_total: f64, vram
     if let Some(vram) = vram_avail {
         let vram_used = vram_total - vram;
         let vram_pct = if vram_total > 0.0 { vram / vram_total * 100.0 } else { 0.0 };
-        println!("   {} {:.0}% {:.1}/{:.1} Go {} ",
+        println!("   {} {:.0}% {:.1}/{:.1} Go {} {}",
             "🎮".cyan(), vram_pct, vram, vram_total,
-            progress_bar(vram_used, vram_total, 20).yellow());
+            progress_bar(vram_used, vram_total, 20).yellow(),
+            running.join(", ").dimmed());
     }
     
-    if !running.is_empty() {
-        println!("   {} {}", "⚡ Loaded:".cyan(), running.join(", ").dimmed());
+    if let Some(model) = default_model {
+        println!("   {} {}", "🤖".cyan(), model.bold());
     }
 }
 

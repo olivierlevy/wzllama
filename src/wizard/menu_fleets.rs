@@ -1,11 +1,24 @@
 use anyhow::Result;
 use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
-use crate::core::HardwareInfo;
+use crate::core::{HardwareInfo, ollama_api, system};
 use crate::display;
 use crate::tools::openclaw::OpenClawTool;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
+    // Affiche le header avec ressources comme le menu principal
+    let ram_avail = system::get_available_ram_gb();
+    let vram_avail = system::get_available_vram_gb();
+    let running = ollama_api::get_running_models();
+    display::clear_screen();
+    display::header_with_resources(
+        &i18n.t("menu.main.fleets"),
+        hw.ram_gb, ram_avail, 
+        hw.total_vram_mb as f64 / 1024.0, vram_avail, 
+        &running,
+        state.last_model.as_deref()
+    );
+    
     let fleets = config::fleets::detect_openclaw_fleets();
     state.fleets = fleets.clone();
     let _ = config::state::save(state);

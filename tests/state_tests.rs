@@ -64,27 +64,36 @@ fn test_mark_installed_unknown() {
 
 #[test]
 fn test_set_language() {
-    let mut state = WzllamaState::default();
-    state.language = Some("en".to_string());
+    let state = WzllamaState {
+        language: Some("en".to_string()),
+        ..Default::default()
+    };
     assert_eq!(state.language, Some("en".to_string()));
     
-    state.language = Some("fr".to_string());
+    let state = WzllamaState {
+        language: Some("fr".to_string()),
+        ..Default::default()
+    };
     assert_eq!(state.language, Some("fr".to_string()));
 }
 
 #[test]
 fn test_state_with_fleets() {
-    let mut state = WzllamaState::default();
-    let mut fleets = HashMap::new();
+    let fleets = {
+        let mut f = HashMap::new();
+        f.insert("project1".to_string(), wzllama::config::state::FleetState {
+            profile: "openclaw".to_string(),
+            orchestrator: "qwen2.5:7b".to_string(),
+            agents: vec!["analyst".to_string(), "reviewer".to_string()],
+            openclaw_installed: true,
+        });
+        f
+    };
     
-    fleets.insert("project1".to_string(), wzllama::config::state::FleetState {
-        profile: "openclaw".to_string(),
-        orchestrator: "qwen2.5:7b".to_string(),
-        agents: vec!["analyst".to_string(), "reviewer".to_string()],
-        openclaw_installed: true,
-    });
-    
-    state.fleets = fleets;
+    let state = WzllamaState {
+        fleets,
+        ..Default::default()
+    };
     
     assert!(state.fleets.contains_key("project1"));
     let fleet = state.fleets.get("project1").unwrap();
@@ -96,7 +105,10 @@ fn test_state_with_fleets() {
 fn test_state_serialization() {
     let state = WzllamaState {
         language: Some("en".to_string()),
-        installed: InstalledTools { ollama: true, ..Default::default() },
+        installed: InstalledTools {
+            ollama: true,
+            ..Default::default()
+        },
         fleets: HashMap::new(),
         last_model: Some("qwen2.5:7b".to_string()),
         last_usage: Some("mixed".to_string()),
@@ -118,7 +130,10 @@ fn test_save_and_load_state() {
     // Test serialization/deserialization directly without relying on file persistence
     let original_state = WzllamaState {
         language: Some("en".to_string()),
-        installed: InstalledTools { open_webui: true, ..Default::default() },
+        installed: InstalledTools {
+            open_webui: true,
+            ..Default::default()
+        },
         fleets: HashMap::new(),
         last_model: Some("test-model".to_string()),
         last_usage: Some("big_code".to_string()),

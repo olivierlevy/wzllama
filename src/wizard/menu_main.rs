@@ -5,12 +5,14 @@ use crate::config::{self, I18n, WzllamaState};
 use crate::core::{hardware::HardwareInfo, system, ollama_api};
 use crate::display;
 use crate::tools::{llmfit::LLMFitTool, ollama::OllamaTool};
+use crate::tools;
 use crate::wizard::menu_cleanup;
 use crate::wizard::menu_config;
 use crate::wizard::menu_fleets;
 use crate::wizard::menu_models;
+use crate::wizard::menu_scientific;
 use crate::wizard::menu_tools;
-use crate::wizard::menu_usage;
+use crate::wizard::menu_wizard;
 use crate::wizard::setup_models;
 
 /// Enter alternate screen buffer (keeps content fixed)
@@ -124,11 +126,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         } else {
             display::header(&current_i18n.t("menu.main.title"));
             display::resources_with_bars(hw.ram_gb, ram_avail, 
-                hw.total_vram_mb as f64 / 1024.0, vram_avail, &running);
-            
-            if let Some(ref model) = state.last_model {
-                println!("   {} {}", "🤖".cyan(), model.bold());
-            }
+                hw.total_vram_mb as f64 / 1024.0, vram_avail, &running, state.last_model.as_deref());
             
             if hw.has_gpu() {
                 for (i, gpu) in hw.gpus.iter().enumerate() {
@@ -137,11 +135,21 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             }
         }
 
-        let mut items = vec![
-            current_i18n.t("menu.main.usage"),
-            current_i18n.t("menu.main.models"),
-            current_i18n.t("menu.main.tools"),
-        ];
+        let mut items = vec![];
+        
+        // Add resume option if we have a last model and last tool
+        if let (Some(ref last_tool), Some(ref last_model)) = (&state.last_tool, &state.last_model) {
+            if let Some(tool) = tools::get_tool(last_tool) {
+                let tool_name = tool.name();
+                let resume_label = current_i18n.t_with_vars("menu.main.resume", &[("tool", tool_name), ("model", last_model)]);
+                items.push(resume_label);
+            }
+        }
+        
+        items.push(current_i18n.t("menu.main.wizard"));
+        items.push(current_i18n.t("menu.main.models"));
+        items.push(current_i18n.t("menu.main.scientific"));
+        items.push(current_i18n.t("menu.main.tools"));
 
         let fleets = config::fleets::detect_openclaw_fleets();
         if !fleets.is_empty() {
@@ -166,21 +174,38 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         };
 
         let has_fleets = !fleets.is_empty();
+        let has_resume = state.last_tool.is_some() && state.last_model.is_some();
         
-        // Menu indices (without fleets): usage(0), models(1), tools(2), cleanup(3), config(4), language(5), quit(6)
-        // Menu indices (with fleets):    usage(0), models(1), tools(2), fleets(3), cleanup(4), config(5), language(6), quit(7)
-        let cleanup_idx = 3 + has_fleets as usize;  // 3 without fleets, 4 with fleets
-        let config_idx = 4 + has_fleets as usize;   // 4 without fleets, 5 with fleets
-        let language_idx = 5 + has_fleets as usize; // 5 without fleets, 6 with fleets
-        let quit_idx = 6 + has_fleets as usize;     // 6 without fleets, 7 with fleets
+        // Menu indices with resume (without fleets): resume(0), wizard(1), models(2), scientific(3), tools(4), fleets(5), cleanup(6), config(7), language(8), quit(9)
+        // Menu indices with resume (with fleets):    resume(0), wizard(1), models(2), scientific(3), tools(4), cleanup(5), config(6), language(7), quit(8)
+        // Menu indices without resume: wizard(0), models(1), scientific(2), tools(3), fleets(4), cleanup(5), config(6), language(7), quit(8)
+        let base_offset = has_resume as usize;
+        let wizard_idx = base_offset;  // 0 without resume, 1 with resume
+        let models_idx = 1 + base_offset;  // 1 without resume, 2 with resume
+        let scientific_idx = 2 + base_offset;  // 2 without resume, 3 with resume
+        let tools_idx = 3 + base_offset;  // 3 without resume, 4 with resume
+        let fleets_idx = 4 + base_offset;  // 4 without resume, 5 with resume
+        let cleanup_idx = 5 + base_offset + has_fleets as usize;
+        let config_idx = 6 + base_offset + has_fleets as usize;
+        let language_idx = 7 + base_offset + has_fleets as usize;
+        let quit_idx = 8 + base_offset + has_fleets as usize;
         
         match choice {
-            0 => menu_usage::run(current_i18n, state, hw)?,
-            1 => menu_models::run(current_i18n, state, hw)?,
-            2 => menu_tools::run(current_i18n, state, hw)?,
-            n if has_fleets && n == 3 => menu_fleets::run(current_i18n, state, hw)?,
-            n if n == cleanup_idx => menu_cleanup::run(current_i18n, state)?,
-            n if n == config_idx => menu_config::run(current_i18n, state)?,
+            n if has_resume && n == 0 => {
+                // Resume last tool with last model
+                if let (Some(ref last_tool), Some(ref last_model)) = (&state.last_tool, &state.last_model) {
+                    if let Some(tool) = tools::get_tool(last_tool) {
+                        tool.launch(current_i18n, state, Some(last_model))?;
+                    }
+                }
+            }
+            n if n == wizard_idx => menu_wizard::run(current_i18n, state, hw)?,
+            n if n == models_idx => menu_models::run(current_i18n, state, hw)?,
+            n if n == scientific_idx => menu_scientific::run(current_i18n, state, hw)?,
+            n if n == tools_idx => menu_tools::run(current_i18n, state, hw)?,
+            n if has_fleets && n == fleets_idx => menu_fleets::run(current_i18n, state, hw)?,
+            n if n == cleanup_idx => menu_cleanup::run(current_i18n, state, hw)?,
+            n if n == config_idx => menu_config::run(current_i18n, state, hw)?,
             n if n == language_idx => {
                 let new_i18n = change_language(state)?;
                 return run(&new_i18n, state, hw);

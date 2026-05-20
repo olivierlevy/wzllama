@@ -27,6 +27,8 @@ impl Tool for PiTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         PiTool::launch(i18n, state, model)
     }
+    
+    fn supports_agentic(&self) -> bool { true }
 }
 
 impl PiTool {

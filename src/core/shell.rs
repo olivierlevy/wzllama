@@ -11,16 +11,11 @@ use colored::Colorize;
 /// Sort du mode raw du terminal si nous sommes dedans
 /// À appeler avant d'exécuter des commandes qui nécessitent un terminal propre
 pub fn exit_raw_mode() {
-    let _ = crossterm::terminal::disable_raw_mode();
+    // No-op: raw mode handling removed with TUI
 }
 
 /// Réinitialise l'affichage du terminal (rend visible le curseur)
 pub fn reset_terminal() {
-    let _ = crossterm::terminal::disable_raw_mode();
-    let _ = crossterm::execute!(std::io::stdout(), 
-        crossterm::terminal::Clear(crossterm::terminal::ClearType::All),
-        crossterm::cursor::Show
-    );
     println!(); // Ligne vide pour l'invite
 }
 

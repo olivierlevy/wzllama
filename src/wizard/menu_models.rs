@@ -3,7 +3,7 @@ use dialoguer::{Select, Confirm};
 use colored::Colorize;
 use std::collections::HashMap;
 use crate::config::{I18n, WzllamaState};
-use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache};
+use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache, system};
 use crate::display;
 
 /// Enter alternate screen buffer (keeps content fixed)
@@ -104,10 +104,18 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let local = ollama_api::get_models();
         let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
         
-        // Clear screen for clean redraw (alternate screen buffer)
-        print!("\x1b[2J\x1b[H");
-        use std::io::Write;
-        std::io::stdout().flush().ok();
+        // Clear screen for clean redraw (alternate screen buffer) with header resources
+        let ram_avail = system::get_available_ram_gb();
+        let vram_avail = system::get_available_vram_gb();
+        let running = ollama_api::get_running_models();
+        display::clear_screen();
+        display::header_with_resources(
+            &i18n.t("menu.main.models"),
+            hw.ram_gb, ram_avail, 
+            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
+            &running,
+            state.last_model.as_deref()
+        );
         
         // Rebuild installed models list
         let mut installed_items: Vec<(String, LocalMaxModel)> = vec![];
@@ -352,7 +360,7 @@ fn show_org_models_menu(
         all_items.push(i18n.t("menu.back"));
         
         let sel = match Select::new()
-            .with_prompt(i18n.t("menu.select"))
+            .with_prompt(i18n.t("menu.models.choose"))
             .items(&all_items)
             .default(0)
             .max_length(20)
@@ -416,6 +424,8 @@ fn run_model_actions_menu(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareIn
                 // Set as default model
                 state.set_last_model(model_name);
                 display::success(&i18n.t_with_vars("models.manage_selected", &[("model", model_name)]));
+                // Exit the actions menu to return to main models menu with updated header
+                break;
             }
             3 => {
                 // Delete model
