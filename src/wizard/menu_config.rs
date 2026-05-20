@@ -88,23 +88,8 @@ fn check_configured_models(i18n: &I18n, config: &config::env::EnvConfig) -> Resu
     Ok(())
 }
 
-fn display_config_summary(_i18n: &I18n, config: &config::env::EnvConfig) {
-    println!();
-    println!("   {} {} | keep={} | cloud={} | ctx={}", 
-        "🔧".cyan(),
-        config.ollama.host.dimmed(),
-        config.ollama.keep_alive,
-        if config.ollama.no_cloud { "❌" } else { "✅" },
-        config.ollama.context_length
-    );
-    println!("   {} Code: {} | Livre: {} | Agent: {} | Chat: {}",
-        "🤖".cyan().bold(),
-        config.models.code.bold(),
-        config.models.book.bold(),
-        config.models.agent.bold(),
-        config.models.chat.bold(),
-    );
-    println!();
+fn display_config_summary(_i18n: &I18n, _config: &config::env::EnvConfig) {
+    // Résumé de configuration retiré - trop redondant avec menu_header
 }
 
 fn edit_models(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()> {
