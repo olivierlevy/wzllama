@@ -65,9 +65,8 @@ cargo clippy  # Check for warnings
 ```
 wzllama/
 ├── src/
-│   ├── core/           # Core logic (hardware, models, API)
-│   ├── wizard/         # Interactive wizards
-│   ├── tui/           # Terminal UI
+│   ├── core/          # Core logic (hardware, models, API)
+│   ├── wizard/        # Interactive wizards
 │   └── tools/         # Tool integrations
 ├── config/            # i18n translations
 └── tests/             # Integration tests

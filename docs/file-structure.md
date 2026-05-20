@@ -55,15 +55,6 @@ wzllama/
 │   │   ├── setup_models.rs       # Installation modèles initiaux
 │   │   └── estimator.rs          # Estimation ressources
 │   │
-│   ├── tui/                      # Terminal UI mode
-│   │   ├── mod.rs                # run_tui entry
-│   │   ├── app.rs                # State machine
-│   │   ├── ui.rs                 # Rendering
-│   │   ├── event.rs              # Event handling
-│   │   ├── screens.rs            # Screen enum
-│   │   ├── widgets.rs            # Custom widgets
-│   │   └── terminal.rs           # Terminal setup
-│   │
 │   └── tools/                    # Outils IA (plugins)
 │       ├── mod.rs                # Registry + ToolInfo
 │       ├── tool_trait.rs         # Trait Tool
@@ -97,7 +88,6 @@ wzllama/
 │   ├── architecture.md
 │   ├── getting-started.md
 │   ├── cli-wizard.md
-│   ├── tui-mode.md
 │   ├── tools.md
 │   ├── configuration.md
 │   ├── models.md

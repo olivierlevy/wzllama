@@ -68,17 +68,6 @@ wzllama
 - Escape pour retourner en arrière
 - Compatible tout terminal (min 40x10)
 
-### Mode TUI - Optionnel
-
-```bash
-wzllama --tui
-```
-
-- Interface terminal riche avec `ratatui`
-- Widgets temps réel (barres de ressources)
-- Navigation fluide entre écrans
-- Nécessite un terminal plus grand (recommendé 80x25)
-
 ## Architecture technique
 
 ```
@@ -86,22 +75,14 @@ wzllama --tui
 │                  CLI                        │
 └─────────────────────────────────────────────┘
                         │
-        ┌───────────────┴───────────────┐
-        ▼                               ▼
-┌───────────────┐              ┌───────────────┐
-│   Wizard      │              │     TUI       │
-│   (dialoguer) │              │   (ratatui)   │
-└───────────────┘              └───────────────┘
-        │                               │
-        └───────────────┬───────────────┘
                         ▼
 ┌─────────────────────────────────────────────┐
 │              Business Logic                 │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │  config  │ │   core   │ │  tools   │   │
-│  │  i18n    │ │ ollama   │ │ Tool trait│   │
-│  │  state   │ │ hardware │ │ impls    │   │
-│  └──────────┘ └──────────┘ └──────────┘   │
+│  ┌──────────┐ ┌──────────┐ ┌───────────┐    │
+│  │  config  │ │   core   │ │  tools    │    │
+│  │  i18n    │ │ ollama   │ │ Tool trait│    │
+│  │  state   │ │ hardware │ │ impls     │    │
+│  └──────────┘ └──────────┘ └───────────┘    │
 └─────────────────────────────────────────────┘
 ```
 

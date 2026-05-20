@@ -38,9 +38,6 @@ sudo mv wzllama /usr/local/bin/
 ```bash
 # Lancer wzllama (mode CLI par défaut)
 wzllama
-
-# Ou mode TUI si terminal suffisamment grand
-wzllama --tui
 ```
 
 ### Étapes initiales

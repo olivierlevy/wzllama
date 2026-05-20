@@ -6,47 +6,36 @@ wzllama suit une architecture modulaire en couches avec séparation claire des r
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    CLI ENTRY POINT                        │
-│                     src/main.rs                           │
+│                    CLI ENTRY POINT                      │
+│                     src/main.rs                         │
 └─────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    CLI PARSER                              │
-│                     src/cli.rs                            │
-│  - Analyse des arguments (clap)                          │
-│  - Routing vers TUI ou Wizard mode                      │
+│                    CLI PARSER                           │
+│                     src/cli.rs                          │
+│  - Analyse des arguments (clap)                         │
 │  - Gestion des commandes globales                       │
 └─────────────────────────────────────────────────────────┘
-                            │
-            ┌───────────────┴───────────────┐
-            ▼                               ▼
-┌───────────────────────┐       ┌───────────────────────┐
-│      TUI MODE         │       │    WIZARD MODE        │
-│     src/tui/          │       │    src/wizard/        │
-│  - ratatui/crossterm  │       │  - dialoguer menus    │
-│  - Widget-based       │       │  - CLI interactions   │
-│  - Real-time updates  │       │  - Alternate screen   │
-└───────────────────────┘       └───────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │                    BUSINESS LOGIC                       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
 │  │   config/    │  │    core/     │  │    tools/    │   │
-│  │ - i18n        │  │ - ollama_api │  │ - Tool trait │  │
-│  │ - state       │  │ - hardware   │  │ - Implements │  │
-│  │ - env config  │  │ - estimation  │  │ - docker     │  │
+│  │ - i18n       │  │ - ollama_api │  │ - Tool trait │   │
+│  │ - state      │  │ - hardware   │  │ - Implements │   │
+│  │ - env config │  │ - estimation │  │ - docker     │   │
 │  └──────────────┘  └──────────────┘  └──────────────┘   │
 └─────────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    DISPLAY LAYER                          │
-│                     src/display.rs                        │
-│  - Formatters de sortie                                  │
-│  - Helpers de menu (max_length dynamique)                 │
-│  - Terminal utilities                                    │
+│                    DISPLAY LAYER                        │
+│                     src/display.rs                      │
+│  - Formatters de sortie                                 │
+│  - Helpers de menu (max_length dynamique)               │
+│  - Terminal utilities                                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -101,15 +90,6 @@ src/
 │   ├── setup_models.rs # Installation modèles initiaux
 │   └── estimator.rs  # Estimation ressources
 │
-├── tui/              # Terminal UI mode
-│   ├── mod.rs        # Entry point
-│   ├── app.rs        # Application state
-│   ├── ui.rs         # Rendering
-│   ├── event.rs      # Event handling
-│   ├── screens.rs    # Screen management
-│   ├── widgets.rs    # Custom widgets
-│   └── terminal.rs   # Terminal utilities
-│
 └── tools/            # Outils IA intégrés
     ├── mod.rs        # Registry + ToolInfo
     ├── tool_trait.rs # Trait Tool (id, name, install, launch)
@@ -136,7 +116,6 @@ graph TD
     A[main.rs] --> B[cli.rs parse]
     B --> C{Mode ?}
     C -->|wizard| D[wizard::select_language]
-    C -->|--tui| E[tui::run_tui]
     D --> F[wizard::run]
     F --> G[menu_main::run]
     G --> H[boucle menu]

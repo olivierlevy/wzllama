@@ -12,7 +12,6 @@
 2. [Architecture](./docs/architecture.md) - Diagrammes et flux de données
 3. [Guide de démarrage](./docs/getting-started.md) - Installation et premiers pas
 4. [Mode CLI (Wizard)](./docs/cli-wizard.md) - Interface ligne de commande
-5. [Mode TUI (Terminal UI)](./docs/tui-mode.md) - Interface terminal avancée
 6. [Outils intégrés](./docs/tools.md) - Ollama, OpenClaw, Claude Code, etc.
 7. [Configuration](./docs/configuration.md) - Fichiers et variables
 8. [Gestion des modèles](./docs/models.md) - Modèles IA et ranking
@@ -41,9 +40,6 @@ wzllama est un wizard CLI qui simplifie l'installation et l'utilisation d'une st
 ```bash
 # Lancer le wizard (mode CLI par défaut)
 wzllama
-
-# Lancer en mode TUI (interface terminal avancée)
-wzllama --tui
 
 # Autres commandes
 wzllama wizard     # Alias du wizard

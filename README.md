@@ -68,7 +68,6 @@ The `deploy.sh` script builds and installs wzllama locally for development purpo
 
 ```bash
 wzllama          # CLI wizard (default)
-wzllama --tui    # Rich TUI mode (beta)
 ```
 
 wzllama will detect your hardware, offer to install Ollama, and suggest models suited to your machine.
@@ -128,28 +127,22 @@ Available MCP tools: `get_system_specs`, `recommend_models`, `search_models`, `p
 ```
 ┌─ wzllama ──────────────────────────────────┐
 │  RAM: 32GB  │  GPU: RTX 4090 (24GB VRAM)   │
-├─────────────────────────────────────────────┤
-│  Menu Principal                              │
-│                                              │
-│  > 🤖 Choose an AI model                    │
-│    🛠  Launch a tool                         │
-│    🚀 OpenClaw Fleets                        │
-│    🧹 Cleanup                                │
-│    ⚙️  Configuration                         │
-│    🌍 Change language                        │
-│    ❌ Quit                                   │
-└─────────────────────────────────────────────┘
+├────────────────────────────────────────────┤
+│  Menu Principal                            │
+│                                            │
+│  > 🤖 Choose an AI model                   │
+│    🛠  Launch a tool                        │
+│    🚀 OpenClaw Fleets                      │
+│    🧹 Cleanup                              │
+│    ⚙️  Configuration                       │
+│    🌍 Change language                      │
+│    ❌ Quit                                 │
+└────────────────────────────────────────────┘
 ```
 
 Navigate with **↑ ↓ Enter** — **Escape** goes back. Works in any terminal ≥ 40×10.
 
 → Full wizard reference: [docs/cli-wizard.md](docs/cli-wizard.md)
-
-### TUI Mode (`--tui`)
-
-Richer terminal interface with real-time resource widgets (RAM/VRAM bars). Recommended terminal size: 80×25.
-
-→ TUI documentation: [docs/tui-mode.md](docs/tui-mode.md)
 
 ---
 
@@ -208,7 +201,6 @@ Fleets are groups of specialized agents (orchestrator + reflexion + experts) tha
 | [Overview](docs/overview.md) | What wzllama is and how it works |
 | [Getting Started](docs/getting-started.md) | Installation and first run |
 | [CLI Wizard](docs/cli-wizard.md) | Wizard mode reference |
-| [TUI Mode](docs/tui-mode.md) | TUI mode reference |
 | [Tools](docs/tools.md) | All supported tools |
 | [Models](docs/models.md) | Model management and ranking |
 | [Fleets](docs/fleets.md) | OpenClaw agent fleets |
