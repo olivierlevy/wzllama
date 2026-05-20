@@ -137,22 +137,14 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 
         let mut items = vec![];
         
-        // Add resume option if we have a last model and last tool
-        if let (Some(ref last_tool), Some(ref last_model)) = (&state.last_tool, &state.last_model) {
-            if let Some(tool) = tools::get_tool(last_tool) {
-                let tool_name = tool.name();
-                let resume_label = current_i18n.t_with_vars("menu.main.resume", &[("tool", tool_name), ("model", last_model)]);
-                items.push(resume_label);
-            }
-        }
-        
         items.push(current_i18n.t("menu.main.wizard"));
         items.push(current_i18n.t("menu.main.models"));
         items.push(current_i18n.t("menu.main.scientific"));
         items.push(current_i18n.t("menu.main.tools"));
 
         let fleets = config::fleets::detect_openclaw_fleets();
-        if !fleets.is_empty() {
+        let has_fleets = !fleets.is_empty();
+        if has_fleets {
             items.push(current_i18n.t("menu.main.fleets"));
         }
 
@@ -160,6 +152,18 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         items.push(current_i18n.t("menu.main.config")); 
         items.push(current_i18n.t("menu.main.language"));
         items.push(current_i18n.t("menu.main.quit"));
+
+        // Resume option: insert at position 0 if we have both last_tool and last_model
+        let has_resume = state.last_tool.is_some() && state.last_model.is_some();
+        if has_resume {
+            if let Some(ref last_tool) = state.last_tool {
+                if let Some(tool) = tools::get_tool(last_tool) {
+                    let tool_name = tool.name();
+                    let resume_label = current_i18n.t_with_vars("menu.main.resume", &[("tool", tool_name), ("model", state.last_model.as_ref().unwrap())]);
+                    items.insert(0, resume_label);
+                }
+            }
+        }
 
         let reserved = if compact { 5 } else { 15 };
         
@@ -173,18 +177,14 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             None => break, // Escape pressed - quit from main menu
         };
 
-        let has_fleets = !fleets.is_empty();
-        let has_resume = state.last_tool.is_some() && state.last_model.is_some();
-        
-        // Menu indices with resume (without fleets): resume(0), wizard(1), models(2), scientific(3), tools(4), fleets(5), cleanup(6), config(7), language(8), quit(9)
-        // Menu indices with resume (with fleets):    resume(0), wizard(1), models(2), scientific(3), tools(4), cleanup(5), config(6), language(7), quit(8)
-        // Menu indices without resume: wizard(0), models(1), scientific(2), tools(3), fleets(4), cleanup(5), config(6), language(7), quit(8)
+        // Menu indices (without resume): wizard(0), models(1), scientific(2), tools(3), fleets(4), cleanup(5), config(6), language(7), quit(8)
+        // Menu indices (with resume): resume(0), wizard(1), models(2), scientific(3), tools(4), fleets(5), cleanup(6), config(7), language(8), quit(9)
         let base_offset = has_resume as usize;
-        let wizard_idx = base_offset;  // 0 without resume, 1 with resume
-        let models_idx = 1 + base_offset;  // 1 without resume, 2 with resume
-        let scientific_idx = 2 + base_offset;  // 2 without resume, 3 with resume
-        let tools_idx = 3 + base_offset;  // 3 without resume, 4 with resume
-        let fleets_idx = 4 + base_offset;  // 4 without resume, 5 with resume
+        let wizard_idx = base_offset;
+        let models_idx = 1 + base_offset;
+        let scientific_idx = 2 + base_offset;
+        let tools_idx = 3 + base_offset;
+        let fleets_idx = 4 + base_offset;
         let cleanup_idx = 5 + base_offset + has_fleets as usize;
         let config_idx = 6 + base_offset + has_fleets as usize;
         let language_idx = 7 + base_offset + has_fleets as usize;
