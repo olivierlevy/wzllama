@@ -13,10 +13,6 @@ pub mod menu_wizard;
 pub mod cleanup_fleets;
 pub mod cleanup_models;
 pub mod cleanup_tools;
-pub mod configurator;
-pub mod estimator;
-pub mod fleet_creator;
-pub mod fleet_templates;
 pub mod setup_models;
 
 // Re-export for convenience

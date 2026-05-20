@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use anyhow::{Result, bail};
 use dialoguer::Confirm;
 use std::path::Path;
@@ -44,7 +42,6 @@ pub fn is_running() -> bool {
     std::path::Path::new("/var/run/docker.sock").exists()
 }
 pub fn start() -> Result<()> { shell::run("systemctl start docker 2>/dev/null || sudo systemctl start docker").map(|_| ()) }
-pub fn startup() -> Result<()> { shell::run("systemctl enable docker 2>/dev/null || sudo systemctl enable docker").map(|_| ()) }
 pub fn restart_socket() -> Result<()> { shell::run("systemctl restart docker.socket 2>/dev/null || sudo systemctl restart docker.socket").map(|_| ()) }
 
 pub fn install_linux() -> Result<()> {

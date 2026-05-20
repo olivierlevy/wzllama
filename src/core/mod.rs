@@ -1,4 +1,3 @@
-pub mod estimation;
 pub mod hardware;
 pub mod llmfit_api;
 pub mod ollama_api;

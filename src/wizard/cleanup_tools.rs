@@ -83,20 +83,6 @@ fn cleanup_is_installed(id: &str) -> bool {
     }
 }
 
-#[allow(dead_code)]
-fn npm_package(id: &str) -> &str {
-    match id {
-        "openclaw" => "openclaw",
-        "claude_code" => "@anthropic-ai/claude-code",
-        "hermes_agent" => "hermes-agent",
-        "opencode" => "opencode-ai",
-        "codex" => "@openai/codex",
-        "droid" => "@factoryai/droid",
-        "pi" => "@earendil-works/pi-coding-agent",
-        _ => id,
-    }
-}
-
 fn mark_uninstalled(id: &str, state: &mut WzllamaState) {
     match id {
         "ollama" => state.installed.ollama = false,

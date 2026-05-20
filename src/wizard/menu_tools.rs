@@ -47,10 +47,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         
         let tools = tools::get_available_tools(state, i18n);
         let mut items: Vec<String> = tools.iter().map(|t| {
-            let icon = if t.supports_agentic { "🤖" } else if t.installed { "✅" } else { "📦" };
-            let agentic_tag = if t.supports_agentic { " [agentic]".to_string() } else { String::new() };
-            let desc = t.description.clone();
-            format!("{} {} - {}{}", icon, t.name, desc.dimmed(), agentic_tag)
+            let tool_dyn = tools::get_tool(&t.id);
+            let supports_agentic = tool_dyn.as_ref().map(|x| x.supports_agentic()).unwrap_or(false);
+            let icon = if supports_agentic { "🤖" } else if t.installed { "✅" } else { "📦" };
+            let agentic_tag = if supports_agentic { " [agentic]".to_string() } else { String::new() };
+            format!("{} {} - {}{}", icon, t.name, t.description.dimmed(), agentic_tag)
         }).collect();
         items.push(i18n.t("menu.back"));
 

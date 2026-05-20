@@ -1,12 +1,6 @@
-#![allow(dead_code)]
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-
-#[cfg(unix)]
-#[allow(unused_imports)]
-use std::os::unix::ffi::OsStrExt;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HardwareInfo {
@@ -18,19 +12,7 @@ pub struct HardwareInfo {
     pub available_disk_gb: f64,
 }
 
-impl HardwareInfo {
-    pub fn default_for_test() -> Self {
-        Self {
-            os: "linux x86_64".to_string(),
-            ram_gb: 16.0,
-            total_vram_mb: 0,
-            gpus: vec![],
-            available_disk_gb: 100.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GpuInfo {
     pub name: String,
     pub vram_mb: u64,

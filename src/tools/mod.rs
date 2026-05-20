@@ -66,8 +66,6 @@ pub fn get_available_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
             name: t.name().to_string(),
             description: t.description(i18n),
             installed,
-            supports_fleets: t.supports_fleets(),
-            supports_agentic: t.supports_agentic(),
         }
     }).collect()
 }
@@ -78,52 +76,4 @@ pub struct ToolInfo {
     pub name: String,
     pub description: String,
     pub installed: bool,
-    #[allow(dead_code)]
-    pub supports_fleets: bool,
-    #[allow(dead_code)]
-    pub supports_agentic: bool,
-}
-
-/// Reruns la commande d'installation pour un outil (via son ID)
-#[allow(dead_code)]
-pub fn get_install_command(tool_id: &str) -> Option<String> {
-    match tool_id {
-        "ollama" => Some("curl -fsSL https://ollama.com/install.sh | sh".to_string()),
-        // Open WebUI nécessite Docker - on utilise un wrapper qui vérifie Docker d'abord
-        "open_webui" => Some("wzllama install-webui".to_string()),
-        "openclaw" => Some("ollama install openclaw".to_string()),
-        "claude_code" => Some("npm install -g @anthropic-ai/claude-code".to_string()),
-        "opencode" => Some("npm install -g @opencode-ai/cli".to_string()),
-        "hermes_agent" => Some("npm install -g @hermes-hq/bot".to_string()),
-        "codex" => Some("ollama install codex".to_string()),
-        "droid" => Some("ollama install droid".to_string()),
-        "pi" => Some("ollama install pi".to_string()),
-        "obsidian" => Some("flatpak install flathub md.obsidian.Obsidian -y".to_string()),
-        "goose" => Some("curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash".to_string()),
-        "llmfit" => Some("uv tool install -U llmfit".to_string()),
-        _ => None,
-    }
-}
-
-/// Reruns la commande de lancement pour un outil (via son ID) avec modèle optionnel
-#[allow(dead_code)]
-pub fn get_launch_command(tool_id: &str, model: Option<&str>) -> Option<String> {
-    match tool_id {
-        "openclaw" => Some(format!("ollama launch openclaw{}", model.map(|m| format!(" --model {}", m)).unwrap_or_default())),
-        // Open WebUI nécessite Docker - use un wrapper
-        "open_webui" => Some("wzllama launch-webui".to_string()),
-        "claude_code" => Some("claude".to_string()),
-        "opencode" => Some("opencode".to_string()),
-        "ollama" => Some(format!("ollama run {}", model.unwrap_or("llama3"))),
-        "hermes_agent" => Some("ollama launch hermes".to_string()),
-        "codex" => Some("codex".to_string()),
-        "droid" => Some("ollama launch droid".to_string()),
-        "pi" => Some("ollama launch pi".to_string()),
-        "pool" => Some("pool".to_string()),
-        "copilot_cli" => Some("copilot".to_string()),
-        "obsidian" => Some("flatpak run md.obsidian.Obsidian".to_string()),
-        "goose" => Some("goose".to_string()),
-        "llmfit" => Some("uvx llmfit".to_string()),
-        _ => Some(tool_id.to_string()),
-    }
 }
