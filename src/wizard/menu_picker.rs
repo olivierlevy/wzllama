@@ -17,7 +17,7 @@ pub fn pick_model(i18n: &I18n) -> Result<Option<String>> {
         if !models.is_empty() {
             let names: Vec<&str> = models.iter().map(|m| m.name.as_str()).collect();
             let sel = Select::new()
-                .with_prompt(&i18n.t("ollama.select_model"))
+                .with_prompt(i18n.t("ollama.select_model"))
                 .items(&names)
                 .default(0)
                 .interact_opt()?;
