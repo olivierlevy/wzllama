@@ -80,6 +80,7 @@ pub struct ToolInfo {
     pub installed: bool,
     #[allow(dead_code)]
     pub supports_fleets: bool,
+    #[allow(dead_code)]
     pub supports_agentic: bool,
 }
 
