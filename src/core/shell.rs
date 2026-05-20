@@ -215,15 +215,29 @@ pub fn is_installed_quiet(cmd: &str) -> bool {
     run_quiet(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
 }
 
-/// Check if a command is installed, including in ~/.local/bin
+/// Check if a command is installed, including in ~/.local/bin and other common locations
 pub fn is_installed_with_local_bin(cmd: &str) -> bool {
-    if is_installed_quiet(cmd) {
-        return true;
-    }
-    // Also check ~/.local/bin
+    // First check known installation locations directly (more reliable than PATH lookup)
     let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
-    let local_bin = format!("{}/.local/bin/{}", home, cmd);
-    std::path::Path::new(&local_bin).exists()
+    
+    // Common locations for different tools
+    let check_paths = [
+        format!("{}/.local/bin/{}", home, cmd),          // Standard local bin
+        format!("{}/.opencode/bin/{}", home, cmd),       // OpenCode
+        format!("{}/.factoryai/bin/{}", home, cmd),      // Droid/FactoryAI
+        format!("{}/go/bin/{}", home, cmd),              // Go tools
+        format!("/usr/local/bin/{}", cmd),                // System local
+        format!("/usr/bin/{}", cmd),                      // System bin
+    ];
+    
+    for path in &check_paths {
+        if std::path::Path::new(path).exists() {
+            return true;
+        }
+    }
+    
+    // Fallback to PATH lookup
+    is_installed_quiet(cmd)
 }
 
 /// Run a command without exiting raw mode (for internal use)

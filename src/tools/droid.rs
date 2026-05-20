@@ -26,6 +26,8 @@ impl Tool for DroidTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         DroidTool::launch(i18n, state, model)
     }
+    
+    fn supports_agentic(&self) -> bool { true }
 }
 
 impl DroidTool {
@@ -33,13 +35,13 @@ impl DroidTool {
         let _ = i18n;
         let xdg_cmd = crate::core::system::get_package_install_command("xdg-utils")?;
         shell::run_live(&xdg_cmd)?;
-        shell::run_live("npm install -g @factoryai/droid")?;
+        shell::run_live("curl -fsSL https://app.factory.ai/cli | sh")?;
         Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating Droid...");
-        shell::run_live("npm update -g @factoryai/droid")?;
+        shell::run_live("curl -fsSL https://app.factory.ai/cli | sh")?;
         display::success("✅ Droid updated");
         Ok(())
     }
@@ -47,7 +49,7 @@ impl DroidTool {
         if !Confirm::new().with_prompt(i18n.t("tool.droid.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo npm uninstall -g @factoryai/droid 2>/dev/null");
+        let _ = shell::run_quiet("rm -f ~/.local/bin/droid /usr/local/bin/droid 2>/dev/null");
         let _ = shell::run_quiet("rm -rf ~/.factoryai 2>/dev/null");
         display::success(&i18n.t("tool.droid.uninstalled"));
         Ok(())

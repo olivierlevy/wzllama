@@ -26,18 +26,20 @@ impl Tool for OpenCodeTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         OpenCodeTool::launch(i18n, state, model)
     }
+    
+    fn supports_agentic(&self) -> bool { true }
 }
 
 impl OpenCodeTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
-        shell::run_live("npm install -g @opencode-ai/cli")?;
-        shell::exec("opencode auth login");
+        shell::run_live("curl -fsSL https://opencode.ai/install | bash")?;
+        Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating OpenCode...");
-        shell::run_live("npm update -g @opencode-ai/cli")?;
+        shell::run_live("curl -fsSL https://opencode.ai/install | bash")?;
         display::success("✅ OpenCode updated");
         Ok(())
     }
@@ -45,8 +47,7 @@ impl OpenCodeTool {
         if !Confirm::new().with_prompt(i18n.t("tool.opencode.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo npm uninstall -g opencode-ai 2>/dev/null");
-        let _ = shell::run_quiet("sudo rm -f /usr/bin/opencode ~/.local/bin/opencode 2>/dev/null");
+        let _ = shell::run_quiet("rm -f /usr/local/bin/opencode ~/.local/bin/opencode 2>/dev/null");
         let _ = shell::run_quiet("rm -rf ~/.opencode* 2>/dev/null");
         display::success(&i18n.t("tool.opencode.uninstalled"));
         Ok(())
