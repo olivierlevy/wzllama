@@ -302,7 +302,7 @@ fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
 }
 
 /// Show launch instructions for a specific tool with scientific skills
-fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_path: &str, state: &WzllamaState) -> Result<()> {
+fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_path: &str, state: &mut WzllamaState) -> Result<()> {
     display::clear_screen();
     display::section(&format!("{} {}", tool.name, i18n.t("scientific.launcher_instructions")));
     
@@ -398,6 +398,7 @@ fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_pat
         if let Some(tool_instance) = crate::tools::get_tool(tool.id) {
             if is_installed {
                 tool_instance.launch(i18n, state, state.last_model.as_deref())?;
+                state.set_last_tool(tool.id);
             } else {
                 display::info(&format!("{}...", i18n.t("scientific.installing_tool")));
                 tool_instance.install(i18n)?;
