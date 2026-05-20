@@ -213,10 +213,31 @@ impl OllamaTool {
             Some(m) => {
                 display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama run {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 display::info(&i18n.t("ollama.choose_model"));
+                // List local models and let user choose
+                if let Some(url) = crate::core::ollama_api::detect_url() {
+                    let models = crate::core::ollama_api::fetch_local_models(&url)?;
+                    if !models.is_empty() {
+                        let names: Vec<&str> = models.iter().map(|m| m.name.as_str()).collect();
+                        use dialoguer::Select;
+                        let sel = Select::new()
+                            .with_prompt(&i18n.t("ollama.select_model"))
+                            .items(&names)
+                            .default(0)
+                            .interact_opt()?;
+                        
+                        if let Some(idx) = sel {
+                            let cmd = format!("ollama run {}", names[idx]);
+                            shell::exec(&cmd);
+                        }
+                    } else {
+                        display::warning(&i18n.t("ollama.no_models"));
+                    }
+                }
             }
         }
         Ok(())
