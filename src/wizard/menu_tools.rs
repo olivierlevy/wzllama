@@ -86,9 +86,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             // Si l'outil n'était pas marqué comme installé mais le conteneur existe
             if !tool_info.installed && current_status == ToolStatus::Installed {
                 // L'outil est maintenant installé, le lancer
+                state.set_last_tool(&tool_info.id);
+                crate::config::state::save(state)?;
                 let model = state.last_model.as_deref();
                 tool.launch(i18n, state, model)?;
-                state.set_last_tool(&tool_info.id);
                 continue;
             }
         }
@@ -108,9 +109,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 
                 match sel {
                     Some(0) => {
+                        state.set_last_tool(&tool_info.id); // Avant launch!
+                        crate::config::state::save(state)?;  // Sauvegarder avant l'exec
                         let model = state.last_model.as_deref();
                         tool.launch(i18n, state, model)?;
-                        state.set_last_tool(&tool_info.id);
                     }
                     Some(1) => {
                         OpenWebUITool::update(i18n)?;
@@ -125,9 +127,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 return Ok(());
             }
 
+            // Sauvegarder l'outil AVANT launch (car exec remplace le processus)
+            state.set_last_tool(&tool_info.id);
+            crate::config::state::save(state)?;  // Sauvegarder avant l'exec
             let model = state.last_model.as_deref();
             tool.launch(i18n, state, model)?;
-            state.set_last_tool(&tool_info.id);
         } else {
             // Installer
             println!("   📥 {}", i18n.t("install.run_command"));
@@ -136,6 +140,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             display::success(&i18n.t("install.completed"));
             crate::config::state::mark_installed(&tool_info.id, state);
             *state = crate::config::state::load();
+
+            // Sauvegarder l'outil nouvellement installé
+            state.set_last_tool(&tool_info.id);
+            crate::config::state::save(state)?;
 
             println!("\n   {}", i18n.t("install.launch_first_time").dimmed());
             let model = state.last_model.as_deref();

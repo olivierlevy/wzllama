@@ -82,13 +82,6 @@ fn check_configured_models(i18n: &I18n, config: &config::env::EnvConfig) -> Resu
                 ("usage", usage),
                 ("model", model),
             ]));
-            if Confirm::new()
-                .with_prompt(i18n.t_with_vars("config.model_download", &[("model", model)]))
-                .default(true)
-                .interact()?
-            {
-                crate::core::ollama_api::pull_model(model)?;
-            }
         }
     }
     
