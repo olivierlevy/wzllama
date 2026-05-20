@@ -7,10 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Hardware compatibility indicator (🟢🟡🟠🔴) for model selection
-- Sorting organizations by popularity (benchmark runs)
-- Model selection menu with installed models first, then organization submenus
+## [0.3.0] - 2025-05-20
+
+### Changed
+- Major code cleanup: removed dead code and unused modules
+- Removed estimator, configurator, fleet_creator, and fleet_templates modules
+- Removed unused estimation module
+- Cleaned up #[allow(dead_code)] attributes across the codebase
+
+### Removed
+- `estimator.rs` - unused estimation functionality
+- `configurator.rs` - unused configuration wizard
+- `fleet_creator.rs` and `fleet_templates.rs` - unused fleet creation
+- `core/estimation.rs` module and tests
+- `npm_package()` function - never called
+- `startup()` docker function - never used
+- `get_install_command()` and `get_launch_command()` - never used
+- `supports_fleets` and `supports_agentic` fields from ToolInfo (replaced by trait methods)
 
 ## [0.2.0] - 2025-05-17
 

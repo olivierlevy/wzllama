@@ -1,6 +1,6 @@
 [package]
 name = "wzllama"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Wizard CLI for simplifying installation and usage of local AI stack"
 license = "MIT"
