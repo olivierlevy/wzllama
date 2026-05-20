@@ -7,6 +7,7 @@ use dialoguer::Select;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::display;
+use super::menu_header;
 
 /// Categories from scientific-agent-skills
 pub struct ScientificCategory {
@@ -88,16 +89,13 @@ impl ScientificCategory {
 pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     loop {
         // Affiche le header avec ressources comme le menu principal
-        let ram_avail = crate::core::system::get_available_ram_gb();
-        let vram_avail = crate::core::system::get_available_vram_gb();
-        let running = crate::core::ollama_api::get_running_models();
-        display::clear_screen();
-        display::header_with_resources(
-            &i18n.t("scientific.title"),
-            hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
-            &running,
-            state.last_model.as_deref()
+        menu_header::render(
+            i18n,
+            "scientific.title",
+            true,
+            state.last_model.as_deref(),
+            hw.ram_gb,
+            hw.total_vram_mb as f64 / 1024.0
         );
         
         let categories = ScientificCategory::all();
@@ -249,16 +247,13 @@ fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
     
     loop {
         // Affiche le header avec ressources
-        let ram_avail = crate::core::system::get_available_ram_gb();
-        let vram_avail = crate::core::system::get_available_vram_gb();
-        let running = crate::core::ollama_api::get_running_models();
-        display::clear_screen();
-        display::header_with_resources(
-            &i18n.t("scientific.launcher"),
-            hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
-            &running,
-            state.last_model.as_deref()
+        menu_header::render(
+            i18n,
+            "scientific.launcher",
+            true,
+            state.last_model.as_deref(),
+            hw.ram_gb,
+            hw.total_vram_mb as f64 / 1024.0
         );
         
         // Show available skills

@@ -5,9 +5,10 @@ use anyhow::Result;
 use dialoguer::Select;
 use std::collections::HashSet;
 use crate::config::{I18n, WzllamaState};
-use crate::core::{HardwareInfo, ollama_api, llmfit_api, localmax_models, system};
+use crate::core::{HardwareInfo, ollama_api, llmfit_api, localmax_models};
 use crate::display;
 use crate::tools::{self, tool_trait::ToolStatus};
+use super::menu_header;
 
 /// Use cases for model filtering
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,16 +101,13 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 fn models_wizard(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     loop {
         // Affiche le header avec ressources comme le menu principal
-        let ram_avail = system::get_available_ram_gb();
-        let vram_avail = system::get_available_vram_gb();
-        let running = ollama_api::get_running_models();
-        display::clear_screen();
-        display::header_with_resources(
-            &i18n.t("wizard.title"),
-            hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
-            &running,
-            state.last_model.as_deref()
+        menu_header::render(
+            i18n,
+            "wizard.title",
+            true,
+            state.last_model.as_deref(),
+            hw.ram_gb,
+            hw.total_vram_mb as f64 / 1024.0
         );
         
         let use_cases = UseCase::all();

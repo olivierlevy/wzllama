@@ -3,8 +3,9 @@ use dialoguer::{Select, Confirm};
 use colored::Colorize;
 use std::collections::HashMap;
 use crate::config::{I18n, WzllamaState};
-use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache, system};
+use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache};
 use crate::display;
+use super::menu_header;
 
 /// Enter alternate screen buffer (keeps content fixed)
 fn enter_alternate_screen() {
@@ -105,16 +106,13 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let local_names: std::collections::HashSet<&str> = local.iter().map(|m| m.name.as_str()).collect();
         
         // Clear screen for clean redraw (alternate screen buffer) with header resources
-        let ram_avail = system::get_available_ram_gb();
-        let vram_avail = system::get_available_vram_gb();
-        let running = ollama_api::get_running_models();
-        display::clear_screen();
-        display::header_with_resources(
-            &i18n.t("menu.main.models"),
-            hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
-            &running,
-            state.last_model.as_deref()
+        menu_header::render(
+            i18n,
+            "menu.main.models",
+            true,
+            state.last_model.as_deref(),
+            hw.ram_gb,
+            hw.total_vram_mb as f64 / 1024.0
         );
         
         // Rebuild installed models list

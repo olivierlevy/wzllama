@@ -6,6 +6,7 @@ use crate::core::HardwareInfo;
 use crate::core::shell;
 use crate::tools::{self, docker, tool_trait::ToolStatus, open_webui::OpenWebUITool};
 use crate::display;
+use super::menu_header;
 
 fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.docker = docker::is_installed();
@@ -33,21 +34,15 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     sync_tools_state(state);
     crate::config::state::save(state)?;
     
-    // Import nécessaires pour le header
-    use crate::core::{ollama_api, system};
-    
     loop {
         // Affiche le header avec ressources comme le menu principal
-        let ram_avail = system::get_available_ram_gb();
-        let vram_avail = system::get_available_vram_gb();
-        let running = ollama_api::get_running_models();
-        display::clear_screen();
-        display::header_with_resources(
-            &i18n.t("menu.main.tools"),
-            hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
-            &running,
-            state.last_model.as_deref()
+        menu_header::render(
+            i18n, 
+            "menu.main.tools", 
+            true,
+            state.last_model.as_deref(),
+            hw.ram_gb, 
+            hw.total_vram_mb as f64 / 1024.0
         );
         
         let tools = tools::get_available_tools(state, i18n);

@@ -2,8 +2,9 @@ use anyhow::Result;
 use colored::*;
 use dialoguer::{Select, Confirm, Input};
 use crate::config::{self, I18n, WzllamaState};
-use crate::core::{HardwareInfo, ollama_api, system};
+use crate::core::HardwareInfo;
 use crate::display;
+use super::menu_header;
 
 pub fn run(i18n: &I18n, _state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     let mut config = config::env::EnvConfig::load();
@@ -13,16 +14,13 @@ pub fn run(i18n: &I18n, _state: &mut WzllamaState, hw: &HardwareInfo) -> Result<
     
     loop {
         // Affiche le header avec ressources comme le menu principal
-        let ram_avail = system::get_available_ram_gb();
-        let vram_avail = system::get_available_vram_gb();
-        let running = ollama_api::get_running_models();
-        display::clear_screen();
-        display::header_with_resources(
-            &i18n.t("menu.main.config"),
-            hw.ram_gb, ram_avail, 
-            hw.total_vram_mb as f64 / 1024.0, vram_avail, 
-            &running,
-            _state.last_model.as_deref()
+        menu_header::render(
+            i18n,
+            "menu.main.config",
+            true,
+            _state.last_model.as_deref(),
+            hw.ram_gb,
+            hw.total_vram_mb as f64 / 1024.0
         );
         
         // Afficher résumé avec icônes
