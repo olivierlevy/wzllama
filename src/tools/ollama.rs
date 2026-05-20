@@ -4,6 +4,7 @@ use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use crate::wizard::menu_picker;
 
 pub struct OllamaTool;
 
@@ -218,25 +219,12 @@ impl OllamaTool {
             }
             None => {
                 display::info(&i18n.t("ollama.choose_model"));
-                // List local models and let user choose
-                if let Some(url) = crate::core::ollama_api::detect_url() {
-                    let models = crate::core::ollama_api::fetch_local_models(&url)?;
-                    if !models.is_empty() {
-                        let names: Vec<&str> = models.iter().map(|m| m.name.as_str()).collect();
-                        use dialoguer::Select;
-                        let sel = Select::new()
-                            .with_prompt(&i18n.t("ollama.select_model"))
-                            .items(&names)
-                            .default(0)
-                            .interact_opt()?;
-                        
-                        if let Some(idx) = sel {
-                            let cmd = format!("ollama run {}", names[idx]);
-                            shell::exec(&cmd);
-                        }
-                    } else {
-                        display::warning(&i18n.t("ollama.no_models"));
-                    }
+                // Use shared model picker
+                if let Some(selected) = menu_picker::pick_model(i18n)? {
+                    let cmd = format!("ollama run {}", selected);
+                    shell::exec(&cmd);
+                } else {
+                    display::warning(&i18n.t("ollama.no_models"));
                 }
             }
         }
