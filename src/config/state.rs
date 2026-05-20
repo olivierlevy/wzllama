@@ -69,8 +69,12 @@ pub struct WzllamaState {
 pub fn load() -> WzllamaState {
     let path = paths::state_file();
     if path.exists() {
-        serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_default())
-            .unwrap_or_default()
+        let content = std::fs::read_to_string(&path).unwrap_or_default();
+        serde_json::from_str(&content).unwrap_or_else(|_| {
+            // If parsing fails, backup corrupted file and return default
+            let _ = std::fs::copy(&path, path.with_extension("json.bak"));
+            WzllamaState::default()
+        })
     } else {
         WzllamaState::default()
     }
