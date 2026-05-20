@@ -52,4 +52,7 @@ pub trait Tool {
     
     /// For tools that need Docker (e.g., Open WebUI)
     fn requires_docker(&self) -> bool { false }
+    
+    /// For agentic tools that support autonomous operation with skills/agentic workflows
+    fn supports_agentic(&self) -> bool { false }
 }

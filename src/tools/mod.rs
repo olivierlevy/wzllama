@@ -67,6 +67,7 @@ pub fn get_available_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
             description: t.description(i18n),
             installed,
             supports_fleets: t.supports_fleets(),
+            supports_agentic: t.supports_agentic(),
         }
     }).collect()
 }
@@ -79,6 +80,7 @@ pub struct ToolInfo {
     pub installed: bool,
     #[allow(dead_code)]
     pub supports_fleets: bool,
+    pub supports_agentic: bool,
 }
 
 /// Reruns la commande d'installation pour un outil (via son ID)
