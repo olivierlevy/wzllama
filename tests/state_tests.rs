@@ -1,5 +1,4 @@
 use wzllama::config::state::{self, InstalledTools, WzllamaState};
-use std::collections::HashMap;
 
 #[test]
 fn test_installed_tools_default() {
@@ -25,17 +24,6 @@ fn test_wzllama_state_default() {
     assert!(state.last_model.is_none());
     assert!(state.last_usage.is_none());
     assert!(state.last_tool.is_none());
-    assert!(state.last_fleet.is_none());
-    assert!(state.fleets.is_empty());
-}
-
-#[test]
-fn test_fleet_state_default() {
-    let fleet = wzllama::config::state::FleetState::default();
-    assert!(fleet.profile.is_empty());
-    assert!(fleet.orchestrator.is_empty());
-    assert!(fleet.agents.is_empty());
-    assert!(!fleet.openclaw_installed);
 }
 
 #[test]
@@ -78,30 +66,6 @@ fn test_set_language() {
 }
 
 #[test]
-fn test_state_with_fleets() {
-    let fleets = {
-        let mut f = HashMap::new();
-        f.insert("project1".to_string(), wzllama::config::state::FleetState {
-            profile: "openclaw".to_string(),
-            orchestrator: "qwen2.5:7b".to_string(),
-            agents: vec!["analyst".to_string(), "reviewer".to_string()],
-            openclaw_installed: true,
-        });
-        f
-    };
-    
-    let state = WzllamaState {
-        fleets,
-        ..Default::default()
-    };
-    
-    assert!(state.fleets.contains_key("project1"));
-    let fleet = state.fleets.get("project1").unwrap();
-    assert_eq!(fleet.profile, "openclaw");
-    assert_eq!(fleet.agents.len(), 2);
-}
-
-#[test]
 fn test_state_serialization() {
     let state = WzllamaState {
         language: Some("en".to_string()),
@@ -109,11 +73,9 @@ fn test_state_serialization() {
             ollama: true,
             ..Default::default()
         },
-        fleets: HashMap::new(),
         last_model: Some("qwen2.5:7b".to_string()),
         last_usage: Some("mixed".to_string()),
         last_tool: None,
-        last_fleet: None,
     };
     
     let json = serde_json::to_string(&state).unwrap();
@@ -134,11 +96,9 @@ fn test_save_and_load_state() {
             open_webui: true,
             ..Default::default()
         },
-        fleets: HashMap::new(),
         last_model: Some("test-model".to_string()),
         last_usage: Some("big_code".to_string()),
         last_tool: Some("open_webui".to_string()),
-        last_fleet: Some("test_fleet".to_string()),
     };
     
     // Test JSON serialization roundtrip

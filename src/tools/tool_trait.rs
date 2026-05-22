@@ -48,8 +48,6 @@ pub trait Tool {
     
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()>;
     
-    fn supports_fleets(&self) -> bool { false }
-    
     /// For tools that need Docker (e.g., Open WebUI)
     fn requires_docker(&self) -> bool { false }
     

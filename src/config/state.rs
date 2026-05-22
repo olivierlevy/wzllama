@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::config::paths;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -40,30 +39,17 @@ pub struct InstalledTools {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
-pub struct FleetState {
-    pub profile: String,
-    pub orchestrator: String,
-    pub agents: Vec<String>,
-    #[serde(default)]
-    pub openclaw_installed: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct WzllamaState {
     #[serde(default)]
     pub language: Option<String>,
     #[serde(default)]
     pub installed: InstalledTools,
     #[serde(default)]
-    pub fleets: HashMap<String, FleetState>,
-    #[serde(default)]
     pub last_model: Option<String>,
     #[serde(default)]
     pub last_usage: Option<String>,
     #[serde(default)]
     pub last_tool: Option<String>,
-    #[serde(default)]
-    pub last_fleet: Option<String>,
 }
 
 pub fn load() -> WzllamaState {
@@ -117,11 +103,6 @@ pub fn set_last_tool(tool: &str, state: &mut WzllamaState) {
     let _ = save(state);
 }
 
-pub fn set_last_fleet(fleet: &str, state: &mut WzllamaState) {
-    state.last_fleet = Some(fleet.to_string());
-    let _ = save(state);
-}
-
 pub fn set_last_model(model: &str, state: &mut WzllamaState) {
     state.last_model = Some(model.to_string());
     let _ = save(state);
@@ -162,9 +143,5 @@ impl WzllamaState {
     
     pub fn set_last_tool(&mut self, tool: &str) {
         set_last_tool(tool, self);
-    }
-    
-    pub fn set_last_fleet(&mut self, fleet: &str) {
-        set_last_fleet(fleet, self);
     }
 }

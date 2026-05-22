@@ -7,7 +7,23 @@ use dialoguer::Select;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::display;
+use crate::menu_api::{MenuTree, MenuItem};
 use super::menu_header;
+
+/// Create the scientific menu tree structure
+pub fn build_menu_tree() -> MenuTree {
+    let root = MenuItem::branch("scientific")
+        .add_submenu(MenuItem::leaf("↩️ Retour"))
+        .add_submenu(MenuItem::leaf("🧬 Bioinformatics").with_action("scientific_bioinformatics"))
+        .add_submenu(MenuItem::leaf("🧪 Cheminformatics").with_action("scientific_cheminformatics"))
+        .add_submenu(MenuItem::leaf("🔬 Proteomics").with_action("scientific_proteomics"))
+        .add_submenu(MenuItem::leaf("🏥 Clinical").with_action("scientific_clinical"))
+        .add_submenu(MenuItem::leaf("🧬 Genomics").with_action("scientific_genomics"))
+        .add_submenu(MenuItem::leaf("🤖 Machine Learning").with_action("scientific_ml"))
+        .add_submenu(MenuItem::leaf("🤖 Agentic Tools Info").with_action("scientific_agentic_info"));
+    
+    MenuTree::new("scientific").with_root(root)
+}
 
 /// Categories from scientific-agent-skills
 pub struct ScientificCategory {
@@ -104,11 +120,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             .map(|c| i18n.t(c.name_key))
             .collect();
         
-        // Add agentic tools option at the end
+        // Retour en premier item (selon TODO.md ligne 72)
         let back_option = i18n.t("menu.back");
-        let mut all_items = display_names.clone();
+        let mut all_items = vec![back_option];
+        all_items.extend(display_names.clone());
         all_items.push(i18n.t("scientific.agentic_tools"));
-        all_items.push(back_option.clone());
         
         let sel = Select::new()
             .with_prompt("")
@@ -117,10 +133,12 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             .interact_opt()?;
         
         match sel {
-            Some(s) if s < categories.len() => {
-                handle_category(i18n, state, hw, &categories[s])?;
+            Some(0) => return Ok(()),  // Retour en position 0
+            Some(s) if s <= categories.len() => {
+                // s-1 car Retour est en position 0, puis les catégories commencent à 1
+                handle_category(i18n, state, hw, &categories[s - 1])?;
             }
-            Some(s) if s == categories.len() => {
+            Some(s) if s == categories.len() + 1 => {
                 show_agentic_tools_info(i18n, &agentic_tools)?;
             }
             _ => return Ok(()),

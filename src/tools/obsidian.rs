@@ -18,7 +18,6 @@ impl Tool for ObsidianTool {
     fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> { 
         ObsidianTool::launch(i18n) 
     }
-    fn supports_fleets(&self) -> bool { false }
 }
 
 impl ObsidianTool {

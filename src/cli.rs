@@ -29,6 +29,8 @@ pub enum Command {
     CheckI18n,
     #[command(visible_alias = "u")]
     Uninstall,
+    #[command(visible_alias = "s")]
+    Serve,
     /// Install Open WebUI with Docker checks
     InstallWebui,
     /// Launch Open WebUI with Docker checks
@@ -87,6 +89,11 @@ impl Cli {
                 println!("🌐 Open WebUI : {}", url);
                 shell::open_url(url);
                 println!("✅ Open WebUI lancé dans le navigateur");
+                Ok(())
+            }
+            Command::Serve => {
+                let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 1133));
+                tokio::runtime::Runtime::new()?.block_on(crate::api_server::start_server(addr));
                 Ok(())
             }
         }

@@ -25,6 +25,7 @@ pub struct I18nFile {
     pub translations: HashMap<String, serde_json::Value>,
 }
 
+#[derive(Clone)]
 pub struct I18n {
     #[allow(dead_code)]
     pub meta: LanguageMeta,

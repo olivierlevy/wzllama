@@ -6,7 +6,28 @@ use crate::core::HardwareInfo;
 use crate::core::shell;
 use crate::tools::{self, docker, tool_trait::ToolStatus, open_webui::OpenWebUITool};
 use crate::display;
+use crate::menu_api::{MenuTree, MenuItem};
 use super::menu_header;
+
+/// Create the tools menu tree structure
+pub fn build_menu_tree() -> MenuTree {
+    let root = MenuItem::branch("tools")
+        .add_submenu(MenuItem::leaf("↩️ Retour"))
+        .add_submenu(MenuItem::leaf("🐳 Docker").with_action("tool_docker"))
+        .add_submenu(MenuItem::leaf("🦙 Ollama").with_action("tool_ollama"))
+        .add_submenu(MenuItem::leaf("🌐 Open WebUI").with_action("tool_open_webui"))
+        .add_submenu(MenuItem::leaf("🔓 Openclaw").with_action("tool_openclaw"))
+        .add_submenu(MenuItem::leaf("🤖 Claude Code").with_action("tool_claude_code"))
+        .add_submenu(MenuItem::leaf("🎭 Hermes Agent").with_action("tool_hermes_agent"))
+        .add_submenu(MenuItem::leaf("📱 OpenCode").with_action("tool_opencode"))
+        .add_submenu(MenuItem::leaf("🎯 Codex").with_action("tool_codex"))
+        .add_submenu(MenuItem::leaf("🤖 Droid").with_action("tool_droid"))
+        .add_submenu(MenuItem::leaf("π Pi").with_action("tool_pi"))
+        .add_submenu(MenuItem::leaf("🌊 Pool").with_action("tool_pool"))
+        .add_submenu(MenuItem::leaf("📚 Obsidian").with_action("tool_obsidian"));
+    
+    MenuTree::new("tools").with_root(root)
+}
 
 fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.docker = docker::is_installed();
@@ -46,14 +67,15 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         );
         
         let tools = tools::get_available_tools(state, i18n);
-        let mut items: Vec<String> = tools.iter().map(|t| {
+        // Retour en premier item (selon TODO.md ligne 72)
+        let mut items: Vec<String> = vec![i18n.t("menu.back")];
+        items.extend(tools.iter().map(|t| {
             let tool_dyn = tools::get_tool(&t.id);
             let supports_agentic = tool_dyn.as_ref().map(|x| x.supports_agentic()).unwrap_or(false);
             let icon = if supports_agentic { "🤖" } else if t.installed { "✅" } else { "📦" };
             let agentic_tag = if supports_agentic { " [agentic]".to_string() } else { String::new() };
             format!("{} {} - {}{}", icon, t.name, t.description.dimmed(), agentic_tag)
-        }).collect();
-        items.push(i18n.t("menu.back"));
+        }));
 
         let max_items = display::menu_max_items(items.len(), 10);
         let sel = Select::new()
@@ -72,9 +94,9 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             }
         };
 
-        if sel == tools.len() { return Ok(()); }
+        if sel == 0 { return Ok(()); }  // Retour en position 0
 
-        let tool_info = &tools[sel];
+        let tool_info = &tools[sel - 1];  // -1 car Retour est en position 0
         let tool = match tools::get_tool(&tool_info.id) {
             Some(t) => t,
             None => continue,
@@ -121,11 +143,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                     _ => {} // Escape or cancel
                 }
                 continue;
-            }
-            
-            if tool.supports_fleets() {
-                crate::wizard::menu_fleets::run(i18n, state, hw)?;
-                return Ok(());
             }
 
             // Sauvegarder l'outil AVANT launch (car exec remplace le processus)

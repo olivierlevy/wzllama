@@ -29,10 +29,10 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             return Ok(());
         }
 
-        let mut items: Vec<String> = installed_tools.iter()
+        let mut items: Vec<String> = vec![i18n.t("menu.back")];
+        items.extend(installed_tools.iter()
             .map(|t| format!("🗑️  {}", t.name()))
-            .collect();
-        items.push(i18n.t("menu.back"));
+            .collect::<Vec<String>>());
 
         let sel = match Select::new()
             .with_prompt(i18n.t("cleanup.choose_tool"))
@@ -44,9 +44,9 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
             None => return Ok(()), // Escape pressed
         };
 
-        if sel == installed_tools.len() { return Ok(()); }
+        if sel == 0 { return Ok(()); }  // Retour en position 0
 
-        let tool = installed_tools[sel];
+        let tool = installed_tools[sel - 1];  // -1 car Retour est en position 0
 
         display::section(&i18n.t("cleanup.uninstalling"));
 

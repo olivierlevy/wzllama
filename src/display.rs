@@ -89,27 +89,43 @@ pub fn format_number(n: u64) -> String {
     result
 }
 
+/// Get color indicator for resource usage level
+fn usage_color(pct: f64) -> Color {
+    if pct < 70.0 { Color::Green }
+    else if pct < 90.0 { Color::Yellow }
+    else { Color::Red }
+}
+
 /// Affiche les ressources système avec barres de progression et modèle par défaut
 pub fn resources_with_bars(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String], default_model: Option<&str>) {
     let ram_used = ram_total - ram_avail;
-    let ram_pct = if ram_total > 0.0 { ram_avail / ram_total * 100.0 } else { 0.0 };
+    let ram_pct = if ram_total > 0.0 { (ram_used / ram_total) * 100.0 } else { 0.0 };
+    let ram_color = usage_color(ram_pct);
     
     println!("   {} {:.0}% {:.1}/{:.1} Go {} ",
         "💾".cyan(), ram_pct, ram_avail, ram_total,
-        progress_bar(ram_used, ram_total, 20).yellow());
+        progress_bar_colored(ram_used, ram_total, 20, ram_color));
     
     if let Some(vram) = vram_avail {
         let vram_used = vram_total - vram;
-        let vram_pct = if vram_total > 0.0 { vram / vram_total * 100.0 } else { 0.0 };
+        let vram_pct = if vram_total > 0.0 { (vram_used / vram_total) * 100.0 } else { 0.0 };
+        let vram_color = usage_color(vram_pct);
         println!("   {} {:.0}% {:.1}/{:.1} Go {} {}",
             "🎮".cyan(), vram_pct, vram, vram_total,
-            progress_bar(vram_used, vram_total, 20).yellow(),
+            progress_bar_colored(vram_used, vram_total, 20, vram_color),
             running.join(", ").dimmed());
     }
     
     if let Some(model) = default_model {
         println!("   {} {}", "🤖".cyan(), model.bold());
     }
+}
+
+/// Barre de progression visuelle colorée
+pub fn progress_bar_colored(used: f64, total: f64, width: usize, color: Color) -> String {
+    let ratio = if total > 0.0 { (used / total).min(1.0) } else { 0.0 };
+    let filled = ((ratio * width as f64) as usize).min(width);
+    format!("{}{}", "█".repeat(filled).color(color), "░".repeat(width - filled).dimmed())
 }
 
 /// Barre de progression visuelle

@@ -1,3 +1,8 @@
+//! Models menu - entry point using menu_api
+//!
+//! This module provides the business logic for model management.
+//! The entry point from main menu uses ModelsMenuRunner from menu_api.
+
 use anyhow::Result;
 use dialoguer::{Select, Confirm};
 use colored::Colorize;
@@ -5,7 +10,19 @@ use std::collections::HashMap;
 use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, ollama_models, localmax_models::{self, LocalMaxModel}, cache};
 use crate::display;
+use crate::menu_api::{MenuTree, MenuItem};
 use super::menu_header;
+
+/// Create the models menu tree structure
+pub fn build_menu_tree() -> MenuTree {
+    let root = MenuItem::branch("models")
+        .add_submenu(MenuItem::leaf("↩️ Retour"))
+        .add_submenu(MenuItem::leaf("📦 Installed Models").with_action("models_installed"))
+        .add_submenu(MenuItem::leaf("🏢 By Organization").with_action("models_by_org"))
+        .add_submenu(MenuItem::leaf("🔍 Search Models").with_action("models_search"));
+    
+    MenuTree::new("models").with_root(root)
+}
 
 /// Enter alternate screen buffer (keeps content fixed)
 fn enter_alternate_screen() {
@@ -177,12 +194,15 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         });
         
         // Build main menu items
-        let mut main_items = vec![];
+        // Retour en premier item (selon TODO.md ligne 72)
+        let mut main_items = vec![(i18n.t("menu.back"), None)];
+        let mut installed_count = 0;
+        
         for (display, model) in &installed_items {
             main_items.push((display.clone(), Some(model.clone())));
+            installed_count += 1;
         }
         
-        let installed_count = installed_items.len();
         main_items.push((format!("─── {} ───", i18n.t("models.localmaxxing_by_org")), None));
         
         for (org, org_models) in &orgs {
@@ -190,8 +210,6 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             let display = format!("🏢 {} ({})", org, i18n.t_with_vars("models.localmaxxing_org_count", &[("count", &count.to_string())]));
             main_items.push((display, None));
         }
-        
-        main_items.push((i18n.t("menu.back"), None));
         
         let display_items: Vec<String> = main_items.iter().map(|(d, _)| d.clone()).collect();
         
@@ -209,8 +227,8 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             }
         };
         
-        // Handle selection
-        if sel == display_items.len() - 1 {
+        // Handle selection - Retour en position 0
+        if sel == 0 {
             exit_alternate_screen();
             return Ok(());
         }
@@ -218,13 +236,16 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
         let (_, model_opt) = &main_items[sel];
         
         if let Some(model) = model_opt {
+            // Les modèles installés commencent à l'index 1 (Retour en position 0)
             handle_model_selection(i18n, state, hw, model, &local_names)?;
             continue 'outer;
         }
         
-        let org_index = sel - (installed_count + 1);
+        // Les organisations commencent après les modèles installés + le séparateur
+        // Index: 0=Retour, 1..installed_count+1=modèles, installed_count+2=séparateur, installed_count+3..=orgs
+        let org_index = sel - (installed_count + 2);
         
-        if org_index >= orgs.len() {
+        if org_index < 0 || org_index >= orgs.len() {
             continue 'outer;
         }
         
@@ -353,9 +374,9 @@ fn show_org_models_menu(
         }
         
         let display_items: Vec<String> = model_items.iter().map(|(d, _)| d.clone()).collect();
-        let mut all_items = vec![];
+        // Retour en premier item (selon TODO.md ligne 72)
+        let mut all_items = vec![i18n.t("menu.back")];
         all_items.extend(display_items);
-        all_items.push(i18n.t("menu.back"));
         
         let sel = match Select::new()
             .with_prompt(i18n.t("menu.models.choose"))
@@ -368,12 +389,12 @@ fn show_org_models_menu(
             None => return Ok(()),
         };
         
-        if sel == all_items.len() - 1 {
+        if sel == 0 {
             // Back button - return to parent (organization list)
             return Ok(());
         }
         
-        let chosen = &model_items[sel].1;
+        let chosen = &model_items[sel - 1].1;  // -1 car Retour est en position 0
         handle_model_selection(i18n, state, hw, chosen, &local_names)?;
         // After handling, continue the loop to show the org menu again
     }
@@ -386,14 +407,11 @@ fn run_model_actions_menu(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareIn
         let models = ollama_api::get_models();
         let model = models.iter().find(|m| m.name == model_name);
         
-        let mut actions = vec![
-            i18n.t_with_vars("models.manage_selected", &[("model", model_name)]),
-            i18n.t("models.manage_show_info"),
-            i18n.t("models.manage_set_default"),
-            i18n.t("models.manage_delete"),
-        ];
-        
-        actions.push(i18n.t("menu.back"));
+        let mut actions = vec![i18n.t("menu.back")];
+        actions.push(i18n.t_with_vars("models.manage_selected", &[("model", model_name)]));
+        actions.push(i18n.t("models.manage_show_info"));
+        actions.push(i18n.t("models.manage_set_default"));
+        actions.push(i18n.t("models.manage_delete"));
         
         let action_sel = match Select::new()
             .with_prompt(i18n.t("models.manage_action"))
@@ -406,26 +424,27 @@ fn run_model_actions_menu(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareIn
         };
         
         match action_sel {
-            0 => {
+            0 => break,  // Retour en position 0
+            1 => {
                 // Already selected, just show info
                 if let Some(m) = model {
                     show_installed_model_info(i18n, m, hw);
                 }
             }
-            1 => {
+            2 => {
                 // Show model info
                 if let Some(m) = model {
                     show_installed_model_info(i18n, m, hw);
                 }
             }
-            2 => {
+            3 => {
                 // Set as default model
                 state.set_last_model(model_name);
                 display::success(&i18n.t_with_vars("models.manage_selected", &[("model", model_name)]));
                 // Exit the actions menu to return to main models menu with updated header
                 break;
             }
-            3 => {
+            4 => {
                 // Delete model
                 if Confirm::new()
                     .with_prompt(i18n.t_with_vars("models.manage_delete_confirm", &[("model", model_name)]))

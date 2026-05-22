@@ -1,0 +1,18 @@
+# Cleanup menu configuration for wzllama
+# This file defines the cleanup submenu structure
+
+[menu]
+title = "menu.main.cleanup"
+description = "Cleanup and maintenance actions"
+
+[[items]]
+label = "cleanup.menu_tools"
+action = "cleanup_tools"
+
+[[items]]
+label = "cleanup.menu_models"
+action = "cleanup_models"
+
+[[items]]
+label = "menu.back"
+action = "back"

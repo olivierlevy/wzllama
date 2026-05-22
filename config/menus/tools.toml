@@ -1,0 +1,62 @@
+# Tools menu configuration for wzllama
+# This file defines the tools submenu structure
+
+[menu]
+title = "menu.main.tools"
+description = "AI tools and applications"
+
+[[items]]
+label = "tool.ollama.name"
+action = "tool_ollama"
+
+[[items]]
+label = "tool.openwebui.name"
+action = "tool_openwebui"
+
+[[items]]
+label = "tool.openclaw.name"
+action = "tool_openclaw"
+
+[[items]]
+label = "tool.claudecode.name"
+action = "tool_claudecode"
+
+[[items]]
+label = "tool.opencode.name"
+action = "tool_opencode"
+
+[[items]]
+label = "tool.codex.name"
+action = "tool_codex"
+
+[[items]]
+label = "tool.copilotcli.name"
+action = "tool_copilotcli"
+
+[[items]]
+label = "tool.obsidian.name"
+action = "tool_obsidian"
+
+[[items]]
+label = "tool.goose.name"
+action = "tool_goose"
+
+[[items]]
+label = "tool.llmfit.name"
+action = "tool_llmfit"
+
+[[items]]
+label = "tool.droid.name"
+action = "tool_droid"
+
+[[items]]
+label = "tool.pi.name"
+action = "tool_pi"
+
+[[items]]
+label = "tool.pool.name"
+action = "tool_pool"
+
+[[items]]
+label = "menu.back"
+action = "back"

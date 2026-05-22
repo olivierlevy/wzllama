@@ -1,234 +1,189 @@
-# wzllama 🦙
+# wzllama - Menu API Documentation
 
-**wzllama** is an interactive CLI wizard that simplifies installing, configuring and running a complete local AI stack — Ollama, Open WebUI, OpenClaw, coding agents and more — all from a single terminal interface.
+## Overview
+
+The `menu_api` module provides a hierarchical, configurable menu system for the wzllama CLI application. It separates menu structure from business logic, enabling dynamic menu generation and flexible action dispatch.
+
+## Architecture
 
 ```
-wzllama
+menu_api/
+├── menu_tree.rs        # MenuTree - root container for hierarchical menus
+├── menu_item.rs        # MenuItem - leaf or branch with optional action
+├── menu_handler.rs     # MenuHandler - interactive navigation & execution
+├── tool_action.rs      # ToolAction trait & ActionDispatcher for command execution
+├── wizard_adapter.rs   # WizardAdapter - bridges wizard:: functions to menu_api
+├── wizard_menu_handler.rs # WizardMenuRunner - migrated wizard logic
+├── dynamic_generators.rs  # Dynamic submenu generators
+├── models_engine.rs    # ModelsEngineRunner for model workflows
+├── tools_engine.rs     # ToolsEngineRunner for tool workflows
+├── scientific_menu_adapter.rs # ScientificMenuRunner
+├── config_menu_adapter.rs     # ConfigMenuRunner
+├── cleanup_menu_adapter.rs    # CleanupMenuRunner
+├── main_menu_adapter.rs       # MainMenuRunner
+└── api_service.rs      # HTTP API service layer
 ```
 
-![Rust](https://img.shields.io/badge/Rust-edition%202021-orange?logo=rust)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
+## Core Components
 
----
+### MenuTree
 
-## Why wzllama?
+```rust
+pub struct MenuTree {
+    pub root: MenuItem,
+    pub metadata: MenuMetadata,
+}
 
-Running a local AI stack usually means manually installing Ollama, hunting for compatible models, juggling environment variables, and wiring up multiple tools. wzllama automates all of it:
-
-- **One command** to install and configure the entire stack
-- **Hardware-aware** model recommendations (CPU, RAM, GPU auto-detected)
-- **Centralized config** — one `config.yaml`, one generated `env` file
-- **Multi-agent orchestration** via OpenClaw fleets
-- **FR / EN** support out of the box (system language auto-detected)
-
----
-
-## Features
-
-| | |
-|---|---|
-| 🔧 **Automated install** | Ollama, Open WebUI, Claude Code, OpenCode, Codex, Droid, Hermes, Pi, Pool, Copilot CLI |
-| 🎯 **Smart model ranking** | Ranked by usage type (code, long text, agents, chat) and your hardware |
-| ⚙️ **Centralized config** | `config.yaml` → auto-generated `~/.wzllama/env` |
-| 🚀 **Agent fleets** | Create orchestrator + reflexion + expert agent groups for OpenClaw |
-| 🌍 **i18n** | FR / EN, extensible to any language |
-| 💻 **CLI wizard** | Interactive terminal interface with hardware-aware recommendations |
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **OS**: Linux (tested on Arch, Ubuntu)
-- **RAM**: 8 GB minimum, 16 GB recommended
-- **GPU**: Optional but strongly recommended (NVIDIA / AMD)
-- **Rust**: To build from source
-
-### Install from remote (recommended)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/olivierlevy/wzllama/main/install.sh | sh
-```
-
-This script automatically downloads, compiles, and installs wzllama.
-
-### Install locally (for developers)
-
-```bash
-git clone https://github.com/olivierlevy/wzllama.git
-cd wzllama
-./deploy.sh
-```
-
-The `deploy.sh` script builds and installs wzllama locally for development purposes.
-
-### First run
-
-```bash
-wzllama          # CLI wizard (default)
-```
-
-wzllama will detect your hardware, offer to install Ollama, and suggest models suited to your machine.
-
-→ Full setup guide: [docs/getting-started.md](docs/getting-started.md)
-
----
-
-## Supported Tools
-
-| Tool | Description | Transport |
-|------|-------------|-----------|
-| **Ollama** | Local AI model server | Native |
-| **LLMFit** | LLM training and evaluation tool with MCP support | Native / MCP |
-| **Open WebUI** | Web interface for AI models | Docker |
-| **OpenClaw** | Personal AI assistant (100+ skills, fleet support) | Ollama |
-| **Claude Code** | Anthropic coding agent with sub-agents | NPM |
-| **OpenCode** | Open-source coding agent by Anomaly | NPM |
-| **Codex** | OpenAI coding agent | Ollama |
-| **Copilot CLI** | GitHub AI agent for the terminal | Native |
-| **Droid** | Factory coding agent (terminal + IDE) | Ollama |
-| **Hermes Agent** | Self-improving AI agent by Nous Research | NPM |
-| **Pi** | Minimal AI agent with plugin support | Native |
-| **Pool** | Poolside coding agent | Native |
-
-→ Full tool reference: [docs/tools.md](docs/tools.md)
-
-### LLMFit MCP Integration
-
-LLMFit can be used as an MCP (Model Context Protocol) server, making it available to AI agents like Claude Desktop:
-
-```bash
-# Install llmfit (done automatically by wzllama)
-uv tool install -U llmfit
-
-# MCP configuration for Claude Desktop (claude_desktop_config.json):
-{
-  "mcpServers": {
-    "llmfit": {
-      "command": "llmfit",
-      "args": ["serve", "--mcp"]
-    }
-  }
+impl MenuTree {
+    pub fn new(root_label: &str) -> Self;
+    pub fn with_title(root_label: &str, title: &str) -> Self;
+    pub fn with_root(mut self, root: MenuItem) -> Self;
+    pub fn find_by_path(&self, path: &str) -> Option<&MenuItem>;
+    pub fn get_leaf_items(&self) -> Vec<&MenuItem>;
 }
 ```
 
-Available MCP tools: `get_system_specs`, `recommend_models`, `search_models`, `plan_hardware`, `get_runtimes`, `get_installed_models`.
+### MenuItem
 
-→ MCP documentation: [config/mcp/README.md](config/mcp/README.md)
+```rust
+pub struct MenuItem {
+    pub label: String,
+    pub action_id: Option<String>,
+    pub submenus: Vec<MenuItem>,
+    pub label_vars: HashMap<String, String>,
+}
 
----
-
-## Interface Modes
-
-### CLI Wizard (default)
-
-```
-┌─ wzllama ──────────────────────────────────┐
-│  RAM: 32GB  │  GPU: RTX 4090 (24GB VRAM)   │
-├────────────────────────────────────────────┤
-│  Menu Principal                            │
-│                                            │
-│  > 🤖 Choose an AI model                   │
-│    🛠  Launch a tool                        │
-│    🚀 OpenClaw Fleets                      │
-│    🧹 Cleanup                              │
-│    ⚙️  Configuration                       │
-│    🌍 Change language                      │
-│    ❌ Quit                                 │
-└────────────────────────────────────────────┘
+impl MenuItem {
+    pub fn leaf(label: &str) -> Self;
+    pub fn branch(label: &str) -> Self;
+    pub fn with_action(self, action_id: &str) -> Self;
+    pub fn add_submenu(self, item: MenuItem) -> Self;
+    pub fn is_leaf(&self) -> bool;
+    pub fn has_action(&self) -> bool;
+}
 ```
 
-Navigate with **↑ ↓ Enter** — **Escape** goes back. Works in any terminal ≥ 40×10.
+### MenuHandler
 
-→ Full wizard reference: [docs/cli-wizard.md](docs/cli-wizard.md)
+```rust
+pub struct MenuHandler<'a> {
+    // Navigation state, references to i18n, state, hardware
+}
 
----
-
-## Configuration
-
-wzllama stores everything under `~/.wzllama/`:
-
-```
-~/.wzllama/
-├── config.yaml      # Main configuration (editable)
-├── env              # Auto-generated environment file
-├── state.json       # Persistent state
-└── fleets/          # OpenClaw agent fleets
-```
-
-Example `config.yaml`:
-
-```yaml
-ollama:
-  host: "127.0.0.1:11434"
-  flash_attention: true
-  kv_cache_type: "q8_0"
-  context_length: 16384
-
-models:
-  code: "qwen2.5-coder:14b"
-  book: "qwen2.5:14b"
-  agent: "qwen2.5:3b"
-  chat: "qwen2.5:7b"
+impl<'a> MenuHandler<'a> {
+    pub fn new(
+        tree: MenuTree,
+        dispatcher: ActionDispatcher,
+        i18n: &'a I18n,
+        state: &'a mut WzllamaState,
+        hw: &'a HardwareInfo,
+    ) -> Self;
+    
+    pub fn run(&mut self) -> Result<()>;  // Interactive loop
+    pub fn register_action(&mut self, action: Box<dyn ToolAction>);
+}
 ```
 
-→ Full configuration reference: [docs/configuration.md](docs/configuration.md)
+### ActionDispatcher & ToolAction
 
----
+```rust
+pub trait ToolAction: Send + Sync {
+    fn id(&self) -> &str;
+    fn description(&self) -> &str;
+    fn execute(&self, ctx: &ActionContext) -> Result<ActionResult>;
+}
 
-## OpenClaw Fleets
+pub struct ActionDispatcher {
+    // Registered actions map
+}
 
-Fleets are groups of specialized agents (orchestrator + reflexion + experts) that collaborate on complex tasks.
+impl ActionDispatcher {
+    pub fn register(&mut self, action: Box<dyn ToolAction>);
+    pub fn execute(&self, action_id: &str, ctx: &ActionContext) -> Result<ActionResult>;
+}
+```
+
+## Navigation Pattern
+
+The MenuHandler implements the "Retour en position 0" pattern as specified in TODO.md line 72:
+
+- "Retour" is always displayed in position 0 for sub-menus
+- "Quitter" is always displayed in the last position
+- The handler automatically detects and handles "Retour" navigation
 
 ```
-🚀 Fleet: my-project
-├── Orchestrator   qwen2.5:7b   "Chief software architect"
-├── Reflexion      ── Software architect
-├── Reflexion      ── Code reviewer
-└── Experts        ── Linter / Documentarian / Tester
+Main Menu
+├── ↩️ Retour (only shown in sub-menus)
+├── Menu Item 1
+├── Menu Item 2
+├── Menu Item 3
+└── ✖ Quitter
 ```
 
-→ Fleet documentation: [docs/fleets.md](docs/fleets.md)
+## Usage Example
 
----
+```rust
+use menu_api::{MenuTree, MenuItem, MenuHandler, ActionDispatcher, ToolAction, ActionResult};
 
-## Documentation
+// Build menu tree
+let tree = MenuTree::new("main")
+    .with_root(
+        MenuItem::branch("main")
+            .add_submenu(MenuItem::leaf("Option 1").with_action("action1"))
+            .add_submenu(MenuItem::leaf("Option 2").with_action("action2"))
+    );
 
-| Document | Description |
-|----------|-------------|
-| [Overview](docs/overview.md) | What wzllama is and how it works |
-| [Getting Started](docs/getting-started.md) | Installation and first run |
-| [CLI Wizard](docs/cli-wizard.md) | Wizard mode reference |
-| [Tools](docs/tools.md) | All supported tools |
-| [Models](docs/models.md) | Model management and ranking |
-| [Fleets](docs/fleets.md) | OpenClaw agent fleets |
-| [Configuration](docs/configuration.md) | config.yaml reference |
-| [i18n](docs/i18n.md) | Adding a new language |
-| [Architecture](docs/architecture.md) | Code architecture and module map |
-| [API & Development](docs/api-development.md) | Extending wzllama |
-| [File Structure](docs/file-structure.md) | Full project file tree |
+// Create dispatcher with actions
+let mut dispatcher = ActionDispatcher::new();
+dispatcher.register(Box::new(ClosureAction::new(
+    "action1",
+    "Action 1",
+    |_| Ok(ActionResult::success())
+)));
 
----
+// Run interactive handler
+let mut handler = MenuHandler::new(tree, dispatcher, i18n, state, hw);
+handler.run()?;
+```
 
-## Tech Stack
+## Dynamic Menu Generation
 
-- **Language**: Rust (edition 2021)
-- **CLI parsing**: clap 4.5
-- **TUI**: ratatui 0.26 + crossterm 0.27
-- **CLI interaction**: dialoguer 0.12
-- **Serialization**: serde / serde_yaml / serde_json
-- **i18n**: JSON with HashMap
+Menus can be generated dynamically from:
 
----
+1. **TOML/JSON configuration files** - see `config_loader.rs`
+2. **Runtime functions** - see `dynamic_generators.rs`
+3. **API data** - models from llmfit/localmaxxing APIs
 
-## Contributing
+## Integration Points
 
-Adding a new tool is straightforward — implement the `Tool` trait, register it in the tool registry, add i18n keys. See [docs/api-development.md](docs/api-development.md) for a step-by-step guide.
+| Wizard File | Menu API Equivalent | Status |
+|-------------|-------------------|--------|
+| `menu_wizard.rs` | `WizardMenuRunner` | ✅ Migrated |
+| `menu_models.rs` | `ModelsEngineRunner` | ✅ Wrapper |
+| `menu_tools.rs` | `ToolsEngineRunner` | ✅ Wrapper |
+| `menu_scientific.rs` | `ScientificMenuRunner` | ✅ Wrapper |
+| `menu_cleanup.rs` | `CleanupMenuRunner` | ✅ Wrapper |
+| `menu_config.rs` | `ConfigMenuRunner` | ✅ Wrapper |
 
----
+## API Service Layer
 
-## License
+The `api_service.rs` provides HTTP endpoints for:
+- `GET /api/menu/state` - Current state
+- `GET /api/menu/structure` - Menu tree structure
+- `POST /api/menu/action` - Execute action
+- `GET /api/menu/i18n` - Internationalization strings
 
-MIT — see [LICENSE](LICENSE)
+## Testing
+
+Run tests with:
+```bash
+cargo test --lib
+```
+
+All 27 tests pass covering:
+- MenuTree creation and navigation
+- MenuItem structure and actions
+- ActionDispatcher registration and execution
+- MenuHandler navigation patterns
+- UseCase and ScientificCategory enums
+- Dynamic menu generators

@@ -1,0 +1,43 @@
+# Main menu configuration for wzllama
+# This file defines the main menu structure
+
+[menu]
+title = "menu.main.title"
+description = "Main application menu"
+
+[[items]]
+label = "menu.main.resume"
+action = "resume"
+condition = "has_resume"
+
+[[items]]
+label = "menu.main.wizard"
+action = "wizard"
+
+[[items]]
+label = "menu.main.models"
+action = "models"
+
+[[items]]
+label = "menu.main.scientific"
+action = "scientific"
+
+[[items]]
+label = "menu.main.tools"
+action = "tools"
+
+[[items]]
+label = "menu.main.cleanup"
+action = "cleanup"
+
+[[items]]
+label = "menu.main.config"
+action = "config"
+
+[[items]]
+label = "menu.main.language"
+action = "language"
+
+[[items]]
+label = "menu.main.quit"
+action = "quit"

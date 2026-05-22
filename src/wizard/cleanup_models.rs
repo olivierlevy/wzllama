@@ -6,16 +6,20 @@ use crate::display;
 
 pub fn run(i18n: &I18n, _state: &mut crate::config::WzllamaState) -> Result<()> {
     loop {
-        let models = ollama_api::list_wzllama_models();
+        // Liste TOUS les modèles locaux avec leurs tailles
+        let all_models = ollama_api::get_models();
         
-        if models.is_empty() {
+        if all_models.is_empty() {
             display::info(&i18n.t("cleanup.no_models"));
             return Ok(());
         }
 
-        let mut items: Vec<String> = models.iter().map(|m| format!("🗑️  {}", m)).collect();
+        // Retour en premier item (selon TODO.md ligne 72)
+        let mut items: Vec<String> = vec![i18n.t("menu.back")];
+        items.extend(all_models.iter().map(|m| {
+            format!("🗑️  {} ({})", m.name, m.formatted_size())
+        }));
         items.push(i18n.t("cleanup.delete_all_models"));
-        items.push(i18n.t("menu.back"));
 
         let sel = match Select::new()
             .with_prompt(i18n.t("cleanup.choose_model"))
@@ -27,19 +31,23 @@ pub fn run(i18n: &I18n, _state: &mut crate::config::WzllamaState) -> Result<()> 
             None => return Ok(()), // Escape pressed
         };
 
-        if sel == models.len() + 1 { return Ok(()); }
-
-        if sel == models.len() {
+        // Retour en position 0
+        if sel == 0 { return Ok(()); }
+        
+        // Supprimer tous les modèles (dernier item)
+        if sel == items.len() - 1 {
             if Confirm::new().with_prompt(i18n.t("cleanup.confirm")).default(false).interact()? {
-                let count = models.len();
-                for m in &models { let _ = ollama_api::delete_model(m); }
+                let count = all_models.len();
+                for m in &all_models { let _ = ollama_api::delete_model(&m.name); }
                 display::success(&i18n.t_with_vars("cleanup.models_deleted", &[("count", &count.to_string())]));
             }
         } else {
-            let name = &models[sel];
+            // Un modèle spécifique (après Retour en position 0)
+            let model_idx = sel - 1;
+            let model = &all_models[model_idx];
             if Confirm::new().with_prompt(i18n.t("cleanup.confirm")).default(false).interact()? {
-                ollama_api::delete_model(name)?;
-                display::success(&i18n.t_with_vars("cleanup.model_deleted", &[("name", name)]));
+                ollama_api::delete_model(&model.name)?;
+                display::success(&i18n.t_with_vars("cleanup.model_deleted", &[("name", &model.name)]));
             }
         }
     }

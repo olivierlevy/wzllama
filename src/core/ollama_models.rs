@@ -66,16 +66,6 @@ impl ModelConfig {
     }
 }
 
-pub struct FleetCapacity {
-    pub max_experts_ram: u32,
-    #[allow(dead_code)]
-    pub max_experts_vram: u32,
-    #[allow(dead_code)]
-    pub max_reflexion: u32,
-    pub ram_total_gb: f64,
-    pub vram_total_gb: f64,
-}
-
 /// Extract approximate parameter size from model name (in billions)
 /// Returns 0 if cannot determine - caller should handle this case
 pub fn extract_size(name: &str) -> u32 {
@@ -126,18 +116,6 @@ pub fn extract_size(name: &str) -> u32 {
         }
     }
     0
-}
-
-pub fn calculate_fleet_capacity(hw: &HardwareInfo, orchestrator: &OllamaModel) -> FleetCapacity {
-    let vram_gb = hw.total_vram_mb as f64 / 1024.0;
-    let orch_vram = orchestrator.size.unwrap_or(0) as f64 / 1_073_741_824.0;
-    FleetCapacity {
-        max_experts_ram: ((hw.ram_gb * 0.4) / 2.0) as u32,
-        max_experts_vram: ((vram_gb - orch_vram).max(0.0) / 1.0) as u32,
-        max_reflexion: ((vram_gb - orch_vram).max(0.0) / 4.0) as u32,
-        ram_total_gb: hw.ram_gb,
-        vram_total_gb: vram_gb,
-    }
 }
 
 pub fn score_model(model: &OllamaModel, usage: &str, hw: &HardwareInfo) -> f32 {

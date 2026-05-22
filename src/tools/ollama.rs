@@ -133,7 +133,7 @@ impl OllamaTool {
         // Check que la config wzllama existe
         let env_path = crate::config::env::EnvConfig::env_path();
         if !env_path.exists() {
-            let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());
+            let config = crate::config::env::EnvConfig::default();
             config.save()?;
             display::success(&i18n.t("config.generated_env"));
             
@@ -191,7 +191,7 @@ impl OllamaTool {
         }
     
         // Générer la configuration par défaut
-        let config = crate::config::env::EnvConfig::default_for_hardware(&crate::core::hardware::detect());
+        let config = crate::config::env::EnvConfig::default();
         config.save()?;
         
         // Installer dans les shells

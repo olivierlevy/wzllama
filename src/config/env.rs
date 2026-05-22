@@ -8,7 +8,6 @@ pub struct EnvConfig {
     pub ollama: OllamaEnv,
     pub providers: ProvidersEnv,
     pub openclaw: OpenClawEnv,
-    pub models: ModelsEnv,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -55,14 +54,6 @@ pub struct OpenClawEnv {
     pub api_key: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ModelsEnv {
-    pub code: String,
-    pub book: String,
-    pub agent: String,
-    pub chat: String,
-}
-
 fn default_ollama_host() -> String { "127.0.0.1:11434".into() }
 fn default_ollama_origins() -> String { "http://localhost:*".into() }
 fn default_keep_alive() -> i32 { -1 }
@@ -103,44 +94,11 @@ impl Default for EnvConfig {
             openclaw: OpenClawEnv {
                 api_key: "ollama-local".into(),
             },
-            models: ModelsEnv {
-                code: "qwen2.5-coder:14b".into(),
-                book: "qwen2.5:14b".into(),
-                agent: "qwen2.5:3b".into(),
-                chat: "qwen2.5:7b".into(),
-            },
         }
     }
 }
 
 impl EnvConfig {
-
-    pub fn default_for_hardware(hw: &crate::core::HardwareInfo) -> Self {
-        let mut config = EnvConfig::default();
-        
-        // Pour chaque usage, trouver le meilleur modèle
-        if let Ok(remote) = crate::core::ollama_api::fetch_full_catalog() {
-            let local = crate::core::ollama_api::detect_url()
-                .and_then(|u| crate::core::ollama_api::fetch_local_models(&u).ok())
-                .unwrap_or_default();
-            let all = crate::core::ollama_api::merge_models(&local, &remote);
-            let models: Vec<_> = all.iter().map(|(m, _)| m.clone()).collect();
-            
-            for (usage, field) in [
-                ("code", &mut config.models.code),
-                ("book", &mut config.models.book),
-                ("agents", &mut config.models.agent),
-                ("mixed", &mut config.models.chat),
-            ] {
-                let ranked = crate::core::ollama_models::rank_models(&models, usage, hw, 1);
-                if let Some((best, _)) = ranked.first() {
-                    *field = best.name.clone();
-                }
-            }
-        }
-        
-        config
-    }
     pub fn config_path() -> std::path::PathBuf {
         paths::config_dir().join("config.yaml")
     }
@@ -211,10 +169,6 @@ impl EnvConfig {
         if let Some(ref lang) = state.language {
             content.push_str(&format!("export WZLLAMA_LANG='{}'\n", lang));
         }
-        content.push_str(&format!("export WZLLAMA_MODEL_CODE='{}'\n", self.models.code));
-        content.push_str(&format!("export WZLLAMA_MODEL_BOOK='{}'\n", self.models.book));
-        content.push_str(&format!("export WZLLAMA_MODEL_AGENT='{}'\n", self.models.agent));
-        content.push_str(&format!("export WZLLAMA_MODEL_CHAT='{}'\n", self.models.chat));
         
         fs::write(Self::env_path(), content)?;
         Ok(())

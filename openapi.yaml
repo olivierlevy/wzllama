@@ -1,0 +1,366 @@
+openapi: 3.0.0
+info:
+  title: wzllama API
+  description: HTTP API for wzllama - Local AI Stack Management
+  version: 1.0.0
+  contact:
+    name: wzllama
+    url: https://github.com/olivierlevy/wzllama
+
+servers:
+  - url: http://localhost:1133
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+
+  /api/v1/tools:
+    get:
+      summary: List all available tools
+      operationId: listTools
+      tags:
+        - Tools
+      responses:
+        '200':
+          description: List of tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ToolInfo'
+
+  /api/v1/tools/{id}:
+    get:
+      summary: Get tool details
+      operationId: getTool
+      tags:
+        - Tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolInfo'
+        '404':
+          description: Tool not found
+
+  /api/v1/tools/{id}/status:
+    get:
+      summary: Get tool installation status
+      operationId: getToolStatus
+      tags:
+        - Tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tool status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolStatus'
+
+  /api/v1/tools/{id}/install:
+    post:
+      summary: Install a tool
+      operationId: installTool
+      tags:
+        - Tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Installation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+
+  /api/v1/tools/{id}/update:
+    post:
+      summary: Update a tool
+      operationId: updateTool
+      tags:
+        - Tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+
+  /api/v1/tools/{id}/uninstall:
+    post:
+      summary: Uninstall a tool
+      operationId: uninstallTool
+      tags:
+        - Tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Uninstall result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+
+  /api/v1/tools/{id}/launch:
+    post:
+      summary: Launch a tool
+      operationId: launchTool
+      tags:
+        - Tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Launch result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+
+  /api/v1/models:
+    get:
+      summary: List installed models
+      operationId: listModels
+      tags:
+        - Models
+      responses:
+        '200':
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelInfo'
+
+  /api/v1/models/{name}/pull:
+    post:
+      summary: Pull a model
+      operationId: pullModel
+      tags:
+        - Models
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pull result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+
+  /api/v1/models/{name}/delete:
+    delete:
+      summary: Delete a model
+      operationId: deleteModel
+      tags:
+        - Models
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+
+  /api/v1/hardware:
+    get:
+      summary: Get hardware information
+      operationId: getHardwareInfo
+      tags:
+        - System
+      responses:
+        '200':
+          description: Hardware info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HardwareInfo'
+
+  /api/v1/status:
+    get:
+      summary: Get system status
+      operationId: getSystemStatus
+      tags:
+        - System
+      responses:
+        '200':
+          description: System status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  /api/v1/menu:
+    get:
+      summary: Get menu tree
+      operationId: getMenuTree
+      tags:
+        - Menu
+      responses:
+        '200':
+          description: Menu tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuTreeResponse'
+
+components:
+  schemas:
+    ToolInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          example: ollama
+        name:
+          type: string
+          example: Ollama
+        description:
+          type: string
+          example: Local AI model server
+        installed:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: installed
+        supports_agentic:
+          type: boolean
+          example: false
+        requires_docker:
+          type: boolean
+          example: false
+
+    ToolStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        installed:
+          type: boolean
+        status:
+          type: string
+
+    ModelInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        model:
+          type: string
+        size:
+          type: integer
+          format: int64
+        formatted_size:
+          type: string
+
+    HardwareInfo:
+      type: object
+      properties:
+        ram_gb:
+          type: number
+          format: float
+        has_gpu:
+          type: boolean
+        gpus:
+          type: array
+          items:
+            $ref: '#/components/schemas/GPUInfo'
+
+    GPUInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        vram_mb:
+          type: integer
+
+    SystemStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        ollama:
+          type: string
+
+    MenuTreeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        action_id:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuTreeResponse'
+
+    ActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string

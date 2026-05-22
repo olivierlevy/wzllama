@@ -12,7 +12,6 @@ impl Tool for OpenClawTool {
     fn id(&self) -> &str { "openclaw" }
     fn name(&self) -> &str { "OpenClaw" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openclaw.description") }
-    fn supports_fleets(&self) -> bool { true }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
         if shell::is_installed_with_local_bin("openclaw") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
     }
@@ -31,12 +30,6 @@ impl Tool for OpenClawTool {
 }
 
 impl OpenClawTool {
-    pub fn run_fleet(i18n: &I18n, project_name: &str) -> Result<()> {
-        display::comment(&i18n.t("fleet.launching").bold());
-        let cmd: String = format!("openclaw --profile {}", project_name.cyan());
-        println!("{}", &cmd.yellow());
-        shell::exec(&format!("openclaw --profile {}", project_name));
-    }
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         match WzllamaState::load().last_model.as_deref() {

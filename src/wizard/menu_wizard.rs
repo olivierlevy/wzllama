@@ -8,7 +8,22 @@ use crate::config::{I18n, WzllamaState};
 use crate::core::{HardwareInfo, ollama_api, llmfit_api, localmax_models};
 use crate::display;
 use crate::tools::{self, tool_trait::ToolStatus};
+use crate::menu_api::{MenuTree, MenuItem};
 use super::menu_header;
+
+/// Create the wizard menu tree structure
+pub fn build_menu_tree() -> MenuTree {
+    let root = MenuItem::branch("wizard")
+        .add_submenu(MenuItem::leaf("↩️ Retour"))
+        .add_submenu(MenuItem::leaf("📋 Général").with_action("usecase_general"))
+        .add_submenu(MenuItem::leaf("💻 Coding").with_action("usecase_coding"))
+        .add_submenu(MenuItem::leaf("🧠 Reasoning").with_action("usecase_reasoning"))
+        .add_submenu(MenuItem::leaf("💬 Chat").with_action("usecase_chat"))
+        .add_submenu(MenuItem::leaf("🎨 Multimodal").with_action("usecase_multimodal"))
+        .add_submenu(MenuItem::leaf("🔢 Embedding").with_action("usecase_embedding"));
+    
+    MenuTree::new("wizard").with_root(root)
+}
 
 /// Use cases for model filtering
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,9 +130,10 @@ fn models_wizard(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Re
             .map(|uc| uc.display_name(i18n))
             .collect();
         
+        // Retour en premier item (selon TODO.md ligne 72)
         let back_option = i18n.t("menu.back");
-        let mut all_items = display_names.clone();
-        all_items.push(back_option.clone());
+        let mut all_items = vec![back_option];
+        all_items.extend(display_names);
         
         let sel = Select::new()
             .with_prompt(i18n.t("wizard.usecase.choose"))
@@ -126,8 +142,9 @@ fn models_wizard(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Re
             .interact_opt()?;
         
         match sel {
-            Some(s) if s < use_cases.len() => {
-                if handle_usecase_selection(i18n, state, hw, use_cases[s])? {
+            Some(0) => return Ok(()),  // Retour en position 0
+            Some(s) if s <= use_cases.len() => {
+                if handle_usecase_selection(i18n, state, hw, use_cases[s - 1])? {  // -1 car Retour est en position 0
                     return Ok(()); // User selected a model and set it as default
                 }
                 // Otherwise continue the loop to show use case menu again
@@ -138,7 +155,7 @@ fn models_wizard(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Re
 }
 
 /// Handle use case selection - shows models and allows download selection
-fn handle_usecase_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, use_case: UseCase) -> Result<bool> {
+pub fn handle_usecase_selection(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, use_case: UseCase) -> Result<bool> {
     // Get local models first
     let local_models = ollama_api::get_models();
     let local_names: HashSet<String> = local_models.iter().map(|m| m.name.clone()).collect();
@@ -192,7 +209,8 @@ fn handle_usecase_selection(i18n: &I18n, state: &mut WzllamaState, hw: &Hardware
     } else {
         all_model_choices.push(i18n.t("wizard.action.launch_with_current_no_model"));
     }
-    all_model_choices.push(i18n.t("menu.back"));
+    // Retour en premier item (selon TODO.md ligne 72) - on l'ajoute au début
+    all_model_choices.insert(0, i18n.t("menu.back"));
     
     let sel = Select::new()
         .with_prompt(i18n.t("wizard.usecase.choose_model"))
@@ -201,9 +219,10 @@ fn handle_usecase_selection(i18n: &I18n, state: &mut WzllamaState, hw: &Hardware
         .interact_opt()?;
     
     match sel {
-        Some(s) if s < model_names.len() => {
+        Some(0) => Ok(false),  // Retour en position 0
+        Some(s) if s <= model_names.len() => {
             // User selected an installed model - set as default
-            let selected_model = &local_models[s].name;
+            let selected_model = &local_models[s - 1].name;  // -1 car Retour est en position 0
             state.last_model = Some(selected_model.clone());
             crate::config::state::save(state)?;
             display::success(&i18n.t_with_vars("wizard.model_selected", &[("model", selected_model)]));
@@ -212,23 +231,27 @@ fn handle_usecase_selection(i18n: &I18n, state: &mut WzllamaState, hw: &Hardware
             launch_tool_for_usecase(i18n, state, hw, use_case, selected_model)?;
             Ok(true)
         }
-        Some(s) if s < model_names.len() + available.len() => {
-            // User selected a model to download
-            let idx = s - model_names.len();
-            let chosen_model = &available[idx];
-            display::info(&format!("{}...", i18n.t_with_vars("wizard.downloading", &[("model", &chosen_model.name)])));
-            if let Err(e) = ollama_api::pull_model(&chosen_model.name) {
-                display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
+        Some(s) if s <= model_names.len() + available.len() + 1 => {
+            // User selected a model to download (index +1 car Retour en position 0)
+            let idx = s - model_names.len() - 1;
+            if idx < available.len() {
+                let chosen_model = &available[idx];
+                display::info(&format!("{}...", i18n.t_with_vars("wizard.downloading", &[("model", &chosen_model.name)])));
+                if let Err(e) = ollama_api::pull_model(&chosen_model.name) {
+                    display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
+                } else {
+                    state.last_model = Some(chosen_model.name.clone());
+                    crate::config::state::save(state)?;
+                    display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &chosen_model.name)]));
+                    launch_tool_for_usecase(i18n, state, hw, use_case, &chosen_model.name)?;
+                    return Ok(true);
+                }
+                Ok(false)
             } else {
-                state.last_model = Some(chosen_model.name.clone());
-                crate::config::state::save(state)?;
-                display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &chosen_model.name)]));
-                launch_tool_for_usecase(i18n, state, hw, use_case, &chosen_model.name)?;
-                return Ok(true);
+                Ok(false)
             }
-            Ok(false)
         }
-        Some(s) if s == model_names.len() + available.len() => {
+        Some(s) if s == model_names.len() + available.len() + 2 => {
             // Select tool for current use case (no model change)
             if let Some(ref model) = state.last_model {
                 let model_name = model.clone();
@@ -257,7 +280,7 @@ fn get_models_from_llmfit(use_case: UseCase) -> Vec<llmfit_api::LLMFitModel> {
 }
 
 /// Launch tool for a given use case with selected model
-fn launch_tool_for_usecase(i18n: &I18n, state: &mut WzllamaState, _hw: &HardwareInfo, use_case: UseCase, model: &str) -> Result<()> {
+pub fn launch_tool_for_usecase(i18n: &I18n, state: &mut WzllamaState, _hw: &HardwareInfo, use_case: UseCase, model: &str) -> Result<()> {
     let tools = get_priority_tools_for_usecase(use_case, state);
     
     // Filter to only installed tools
@@ -292,8 +315,9 @@ fn launch_tool_for_usecase(i18n: &I18n, state: &mut WzllamaState, _hw: &Hardware
         })
         .collect();
     
-    let mut items: Vec<String> = tool_displays;
-    items.push(i18n.t("menu.back"));
+    // Retour en premier item (selon TODO.md ligne 72)
+    let mut items: Vec<String> = vec![i18n.t("menu.back")];
+    items.extend(tool_displays);
     
     let sel = Select::new()
         .with_prompt(i18n.t("wizard.select_tool"))
@@ -302,8 +326,9 @@ fn launch_tool_for_usecase(i18n: &I18n, state: &mut WzllamaState, _hw: &Hardware
         .interact_opt()?;
     
     match sel {
-        Some(s) if s < installed_tools.len() => {
-            let tool_id = installed_tools[s].clone();
+        Some(0) => {}  // Retour en position 0
+        Some(s) if s <= installed_tools.len() => {
+            let tool_id = installed_tools[s - 1].clone();  // -1 car Retour est en position 0
             state.last_tool = Some(tool_id.clone());
             crate::config::state::save(state)?;
             let tool = tools::get_tool(&tool_id).unwrap();

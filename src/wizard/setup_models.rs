@@ -53,17 +53,9 @@ pub fn ensure_first_models(i18n: &I18n, hw: &HardwareInfo, state: &mut WzllamaSt
         crate::config::state::set_last_model(&heavy_model.name, state);
     }
 
-    // Update la config env with installed models
-    let mut env_config = crate::config::env::EnvConfig::load();
-    if let Some((heavy_model, _)) = heavy.first() {
-        env_config.models.code = heavy_model.name.clone();
-        env_config.models.book = heavy_model.name.clone();
-        env_config.models.chat = heavy_model.name.clone();
-    }
-    if let Some((light_model, _)) = light.first() {
-        env_config.models.agent = light_model.name.clone();
-    }
-    env_config.save()?;
+    // Update la config env (removed models section - now handled by state)
+    let env_config = crate::config::env::EnvConfig::load();
+    let _ = env_config.save();
 
     display::success(&i18n.t("models.ready"));
     Ok(())

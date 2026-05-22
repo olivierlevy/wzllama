@@ -42,10 +42,6 @@ impl Tool for MockTool {
         Ok(())
     }
     
-    fn supports_fleets(&self) -> bool {
-        true
-    }
-    
     fn requires_docker(&self) -> bool {
         self.id == "open_webui"
     }
@@ -165,7 +161,7 @@ fn test_tool_requires_docker() {
 }
 
 #[test]
-fn test_tool_supports_fleets() {
+fn test_tool_supports_agentic() {
     let tool = MockTool {
         id: "id",
         name: "Name",
@@ -173,7 +169,8 @@ fn test_tool_supports_fleets() {
         installed: false,
     };
     
-    assert!(tool.supports_fleets());
+    // By default, tools don't support agentic mode
+    assert!(!tool.supports_agentic());
 }
 
 #[test]

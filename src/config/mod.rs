@@ -1,5 +1,4 @@
 pub mod env;
-pub mod fleets;
 pub mod i18n;
 pub mod logging;
 pub mod paths;
