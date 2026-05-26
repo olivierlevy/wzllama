@@ -198,9 +198,9 @@ RUST_LOG=wzllama::core::ollama_api wzllama
 ```rust
 use log::{info, debug, warn, error};
 
-info!("wzllama v0.2.0 démarré");
+info!("wzllama v0.3.0 started");
 debug!("Hardware detected: {:?}", hw);
-warn!("Docker non prêt: {}", e);
+warn!("Docker not ready: {}", e);
 ```
 
 ## Internationalisation (i18n)
