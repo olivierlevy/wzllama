@@ -6,7 +6,7 @@ use crate::config;
 use crate::core::{ollama_api, shell};
 
 #[derive(Parser)]
-#[command(name = "wzllama", about = "Assistant IA locale", version = "0.2.0")]
+#[command(name = "wzllama", about = "Assistant IA locale", version = "0.3.0")]
 pub struct Cli {
     #[arg(long, global = true)]
     pub dry_run: bool,
@@ -70,10 +70,10 @@ impl Cli {
                 let exists = shell::run("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$' || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^open-webui$'").is_ok();
                 if exists {
                     shell::run("docker start open-webui 2>/dev/null || sudo docker start open-webui")?;
-                    println!("✅ Open WebUI démarré");
+                    println!("✅ Open WebUI started");
                 } else {
                     shell::run("docker run -d --network=host --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama 2>/dev/null || sudo docker run -d --network=host --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama")?;
-                    println!("✅ Open WebUI installé");
+                    println!("✅ Open WebUI installed");
                 }
                 Ok(())
             }

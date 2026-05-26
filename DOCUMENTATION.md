@@ -1,6 +1,6 @@
 # wzllama Documentation
 
-**Version:** 0.2.0  
+**Version:** 0.3.0  
 **Type:** Wizard CLI pour stack IA locale  
 **Langue:** Français/English (i18n support)
 

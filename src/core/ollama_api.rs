@@ -104,7 +104,7 @@ pub fn get_running_models() -> Vec<String> {
 pub fn pull_model(model: &str) -> Result<()> {
     println!("📥 Téléchargement de {}...", model.cyan().bold());
     crate::core::shell::run_live(&format!("ollama pull {}", model))?;
-    println!("   ✅ {} installé !", model.green());
+    println!("   ✅ {} installed !", model.green());
     Ok(())
 }
 

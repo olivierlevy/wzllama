@@ -11,7 +11,7 @@ A clear and concise description of what the bug is.
 
 ## Environment
 - OS: [e.g., Ubuntu 24.04, macOS 15.0]
-- wzllama version: [e.g., 0.2.0] (run `wzllama --version`)
+- wzllama version: [e.g., 0.3.0] (run `wzllama --version`)
 - Ollama version: [if applicable]
 
 ## Steps to Reproduce

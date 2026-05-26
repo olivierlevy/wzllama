@@ -32,7 +32,7 @@ impl OllamaDoctor {
         let failed = shell::run("systemctl is-failed ollama.service 2>/dev/null").is_ok();
         if failed {
             shell::run("sudo systemctl reset-failed ollama.service 2>/dev/null")?;
-            fixes.push("Service systemd réinitialisé".into());
+            fixes.push("Service systemd reset".into());
         }
         
         // 4. Démarrer si nécessaire
@@ -42,7 +42,7 @@ impl OllamaDoctor {
                 if ollama_api::detect_url().is_some() { break; }
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
-            fixes.push("Ollama démarré".into());
+            fixes.push("Ollama started".into());
         }
         
         Ok(fixes)

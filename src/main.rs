@@ -48,7 +48,7 @@ fn main() -> Result<()> {
     config::paths::ensure_dirs()?;
     config::logging::init()?;
     config::logging::install_embedded_i18n()?;
-    info!("wzllama v0.2.0 démarré");
+    info!("wzllama v0.3.0 started");
 
     let cli = Cli::parse_args();
     
