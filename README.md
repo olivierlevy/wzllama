@@ -1,5 +1,7 @@
 # wzllama - Menu API Documentation
 
+> **Documentation de migration disponible**: Voir [`docs/migration/`](docs/migration/README.md) pour une documentation complète permettant de reconstruire ce projet dans un autre langage.
+
 ## Overview
 
 The `menu_api` module provides a hierarchical, configurable menu system for the wzllama CLI application. It separates menu structure from business logic, enabling dynamic menu generation and flexible action dispatch.

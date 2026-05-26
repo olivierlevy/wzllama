@@ -482,3 +482,140 @@ Action: Désinstalle avec confirmation wzllama
   English (en)
   Français (fr)
 ```
+
+
+***
+
+# Mission : Créer une documentation complète en Markdown pour recréer un programme wzllama
+
+## Contexte
+Je possède l'intégralité du code source d'un programme wzllama. Je souhaite le réécrire dans un autre langage de programmation. Tu dois analyser mon code et générer une série de fichiers Markdown **ultra-détaillés** qui me permettront de reconstruire ce programme **fonctionnalité par fonctionnalité**, sans avoir besoin de relire le code source original.
+
+## Ce que je veux obtenir
+
+Génère **plusieurs fichiers Markdown** structurés comme suit :
+
+### 1. `01-architecture-globale.md`
+- Architecture générale du programme (diagramme textuel ou description claire)
+- Structure des dossiers et fichiers
+- Relations entre les composants/modules
+- Patrons de conception utilisés (design patterns)
+- Flux de données principal (data flow)
+
+### 2. `02-fonctionnalités-completes.md`
+Pour **CHAQUE fonctionnalité** du programme :
+- Nom de la fonctionnalité
+- Description détaillée de ce qu'elle fait
+- Entrées (inputs) : types, formats, contraintes
+- Sorties (outputs) : types, formats, comportements
+- Logique métier complète (algorithme détaillé)
+- Cas limites gérés (edge cases)
+- Exemples concrets d'utilisation
+
+### 3. `03-techniques-implémentation.md`
+Pour **CHAQUE technique/technologie** utilisée :
+- Nom de la technique/bibliothèque/framework
+- Version utilisée (si identifiable)
+- Pourquoi elle est utilisée
+- Comment elle est implémentée dans le code
+- Configuration nécessaire
+- Dépendances et prérequis
+- Alternatives possibles pour le nouveau langage
+
+### 4. `04-structures-données.md`
+- Toutes les structures de données (classes, structs, types, interfaces)
+- Champs/attributs avec types et descriptions
+- Relations entre structures (héritage, composition, agrégation)
+- Constantes et valeurs fixes
+- Énumerations (enums)
+
+### 5. `05-api-et-interfaces.md` (si applicable)
+- Toutes les fonctions/publiques méthodes avec :
+  - Signature complète
+  - Paramètres (nom, type, description, valeur par défaut, obligatoire/optionnel)
+  - Valeur de retour (type, description)
+  - Exceptions levées
+  - Exemples d'appel
+- API externes consommées (endpoints, authentification, formats de données)
+
+### 6. `06-logique-métier-détaillée.md`
+- Algorithmes complexes expliqués étape par étape
+- Règles de métier (business rules)
+- Formules de calcul (avec équations si nécessaire)
+- Workflows et processus métier
+- Estados machines (si applicable)
+
+### 7. `07-gestion-erreurs-journalisation.md`
+- Types d'erreurs gérés
+- Codes d'erreur et messages
+- Stratégie de gestion d'exceptions
+- Système de logging (niveaux, formats, destinations)
+- Messages d'erreur utilisateur
+
+### 8. `08-concurrency-performance.md` (si applicable)
+- Gestion du multithreading/multiprocessing
+- Synchronisation (locks, mutex, sémaphores)
+- Optimisations de performance implémentées
+- Goulots d'étranglement connus
+- Stratégies de caching
+
+### 9. `09-persistancedonnées.md` (si applicable)
+- Type de stockage (base de données, fichiers, cache)
+- Schéma de base de données (tables, colonnes, types, relations)
+- Requêtes SQL/NoSQL utilisées
+- Formats de fichiers (JSON, XML, binaire, etc.)
+- Sérialisation/désérialisation
+
+### 10. `10-configuration-environnement.md`
+- Variables d'environnement nécessaires
+- Fichiers de configuration (formats, paramètres)
+- Prérequis système (OS, bibliothèques système)
+- Ports réseau utilisés
+- Secrets et gestion des credentials
+
+### 11. `11-tests-qualité.md`
+- Types de tests implémentés (unitaires, intégration, E2E)
+- Couverture de code
+- Données de test
+- Critères de qualité
+
+### 12. `12-guide-migration-langage-nouveau.md`
+- Tableau de correspondance : ancien langage → nouveau langage
+  - Types de données
+  - Fonctions/bibliothèques équivalentes
+  - Syntaxe critique
+  - Particularités à retenir
+- Structure recommandée pour le nouveau projet
+- Checklist de migration étape par étape
+- Pièges courants à éviter lors de la réécriture
+
+## Exigences de qualité
+
+Pour chaque fichier Markdown :
+
+✅ **Exhaustif** : rien d'important ne doit être omis  
+✅ **Détaillé** : chaque concept doit être expliqué suffisamment pour être réimplémenté sans le code original  
+✅ **Clair** : langage simple, éviter le jargon non expliqué  
+✅ **Structuré** : utiliser titres, sous-titres, listes, tableaux, blocs de code  
+✅ **Avec exemples** : inclure des exemples de code pseudo ou du nouveau langage cible quand c'est pertinent  
+✅ **Avec références** : citer quelles parties du code source original correspondent à chaque section  
+
+## Format de sortie
+
+- Génère chaque section comme un **fichier Markdown séparé**
+- Utilise la syntaxe Markdown complète :
+  - `#` pour les titres hiérarchisés
+  - Tableaux pour les comparaisons
+  - Blocs de code avec spécification du langage
+  - Listes numérotées et à puces
+  - Gras/italique pour mettre en évidence
+  - Liens internes entre fichiers (si pertinent)
+- Ajoute un `README.md` principal avec la table des matières et les liens vers tous les fichiers
+
+## Instructions d'analyse du code
+
+1. Analyse **tous les fichiers** de code source que je vais te fournir
+2. Identifie **toutes les fonctionnalités** même celles qui semblent mineures
+3. Repère **toutes les dépendances** internes et externes
+4. Documente **tous les comportements** y compris les comportements implicites
+5. Note **toutes les hypothèses** faites par le code original
