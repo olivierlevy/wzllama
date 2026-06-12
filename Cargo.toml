@@ -28,11 +28,7 @@ env_logger = "0.11"
 colored = "3.1"
 which = "8.0"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
-# Unix libc for fork/exec
-libc = "0.2"
-# Terminal PTY for embedded terminal (optional - for future use)
-# tui-term = "0.3"  # Commented out due to enumset_derive incompatibility
-# Keep dialoguer for CLI fallback and tools
+# Terminal UI
 dialoguer = "0.12"
 # HTML scraper for ollama library
 scraper = "0.21"
@@ -44,3 +40,7 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors"] }
 # Shared state for API
 dashmap = "6.1"
+
+# Unix libc for fork/exec (Unix only)
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

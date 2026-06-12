@@ -231,27 +231,23 @@ pub fn handle_usecase_selection(i18n: &I18n, state: &mut WzllamaState, hw: &Hard
             launch_tool_for_usecase(i18n, state, hw, use_case, selected_model)?;
             Ok(true)
         }
-        Some(s) if s <= model_names.len() + available.len() + 1 => {
+        Some(s) if s <= model_names.len() + available.len() => {
             // User selected a model to download (index +1 car Retour en position 0)
             let idx = s - model_names.len() - 1;
-            if idx < available.len() {
-                let chosen_model = &available[idx];
-                display::info(&format!("{}...", i18n.t_with_vars("wizard.downloading", &[("model", &chosen_model.name)])));
-                if let Err(e) = ollama_api::pull_model(&chosen_model.name) {
-                    display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
-                } else {
-                    state.last_model = Some(chosen_model.name.clone());
-                    crate::config::state::save(state)?;
-                    display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &chosen_model.name)]));
-                    launch_tool_for_usecase(i18n, state, hw, use_case, &chosen_model.name)?;
-                    return Ok(true);
-                }
-                Ok(false)
+            let chosen_model = &available[idx];
+            display::info(&format!("{}...", i18n.t_with_vars("wizard.downloading", &[("model", &chosen_model.name)])));
+            if let Err(e) = ollama_api::pull_model(&chosen_model.name) {
+                display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
             } else {
-                Ok(false)
+                state.last_model = Some(chosen_model.name.clone());
+                crate::config::state::save(state)?;
+                display::success(&i18n.t_with_vars("models.downloaded_success", &[("model", &chosen_model.name)]));
+                launch_tool_for_usecase(i18n, state, hw, use_case, &chosen_model.name)?;
+                return Ok(true);
             }
+            Ok(false)
         }
-        Some(s) if s == model_names.len() + available.len() + 2 => {
+        Some(s) if s == model_names.len() + available.len() + 1 => {
             // Select tool for current use case (no model change)
             if let Some(ref model) = state.last_model {
                 let model_name = model.clone();
