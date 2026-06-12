@@ -44,6 +44,7 @@ impl Tool for OpenWebUITool {
 impl OpenWebUITool {
     pub fn pull() -> Result<()> {
         docker::run_live("pull ghcr.io/open-webui/open-webui:ollama")?;
+        #[cfg(unix)]
         docker::run_live("run -d \
             --network=host \
             --add-host=host.docker.internal:host-gateway \
@@ -52,6 +53,14 @@ impl OpenWebUITool {
             --name open-webui \
             --restart always \
             ghcr.io/open-webui/open-webui:ollama")?;
+        #[cfg(not(unix))]
+        docker::run_live("run -d \
+            -p 3000:8080 \
+            -v open-webui:/app/backend/data \
+            -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+            --name open-webui \
+            --restart always \
+            ghcr.io/open-webui/open-webui:main")?;
         Ok(())
     }
     pub fn install(i18n: &I18n) -> Result<()> {

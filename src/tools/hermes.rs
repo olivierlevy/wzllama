@@ -33,11 +33,18 @@ impl HermesTool {
         let _ = i18n;
         match WzllamaState::load().last_model.as_deref() {
             Some(m) => {
-                let cmd: String = format!("ollama launch hermes --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                let cmd = format!("ollama launch hermes --model {}", m);
+                shell::exec(&cmd);
             }
             None => {
+                #[cfg(unix)]
                 shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --no-venv --skip-setup")?;
+                #[cfg(not(unix))]
+                {
+                    display::info("Opening Hermes Agent download page...");
+                    shell::open_url("https://github.com/NousResearch/hermes-agent");
+                    display::info("Install Hermes Agent from https://github.com/NousResearch/hermes-agent");
+                }
             }
         }
         Ok(())
@@ -45,8 +52,10 @@ impl HermesTool {
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating Hermes...");
-        // Re-run install script for update
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -s -- --no-venv --skip-setup")?;
+        #[cfg(not(unix))]
+        shell::open_url("https://github.com/NousResearch/hermes-agent");
         display::success("✅ Hermes updated");
         Ok(())
     }
@@ -54,8 +63,16 @@ impl HermesTool {
         if !Confirm::new().with_prompt(i18n.t("tool.hermes.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo rm -f /usr/bin/hermes ~/.local/bin/hermes 2>/dev/null");
-        let _ = shell::run_quiet("rm -rf ~/.hermes* 2>/dev/null");
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("sudo rm -f /usr/bin/hermes ~/.local/bin/hermes 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.hermes* 2>/dev/null");
+        }
+        #[cfg(not(unix))]
+        {
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".hermes"));
+        }
         display::success(&i18n.t("tool.hermes.uninstalled"));
         Ok(())
     }

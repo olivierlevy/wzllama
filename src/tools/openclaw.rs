@@ -1,5 +1,4 @@
 use anyhow::Result;
-use colored::*;
 use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
@@ -55,10 +54,19 @@ impl OpenClawTool {
             return Ok(());
         }
         let _ = shell::run_quiet("openclaw uninstall --all --yes --non-interactive 2>/dev/null");
-        let _ = shell::run_quiet("sudo npm uninstall -g openclaw 2>/dev/null");
-        let _ = shell::run_quiet("rm -f ~/.local/bin/openclaw 2>/dev/null");
-        let _ = shell::run_quiet("rm -rf ~/.openclaw* 2>/dev/null");
-        let _ = shell::run_quiet("systemctl --user disable openclaw-gateway-* 2>/dev/null");
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("sudo npm uninstall -g openclaw 2>/dev/null");
+            let _ = shell::run_quiet("rm -f ~/.local/bin/openclaw 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.openclaw* 2>/dev/null");
+            let _ = shell::run_quiet("systemctl --user disable openclaw-gateway-* 2>/dev/null");
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = shell::run_quiet("npm uninstall -g openclaw");
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".openclaw"));
+        }
         display::success(&i18n.t("tool.openclaw.uninstalled"));
         Ok(())
     }

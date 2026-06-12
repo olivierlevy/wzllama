@@ -64,9 +64,18 @@ impl PiTool {
         if !Confirm::new().with_prompt(i18n.t("tool.pi.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo npm uninstall -g @earendil-works/pi-coding-agent 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.pi 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.local/bin/pi 2>/dev/null").ok();
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("sudo npm uninstall -g @earendil-works/pi-coding-agent 2>/dev/null").ok();
+            let _ = shell::run_quiet("rm -rf ~/.pi 2>/dev/null").ok();
+            let _ = shell::run_quiet("rm -rf ~/.local/bin/pi 2>/dev/null").ok();
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = shell::run_quiet("npm uninstall -g @earendil-works/pi-coding-agent");
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".pi"));
+        }
         display::success(&i18n.t("tool.pi.uninstalled"));
         Ok(())
     }

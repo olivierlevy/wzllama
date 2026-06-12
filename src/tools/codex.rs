@@ -4,7 +4,6 @@ use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
-
 pub struct CodexTool;
 
 impl Tool for CodexTool {
@@ -47,9 +46,18 @@ impl CodexTool {
         if !Confirm::new().with_prompt(i18n.t("tool.codex.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo npm uninstall -g @openai/codex 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.codex 2>/dev/null").ok();
-        let _ = shell::run_quiet("rm -rf ~/.local/bin/codex 2>/dev/null").ok();
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("sudo npm uninstall -g @openai/codex 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.codex 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.local/bin/codex 2>/dev/null");
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = shell::run_quiet("npm uninstall -g @openai/codex");
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".codex"));
+        }
         display::success(&i18n.t("tool.codex.uninstalled"));
         Ok(())
     }

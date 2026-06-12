@@ -29,15 +29,24 @@ impl Tool for PoolTool {
 impl PoolTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
-        println!("ℹ️  https://github.com/poolsideai/pool");
+        display::info("ℹ️  https://github.com/poolsideai/pool");
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://downloads.poolside.ai/pool/install.sh | sh")?;
+        #[cfg(not(unix))]
+        {
+            display::info("Opening Pool download page...");
+            shell::open_url("https://github.com/poolsideai/pool");
+            display::info("Download and install Pool from https://github.com/poolsideai/pool");
+        }
         Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating Pool...");
-        // Re-run install script for update
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://downloads.poolside.ai/pool/install.sh | sh")?;
+        #[cfg(not(unix))]
+        shell::open_url("https://github.com/poolsideai/pool");
         display::success("✅ Pool updated");
         Ok(())
     }

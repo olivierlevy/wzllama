@@ -14,8 +14,8 @@ impl Tool for LLMFitTool {
     fn name(&self) -> &str { "LLMFit" }
     fn description(&self, i18n: &I18n) -> String { i18n.t("tool.llmfit.description") }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        // Check if llmfit is installed via uv or as binary
-        if shell::is_installed_with_local_bin("llmfit") || shell::run_quiet("uv tool list 2>/dev/null | grep -q llmfit").is_ok() {
+        // Check if llmfit is installed via which (cross-platform)
+        if shell::is_installed_with_local_bin("llmfit") {
             ToolStatus::Installed
         } else {
             ToolStatus::NotInstalled
@@ -95,7 +95,13 @@ impl LLMFitTool {
             return Ok(());
         }
         let _ = shell::run_quiet("uv tool uninstall llmfit 2>/dev/null");
+        #[cfg(unix)]
         let _ = shell::run_quiet("rm -f ~/.local/bin/llmfit 2>/dev/null");
+        #[cfg(not(unix))]
+        {
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_file(home.join(".local").join("bin").join("llmfit.exe"));
+        }
         LLMFitTool::stop_http()?;
         display::success(&i18n.t("tool.llmfit.uninstalled"));
         Ok(())
@@ -104,7 +110,7 @@ impl LLMFitTool {
     /// Ensure llmfit is installed and HTTP server is running (for wzllama integration)
     pub fn ensure_running(i18n: &I18n) -> Result<()> {
         // Check if llmfit is installed
-        if !shell::is_installed("llmfit") && shell::run_quiet("uv tool list 2>/dev/null | grep -q llmfit").is_err() {
+        if !shell::is_installed_with_local_bin("llmfit") {
             display::warning(&i18n.t("llmfit.not_installed"));
             if Confirm::new()
                 .with_prompt(i18n.t("llmfit.install_now"))

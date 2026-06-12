@@ -33,13 +33,22 @@ impl Tool for ClaudeCodeTool {
 impl ClaudeCodeTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
+        #[cfg(not(unix))]
+        {
+            display::info("Installing Claude Code via npm...");
+            shell::run_live("npm install -g @anthropic-ai/claude-code")?;
+        }
         Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating Claude Code...");
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://claude.ai/install.sh | bash")?;
+        #[cfg(not(unix))]
+        shell::run_live("npm update -g @anthropic-ai/claude-code")?;
         display::success("✅ Claude Code updated");
         Ok(())
     }
@@ -47,10 +56,19 @@ impl ClaudeCodeTool {
         if !Confirm::new().with_prompt(i18n.t("tool.claude.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("sudo npm uninstall -g @anthropic-ai/claude-code 2>/dev/null");
-        let _ = shell::run_quiet("sudo rm -f /usr/bin/claude 2>/dev/null");
-        let _ = shell::run_quiet("rm -f ~/.local/bin/claude 2>/dev/null");
-        let _ = shell::run_quiet("rm -rf ~/.claude* 2>/dev/null");
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("sudo npm uninstall -g @anthropic-ai/claude-code 2>/dev/null");
+            let _ = shell::run_quiet("sudo rm -f /usr/bin/claude 2>/dev/null");
+            let _ = shell::run_quiet("rm -f ~/.local/bin/claude 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.claude* 2>/dev/null");
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = shell::run_quiet("npm uninstall -g @anthropic-ai/claude-code");
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".claude"));
+        }
         display::success(&i18n.t("tool.claude.uninstalled"));
         Ok(())
     }

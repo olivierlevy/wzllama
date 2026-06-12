@@ -265,27 +265,33 @@ pub fn is_installed_quiet(cmd: &str) -> bool {
 
 /// Check if a command is installed, including in ~/.local/bin and other common locations
 pub fn is_installed_with_local_bin(cmd: &str) -> bool {
-    // First check known installation locations directly (more reliable than PATH lookup)
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
-    
-    // Common locations for different tools
-    let check_paths = [
-        format!("{}/.local/bin/{}", home, cmd),          // Standard local bin
-        format!("{}/.opencode/bin/{}", home, cmd),       // OpenCode
-        format!("{}/.factoryai/bin/{}", home, cmd),      // Droid/FactoryAI
-        format!("{}/go/bin/{}", home, cmd),              // Go tools
-        format!("/usr/local/bin/{}", cmd),                // System local
-        format!("/usr/bin/{}", cmd),                      // System bin
-    ];
-    
-    for path in &check_paths {
-        if std::path::Path::new(path).exists() {
-            return true;
-        }
+    // Fast path: check PATH first via which
+    if which::which(cmd).is_ok() {
+        return true;
     }
-    
-    // Fallback to PATH lookup
-    is_installed_quiet(cmd)
+
+    // Check well-known install locations not always on PATH
+    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+
+    #[cfg(unix)]
+    let extra_paths = vec![
+        home.join(".local/bin").join(cmd),
+        home.join(".opencode/bin").join(cmd),
+        home.join(".factoryai/bin").join(cmd),
+        home.join("go/bin").join(cmd),
+        std::path::PathBuf::from("/usr/local/bin").join(cmd),
+        std::path::PathBuf::from("/usr/bin").join(cmd),
+    ];
+
+    #[cfg(not(unix))]
+    let extra_paths = vec![
+        home.join("AppData").join("Local").join("Programs").join(cmd).with_extension("exe"),
+        home.join("AppData").join("Roaming").join("npm").join(cmd).with_extension("cmd"),
+        home.join("AppData").join("Roaming").join("npm").join(cmd),
+        home.join(".local").join("bin").join(cmd).with_extension("exe"),
+    ];
+
+    extra_paths.iter().any(|p| p.exists())
 }
 
 /// Run a command without exiting raw mode (for internal use)
@@ -533,4 +539,94 @@ pub fn open_url(url: &str) {
     };
 
     let _ = result;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_installed_with_local_bin;
+    use std::ffi::OsString;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct EnvGuard {
+        vars: Vec<(&'static str, Option<OsString>)>,
+    }
+
+    impl EnvGuard {
+        fn capture(keys: &[&'static str]) -> Self {
+            Self {
+                vars: keys
+                    .iter()
+                    .map(|key| (*key, std::env::var_os(key)))
+                    .collect(),
+            }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, value) in &self.vars {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    fn test_root(name: &str) -> PathBuf {
+        std::env::current_dir()
+            .unwrap()
+            .join("target")
+            .join("shell-tests")
+            .join(name)
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn detects_windows_home_local_bin_without_home_env() {
+        let _guard = env_lock().lock().unwrap();
+        let _env = EnvGuard::capture(&["HOME", "USERPROFILE", "APPDATA"]);
+        let root = test_root("userprofile-local-bin");
+        let bin = root.join(".local").join("bin");
+        let cmd = "wzllama-home-local-bin-test";
+
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&bin).unwrap();
+        fs::write(bin.join(format!("{cmd}.cmd")), "@echo off\r\n").unwrap();
+
+        std::env::remove_var("HOME");
+        std::env::set_var("USERPROFILE", &root);
+        std::env::set_var("APPDATA", root.join("AppData").join("Roaming"));
+
+        assert!(is_installed_with_local_bin(cmd));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn detects_windows_npm_shim_from_appdata() {
+        let _guard = env_lock().lock().unwrap();
+        let _env = EnvGuard::capture(&["HOME", "USERPROFILE", "APPDATA"]);
+        let root = test_root("appdata-npm");
+        let appdata = root.join("AppData").join("Roaming");
+        let npm_bin = appdata.join("npm");
+        let cmd = "wzllama-appdata-npm-test";
+
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&npm_bin).unwrap();
+        fs::write(npm_bin.join(format!("{cmd}.cmd")), "@echo off\r\n").unwrap();
+
+        std::env::remove_var("HOME");
+        std::env::set_var("USERPROFILE", &root);
+        std::env::set_var("APPDATA", &appdata);
+
+        assert!(is_installed_with_local_bin(cmd));
+    }
 }

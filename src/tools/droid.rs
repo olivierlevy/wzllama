@@ -4,7 +4,6 @@ use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
-
 pub struct DroidTool;
 
 impl Tool for DroidTool {
@@ -33,15 +32,30 @@ impl Tool for DroidTool {
 impl DroidTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
-        let xdg_cmd = crate::core::system::get_package_install_command("xdg-utils")?;
-        shell::run_live(&xdg_cmd)?;
-        shell::run_live("curl -fsSL https://app.factory.ai/cli | sh")?;
+        #[cfg(unix)]
+        {
+            let xdg_cmd = crate::core::system::get_package_install_command("xdg-utils")?;
+            shell::run_live(&xdg_cmd)?;
+            shell::run_live("curl -fsSL https://app.factory.ai/cli | sh")?;
+        }
+        #[cfg(not(unix))]
+        {
+            display::info("Opening Droid (Factory AI) download page...");
+            shell::open_url("https://app.factory.ai/download");
+            display::info("Please install Droid manually from https://app.factory.ai/download");
+        }
         Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating Droid...");
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://app.factory.ai/cli | sh")?;
+        #[cfg(not(unix))]
+        {
+            shell::open_url("https://app.factory.ai/download");
+            display::info("Please update Droid from https://app.factory.ai/download");
+        }
         display::success("✅ Droid updated");
         Ok(())
     }
@@ -49,8 +63,16 @@ impl DroidTool {
         if !Confirm::new().with_prompt(i18n.t("tool.droid.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("rm -f ~/.local/bin/droid /usr/local/bin/droid 2>/dev/null");
-        let _ = shell::run_quiet("rm -rf ~/.factoryai 2>/dev/null");
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("rm -f ~/.local/bin/droid /usr/local/bin/droid 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.factoryai 2>/dev/null");
+        }
+        #[cfg(not(unix))]
+        {
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".factoryai"));
+        }
         display::success(&i18n.t("tool.droid.uninstalled"));
         Ok(())
     }

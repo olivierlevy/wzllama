@@ -33,13 +33,22 @@ impl Tool for OpenCodeTool {
 impl OpenCodeTool {
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://opencode.ai/install | bash")?;
+        #[cfg(not(unix))]
+        {
+            display::info("Installing OpenCode via npm...");
+            shell::run_live("npm install -g @opencode-ai/cli")?;
+        }
         Ok(())
     }
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating OpenCode...");
+        #[cfg(unix)]
         shell::run_live("curl -fsSL https://opencode.ai/install | bash")?;
+        #[cfg(not(unix))]
+        shell::run_live("npm update -g @opencode-ai/cli")?;
         display::success("✅ OpenCode updated");
         Ok(())
     }
@@ -47,8 +56,17 @@ impl OpenCodeTool {
         if !Confirm::new().with_prompt(i18n.t("tool.opencode.uninstall_confirm")).default(false).interact()? {
             return Ok(());
         }
-        let _ = shell::run_quiet("rm -f /usr/local/bin/opencode ~/.local/bin/opencode 2>/dev/null");
-        let _ = shell::run_quiet("rm -rf ~/.opencode* 2>/dev/null");
+        #[cfg(unix)]
+        {
+            let _ = shell::run_quiet("rm -f /usr/local/bin/opencode ~/.local/bin/opencode 2>/dev/null");
+            let _ = shell::run_quiet("rm -rf ~/.opencode* 2>/dev/null");
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = shell::run_quiet("npm uninstall -g @opencode-ai/cli");
+            let home = dirs::home_dir().unwrap_or_default();
+            let _ = std::fs::remove_dir_all(home.join(".opencode"));
+        }
         display::success(&i18n.t("tool.opencode.uninstalled"));
         Ok(())
     }
