@@ -1,4 +1,5 @@
 pub mod tool_trait;
+pub mod catalog;
 pub mod docker;
 pub mod open_webui;
 pub mod ollama;

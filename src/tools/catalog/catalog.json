@@ -1,0 +1,28 @@
+{
+  "version": "2026-06-12",
+  "tools": [
+    {"id": "claude_code", "name": "Claude Code", "slug": "claude-code", "category": "coding_agent", "install_cmd": "npm install -g @anthropic-ai/claude-code", "description_fallback": "AI coding agent by Anthropic"},
+    {"id": "codex", "name": "Codex CLI", "slug": "codex", "category": "coding_agent", "install_cmd": "npm install -g @openai/codex", "description_fallback": "OpenAI Codex CLI coding agent"},
+    {"id": "copilot_cli", "name": "Copilot CLI", "slug": "copilot-cli", "category": "coding_agent", "install_cmd": null, "description_fallback": "GitHub Copilot for the terminal"},
+    {"id": "cline", "name": "Cline CLI", "slug": "cline", "category": "coding_agent", "install_cmd": "npm install -g cline", "description_fallback": "Autonomous coding agent for interactive terminal sessions"},
+    {"id": "codex-app", "name": "Codex App", "slug": "codex-app", "category": "coding_agent", "install_cmd": null, "description_fallback": "OpenAI Codex graphical application"},
+    {"id": "droid", "name": "Droid", "slug": "droid", "category": "coding_agent", "install_cmd": null, "description_fallback": "Factory AI autonomous coding agent"},
+    {"id": "goose", "name": "Goose", "slug": "goose", "category": "coding_agent", "install_cmd": null, "description_fallback": "Block open-source AI coding agent"},
+    {"id": "oh-my-pi", "name": "Oh My Pi", "slug": "oh-my-pi", "category": "coding_agent", "install_cmd": null, "description_fallback": "Oh My Pi AI coding agent"},
+    {"id": "pi", "name": "Pi", "slug": "pi", "category": "coding_agent", "install_cmd": "npm install -g pi-agent", "description_fallback": "Pi AI coding agent"},
+    {"id": "pool", "name": "Pool", "slug": "pool", "category": "coding_agent", "install_cmd": null, "description_fallback": "Poolside AI coding agent"},
+    {"id": "opencode", "name": "OpenCode", "slug": "opencode", "category": "coding_agent", "install_cmd": "npm install -g @opencode-ai/cli", "description_fallback": "Open-source AI coding agent"},
+    {"id": "openclaw", "name": "OpenClaw", "slug": "openclaw", "category": "assistant", "install_cmd": "npm install -g openclaw", "description_fallback": "Multi-agent AI assistant"},
+    {"id": "hermes_agent", "name": "Hermes Agent", "slug": "hermes", "category": "assistant", "install_cmd": null, "description_fallback": "Hermes AI assistant CLI"},
+    {"id": "hermes-desktop", "name": "Hermes Desktop", "slug": "hermes-desktop", "category": "assistant", "install_cmd": null, "description_fallback": "Hermes AI desktop application"},
+    {"id": "vscode", "name": "VS Code", "slug": "vscode", "category": "ide", "install_cmd": null, "description_fallback": "Visual Studio Code with Ollama via GitHub Copilot Chat"},
+    {"id": "cline-ide", "name": "Cline (IDE)", "slug": "cline", "category": "ide", "install_cmd": null, "description_fallback": "Cline VS Code extension with Ollama"},
+    {"id": "roo-code", "name": "Roo Code", "slug": "roo-code", "category": "ide", "install_cmd": null, "description_fallback": "Roo Code VS Code extension with Ollama"},
+    {"id": "jetbrains", "name": "JetBrains", "slug": "jetbrains", "category": "ide", "install_cmd": null, "description_fallback": "JetBrains IDEs Ollama integration"},
+    {"id": "xcode", "name": "Xcode", "slug": "xcode", "category": "ide", "install_cmd": null, "description_fallback": "Xcode with Ollama integration"},
+    {"id": "zed", "name": "Zed", "slug": "zed", "category": "ide", "install_cmd": null, "description_fallback": "Zed editor with Ollama integration"},
+    {"id": "onyx", "name": "Onyx", "slug": "onyx", "category": "chat_rag", "install_cmd": null, "description_fallback": "Chat and RAG platform with Ollama"},
+    {"id": "n8n", "name": "n8n", "slug": "n8n", "category": "automation", "install_cmd": null, "description_fallback": "Workflow automation with Ollama AI nodes"},
+    {"id": "marimo", "name": "marimo", "slug": "marimo", "category": "notebook", "install_cmd": null, "description_fallback": "Interactive Python notebook with Ollama"}
+  ]
+}
