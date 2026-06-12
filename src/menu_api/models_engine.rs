@@ -4,7 +4,6 @@
 
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::menu_api::wizard_helpers::UseCase;
 use crate::menu_api::{MenuItem, MenuMetadata, MenuTree};
 use anyhow::Result;
 

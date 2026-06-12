@@ -4,7 +4,7 @@
 //! a menu_api-based approach.
 
 use crate::config::{I18n, WzllamaState};
-use crate::core::{llmfit_api, localmax_models, ollama_api, HardwareInfo};
+use crate::core::{llmfit_api, ollama_api, HardwareInfo};
 use crate::display;
 use crate::menu_api::wizard_helpers::{get_priority_tools_for_usecase, UseCase};
 use crate::menu_api::{
