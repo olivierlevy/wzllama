@@ -58,9 +58,16 @@ impl ApiService {
     }
 
     /// Get i18n for current state
-    pub fn get_i18n(lang: Option<&str>) -> I18n {
-        let lang = lang.unwrap_or("en");
-        crate::config::i18n::load(lang).unwrap_or_default()
+    pub fn get_i18n(lang: Option<&str>) -> std::sync::Arc<crate::config::i18n::I18n> {
+        if let Some(lang) = lang {
+            // Load requested language explicitly (not affecting global store)
+            match crate::config::i18n::load(lang) {
+                Ok(i) => std::sync::Arc::new(i),
+                Err(_) => crate::config::i18n::get_current(),
+            }
+        } else {
+            crate::config::i18n::get_current()
+        }
     }
 
     /// Get menu structure using menu_api

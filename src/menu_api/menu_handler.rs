@@ -67,24 +67,12 @@ impl<'a> MenuHandler<'a> {
         use crate::wizard::menu_header;
 
         loop {
-            // Load current i18n from state so language changes apply immediately
-            let i18n = {
-                use crate::config::i18n as i18n_mod;
-                // Try to load from state.language, fallback to default loader
-                let lang_code = self
-                    .app_state
-                    .language
-                    .as_deref()
-                    .unwrap_or_else(|| crate::config::state::load_language().as_str());
-                match i18n_mod::load(lang_code) {
-                    Ok(x) => x,
-                    Err(_) => i18n_mod::load("fr").unwrap_or_default(),
-                }
-            };
+            // Get the current global i18n (hot-swappable)
+            let i18n = crate::config::i18n::get_current();
 
             // Rebuild the full menu tree each loop using API-first generator so labels
             // reflect the current i18n immediately.
-            let menu_json = crate::menu_api::api_first::get_menu_structure(&i18n, &self.app_state);
+            let menu_json = crate::menu_api::api_first::get_menu_structure(&*i18n, &self.app_state);
             if let Some(root_item) = Self::menu_from_json(&menu_json) {
                 self.tree.root = root_item.clone();
                 // Reset current_menu to root and then rebuild according to history
@@ -283,7 +271,9 @@ impl<'a> MenuHandler<'a> {
                     // the menu reloads immediately without requiring a restart.
                     if let Some(code) = action_id.strip_prefix("set_language_") {
                         crate::config::state::set_language(code, self.app_state);
-                    }
+                                            // Reload global i18n immediately so UI/API reflect change
+                                            let _ = crate::config::i18n::reload(code);
+                                        }
                 } else if let Some(msg) = result.message {
                     warn!("{}", msg);
                 }

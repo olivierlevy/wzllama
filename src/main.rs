@@ -53,6 +53,8 @@ fn main() -> Result<()> {
     config::paths::ensure_dirs()?;
     config::logging::init()?;
     config::logging::install_embedded_i18n()?;
+    // Initialize global hot-swappable I18n store (allows dynamic language reload)
+    crate::config::i18n::init_global();
     info!("wzllama v0.3.0 started");
 
     let cli = Cli::parse_args();

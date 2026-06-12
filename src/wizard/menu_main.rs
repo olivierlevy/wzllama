@@ -26,6 +26,8 @@ pub fn select_language(state: &mut WzllamaState) -> Result<I18n> {
 
     let i18n = config::i18n::load(&languages[selected].code)?;
     config::state::set_language(&languages[selected].code, state);
+    // Ensure global i18n store reflects this selection immediately
+    let _ = crate::config::i18n::reload(&languages[selected].code);
     Ok(i18n)
 }
 

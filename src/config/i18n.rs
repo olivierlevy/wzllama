@@ -4,6 +4,11 @@ use crate::config::paths;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{OnceLock, Arc};
+
+// Arc-swap for atomic hot-swap of I18n
+use arc_swap::ArcSwap;
+use tokio::sync::watch;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LanguageMeta {
@@ -64,6 +69,58 @@ impl I18n {
         }
         text
     }
+}
+
+// Global hot-swappable I18n store and notification channel
+static GLOBAL_I18N: OnceLock<ArcSwap<I18n>> = OnceLock::new();
+static I18N_WATCH: OnceLock<watch::Sender<String>> = OnceLock::new();
+
+/// Initialize global I18n store and watch channel (idempotent)
+pub fn init_global() {
+    // Load the language from state (or default)
+    let lang = crate::config::state::load_language();
+    let i = load(&lang).unwrap_or_default();
+    GLOBAL_I18N.get_or_init(|| ArcSwap::from_pointee(i));
+    I18N_WATCH.get_or_init(|| {
+        let (tx, _rx) = watch::channel(lang);
+        tx
+    });
+}
+
+/// Get the current I18n as an Arc for cheap cloning
+pub fn get_current() -> Arc<I18n> {
+    let store = GLOBAL_I18N.get_or_init(|| {
+        let lang = crate::config::state::load_language();
+        let i = load(&lang).unwrap_or_default();
+        ArcSwap::from_pointee(i)
+    });
+    store.load_full()
+}
+
+/// Subscribe to language change notifications. Returns a watch::Receiver<String> that yields the latest language code when changed.
+pub fn subscribe() -> watch::Receiver<String> {
+    let sender = I18N_WATCH.get_or_init(|| {
+        let lang = crate::config::state::load_language();
+        let (tx, _rx) = watch::channel(lang);
+        tx
+    });
+    sender.subscribe()
+}
+
+/// Atomically reload the global I18n for `lang_code` and notify subscribers.
+pub fn reload(lang_code: &str) -> Result<()> {
+    let i = load(lang_code)?;
+    if let Some(store) = GLOBAL_I18N.get() {
+        store.store(Arc::new(i));
+    } else {
+        GLOBAL_I18N.set(ArcSwap::from_pointee(i)).ok();
+    }
+
+    if let Some(sender) = I18N_WATCH.get() {
+        let _ = sender.send(lang_code.to_string());
+    }
+
+    Ok(())
 }
 
 pub fn get_available_languages() -> Vec<LanguageMeta> {

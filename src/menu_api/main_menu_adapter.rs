@@ -132,29 +132,22 @@ impl<'a> MainMenuRunner<'a> {
         // Register language setter actions for each available language (set_language_<code>)
         {
             use crate::config::i18n as i18n_mod;
-            use crate::menu_api::tool_action::{ClosureAction, ActionResult};
-            use std::sync::Arc;
 
             let languages = i18n_mod::get_available_languages();
-            // capture the state Arc from the action_runner for closures
-            let state_arc = Arc::clone(&action_runner.state);
 
             for lang in languages {
                 let code = lang.code.clone();
                 let id = format!("set_language_{}", code);
                 let name = format!("Set language {}", code);
-                let state_for_closure = Arc::clone(&state_arc);
 
-                dispatcher.register(Box::new(ClosureAction::new(
+                // Use action_runner to create an action that updates persisted state and reloads global i18n
+                dispatcher.register(Box::new(action_runner.create_action(
                     &id,
                     &name,
-                    move |_| {
-                        // set language in persisted state
-                        let mut state_guard = state_for_closure
-                            .lock()
-                            .map_err(|e| anyhow::anyhow!("State mutex poisoned: {}", e))?;
-                        crate::config::state::set_language(&code, &mut state_guard);
-                        Ok(ActionResult::success_with("Langue changée."))
+                    move |_i18n, state, _hw| {
+                        crate::config::state::set_language(&code, state);
+                        let _ = crate::config::i18n::reload(&code);
+                        Ok(())
                     },
                 )));
             }

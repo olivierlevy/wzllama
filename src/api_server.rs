@@ -154,7 +154,7 @@ async fn get_menu_tree() -> Json<Value> {
     let state = ApiService::get_state();
     let lang = state.language.clone().unwrap_or_else(|| "en".to_string());
     let i18n = ApiService::get_i18n(Some(&lang));
-    Json(ApiService::get_menu_structure(&i18n, &state))
+    Json(ApiService::get_menu_structure(&*i18n, &state))
 }
 
 async fn get_menu_item(Path(id): Path<String>) -> Json<Value> {
@@ -163,7 +163,7 @@ async fn get_menu_item(Path(id): Path<String>) -> Json<Value> {
     let i18n = ApiService::get_i18n(Some(&lang));
 
     // Get the main menu structure
-    let menu = ApiService::get_menu_structure(&i18n, &state);
+    let menu = ApiService::get_menu_structure(&*i18n, &state);
 
     // Check if the item has children
     if let Some(items) = menu.get("items").and_then(|i| i.as_array()) {
@@ -222,7 +222,7 @@ async fn list_tools() -> Json<Value> {
     let state = ApiService::get_state();
     let lang = state.language.clone().unwrap_or_else(|| "en".to_string());
     let i18n = ApiService::get_i18n(Some(&lang));
-    Json(ApiService::get_tools_menu(&i18n, &state))
+    Json(ApiService::get_tools_menu(&*i18n, &state))
 }
 
 async fn get_tool(Path(id): Path<String>) -> Response {
@@ -322,7 +322,7 @@ async fn list_models() -> Json<Value> {
     let state = ApiService::get_state();
     let lang = state.language.clone().unwrap_or_else(|| "en".to_string());
     let i18n = ApiService::get_i18n(Some(&lang));
-    Json(ApiService::get_models_menu(&i18n, &state))
+    Json(ApiService::get_models_menu(&*i18n, &state))
 }
 
 async fn pull_model(Path(name): Path<String>) -> (StatusCode, Json<ActionResponse>) {
@@ -414,7 +414,7 @@ async fn get_i18n_map() -> Json<Value> {
     let state = ApiService::get_state();
     let lang = state.language.as_deref().unwrap_or("en");
     let i18n = ApiService::get_i18n(Some(lang));
-    Json(serde_json::to_value(&i18n.map).unwrap_or_else(|_| serde_json::json!({})))
+    Json(serde_json::to_value(&(*i18n).map).unwrap_or_else(|_| serde_json::json!({})))
 }
 
 async fn serve_web_ui() -> Html<String> {
