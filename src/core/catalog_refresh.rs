@@ -25,29 +25,31 @@ impl CatalogRefresher {
                 let mgr = mgr.clone();
                 // Spawn an async task that registers a one-shot catalog refresh under the TaskManager
                 let _ = tokio::spawn(async move {
-                    let _ = mgr.spawn_named(
-                        "catalog-refresh",
-                        || async move {
-                            // Use hot-swappable i18n when logging so messages reflect current language
-                            let current_lang = crate::config::i18n::get_current().meta.code.clone();
-                            match crate::core::catalog_refresh::CatalogRefresher::fetch_and_update(false) {
-                                Ok(catalog) => {
-                                    let new_lang = crate::config::i18n::get_current().meta.code.clone();
-                                    if new_lang != current_lang {
-                                        log::info!("Language changed to {} during catalog refresh", new_lang);
+                        // Register a periodic task (daily) to refresh catalog using spawn_periodic_blocking
+                        let interval = std::time::Duration::from_secs(24 * 3600);
+                        let _ = mgr.spawn_periodic_blocking(
+                            "catalog-refresh",
+                            interval,
+                            || {
+                                // Blocking closure executed in spawn_blocking
+                                let current_lang = crate::config::i18n::get_current().meta.code.clone();
+                                match crate::core::catalog_refresh::CatalogRefresher::fetch_and_update(false) {
+                                    Ok(catalog) => {
+                                        let new_lang = crate::config::i18n::get_current().meta.code.clone();
+                                        if new_lang != current_lang {
+                                            log::info!("Language changed to {} during catalog refresh", new_lang);
+                                        }
+                                        log::info!(
+                                            "Catalog refreshed: {} tools found (version {})",
+                                            catalog.tools.len(),
+                                            catalog.version
+                                        )
                                     }
-                                    log::info!(
-                                        "Catalog refreshed: {} tools found (version {})",
-                                        catalog.tools.len(),
-                                        catalog.version
-                                    )
+                                    Err(e) => log::warn!("Catalog refresh failed (offline?): {}", e),
                                 }
-                                Err(e) => log::warn!("Catalog refresh failed (offline?): {}", e),
-                            }
-                        },
-                        crate::core::task_manager::RestartPolicy::Never,
-                    ).await;
-                });
+                            },
+                        ).await;
+                    });
                 return;
             }
         }
