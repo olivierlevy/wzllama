@@ -179,14 +179,62 @@ impl CatalogRefresher {
 
 ---
 
+## Auto-Update of Installed Tools
+
+### Trigger modes
+
+| Mode | When | Behavior |
+|------|------|----------|
+| Background | At startup, if last update > 24h | Silent (no user output); errors logged only |
+| Manual | `wzllama update-all` | Blocking, with progress per tool |
+
+TTL stored in `~/.wzllama/last_update.txt` (ISO timestamp).
+
+### Update logic per tool type
+
+| Tool type | Update command |
+|-----------|---------------|
+| Static tool (implements `update()`) | Call `tool.update()` |
+| OllamaNativeTool with `install_cmd` (npm) | `npm install -g <pkg>@latest` |
+| OllamaNativeTool without `install_cmd` | `ollama launch <slug>` (Ollama handles it) |
+| Ollama itself | `winget upgrade Ollama.Ollama` (Windows) / `curl \| sh` (Unix) |
+
+### `ToolUpdater` (new `src/core/tool_updater.rs`)
+
+```rust
+pub struct ToolUpdater;
+
+impl ToolUpdater {
+    /// Non-blocking: spawns background thread if TTL expired.
+    pub fn spawn_background_check(tools: Vec<...>, state: WzllamaState);
+
+    /// Blocking: updates all installed tools, prints progress.
+    pub fn update_all(tools: &[Box<dyn Tool>], state: &WzllamaState, i18n: &I18n) -> Result<()>;
+
+    fn is_update_needed() -> bool;   // last_update.txt > 24h or absent
+    fn mark_updated();               // write current timestamp
+}
+```
+
+**Error handling:** If a tool update fails, log and continue. At the end of `update-all`, show summary: `3 updated, 1 failed, 2 skipped`.
+
+### New API endpoint
+
+```
+POST /api/v1/tools/update-all    # Trigger update-all, returns { updated, failed, skipped }
+```
+
+---
+
 ## CLI Commands
 
 ```
 wzllama catalog refresh     # Force-refresh catalog from docs.ollama.com, display results
 wzllama catalog list        # List all catalog tools grouped by category
+wzllama update-all          # Update all installed tools with progress
 ```
 
-Added to `src/cli.rs` under a `catalog` subcommand group.
+Added to `src/cli.rs`.
 
 ---
 
@@ -259,6 +307,8 @@ Existing static tools are also reflected in the catalog for completeness but are
 1. `cargo check --all-targets` passes with 0 errors
 2. `wzllama catalog list` displays all tools from docs.ollama.com/integrations
 3. `wzllama catalog refresh` fetches and updates the cache
-4. New tools appear in the wizard tool menu, launchable via `ollama launch <slug>`
+4. New catalog tools appear in the wizard tool menu, launchable via `ollama launch <slug>`
 5. Existing static tools are unaffected
 6. Offline startup works (uses embedded catalog.json)
+7. `wzllama update-all` updates all installed tools and shows a summary
+8. Background auto-update runs silently at startup if last update > 24h
