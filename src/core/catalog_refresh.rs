@@ -21,13 +21,24 @@ impl CatalogRefresher {
         }
         std::thread::Builder::new()
             .name("catalog-refresh".into())
-            .spawn(|| match Self::fetch_and_update(false) {
-                Ok(catalog) => log::info!(
-                    "Catalog refreshed: {} tools found (version {})",
-                    catalog.tools.len(),
-                    catalog.version
-                ),
-                Err(e) => log::warn!("Catalog refresh failed (offline?): {}", e),
+            .spawn(|| {
+                // Use hot-swappable i18n when logging so messages reflect current language
+                let mut prev_lang = crate::config::i18n::get_current().meta.code.clone();
+                match Self::fetch_and_update(false) {
+                    Ok(catalog) => {
+                        let current_lang = crate::config::i18n::get_current().meta.code.clone();
+                        if current_lang != prev_lang {
+                            log::info!("Language changed to {} during catalog refresh", current_lang);
+                            prev_lang = current_lang;
+                        }
+                        log::info!(
+                            "Catalog refreshed: {} tools found (version {})",
+                            catalog.tools.len(),
+                            catalog.version
+                        )
+                    }
+                    Err(e) => log::warn!("Catalog refresh failed (offline?): {}", e),
+                }
             })
             .ok();
     }

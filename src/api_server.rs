@@ -20,7 +20,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::config::{I18n, WzllamaState};
+use crate::config::I18n;
 use crate::menu_api::api_service::ApiService;
 use crate::menu_api::ActionResponse;
 

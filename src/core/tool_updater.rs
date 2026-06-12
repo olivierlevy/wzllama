@@ -27,9 +27,15 @@ impl ToolUpdater {
         std::thread::Builder::new()
             .name("tool-updater".into())
             .spawn(move || {
-                let i18n = I18n::default();
-                match Self::update_all_silent(&state, &i18n) {
+                // Use hot-swappable i18n during updates so messages reflect current language.
+                let mut prev_lang = crate::config::i18n::get_current().meta.code.clone();
+                match Self::update_all_silent(&state, &I18n::default()) {
                     Ok(summary) => {
+                        let current_lang = crate::config::i18n::get_current().meta.code.clone();
+                        if current_lang != prev_lang {
+                            log::info!("Language changed to {} during background update", current_lang);
+                            prev_lang = current_lang;
+                        }
                         log::info!(
                             "Background update: {} updated, {} failed, {} skipped",
                             summary.updated.len(),
@@ -46,13 +52,15 @@ impl ToolUpdater {
 
     /// Blocking: update all installed tools with progress output.
     /// Used by `wzllama update-all`.
-    pub fn update_all_verbose(state: &WzllamaState, i18n: &I18n) -> Result<UpdateSummary> {
+    pub fn update_all_verbose(state: &WzllamaState, _i18n: &I18n) -> Result<UpdateSummary> {
         let tools = get_all_tools();
         let mut summary = UpdateSummary {
             updated: vec![],
             failed: vec![],
             skipped: vec![],
         };
+
+        let mut prev_lang = crate::config::i18n::get_current().meta.code.clone();
 
         for tool in &tools {
             let name = tool.name().to_string();
@@ -61,8 +69,17 @@ impl ToolUpdater {
                 summary.skipped.push(name);
                 continue;
             }
+
+            // Pickup latest i18n for each tool iteration
+            let i18n = crate::config::i18n::get_current();
+            let current_lang = i18n.meta.code.clone();
+            if current_lang != prev_lang {
+                display::info(&format!("✅ Language changed to {}", current_lang));
+                prev_lang = current_lang.clone();
+            }
+
             display::info(&format!("Updating {}…", tool.name()));
-            match tool.update(i18n) {
+            match tool.update(&*i18n) {
                 Ok(_) => {
                     display::success(&format!("✅ {} updated", tool.name()));
                     summary.updated.push(name);
@@ -78,20 +95,32 @@ impl ToolUpdater {
     }
 
     /// Silent version for background use (no stdout).
-    fn update_all_silent(state: &WzllamaState, i18n: &I18n) -> Result<UpdateSummary> {
+    fn update_all_silent(state: &WzllamaState, _i18n: &I18n) -> Result<UpdateSummary> {
         let tools = get_all_tools();
         let mut summary = UpdateSummary {
             updated: vec![],
             failed: vec![],
             skipped: vec![],
         };
+
+        let mut prev_lang = crate::config::i18n::get_current().meta.code.clone();
+
         for tool in &tools {
             let is_installed = matches!(tool.status(state), ToolStatus::Installed);
             if !is_installed {
                 summary.skipped.push(tool.name().into());
                 continue;
             }
-            match tool.update(i18n) {
+
+            // Use current i18n during silent updates
+            let i18n = crate::config::i18n::get_current();
+            let current_lang = i18n.meta.code.clone();
+            if current_lang != prev_lang {
+                log::info!("Language changed to {} during silent update", current_lang);
+                prev_lang = current_lang.clone();
+            }
+
+            match tool.update(&*i18n) {
                 Ok(_) => summary.updated.push(tool.name().into()),
                 Err(e) => summary.failed.push((tool.name().into(), e.to_string())),
             }

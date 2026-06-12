@@ -5,7 +5,7 @@
 
 use crate::config::{I18n, WzllamaState};
 use crate::core::hardware;
-use crate::tools::{self, tool_trait::ToolStatus};
+use crate::tools;
 use serde_json::Value;
 
 /// Hardware information for API
