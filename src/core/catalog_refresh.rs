@@ -19,16 +19,50 @@ impl CatalogRefresher {
         if cache_fresh {
             return;
         }
+        // Prefer TaskManager when available and when running inside a Tokio runtime.
+        if let Some(mgr) = crate::core::init::get_global_task_manager() {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let mgr = mgr.clone();
+                // Spawn an async task that registers a one-shot catalog refresh under the TaskManager
+                let _ = tokio::spawn(async move {
+                    let _ = mgr.spawn_named(
+                        "catalog-refresh",
+                        || async move {
+                            // Use hot-swappable i18n when logging so messages reflect current language
+                            let current_lang = crate::config::i18n::get_current().meta.code.clone();
+                            match crate::core::catalog_refresh::CatalogRefresher::fetch_and_update(false) {
+                                Ok(catalog) => {
+                                    let new_lang = crate::config::i18n::get_current().meta.code.clone();
+                                    if new_lang != current_lang {
+                                        log::info!("Language changed to {} during catalog refresh", new_lang);
+                                    }
+                                    log::info!(
+                                        "Catalog refreshed: {} tools found (version {})",
+                                        catalog.tools.len(),
+                                        catalog.version
+                                    )
+                                }
+                                Err(e) => log::warn!("Catalog refresh failed (offline?): {}", e),
+                            }
+                        },
+                        crate::core::task_manager::RestartPolicy::Never,
+                    ).await;
+                });
+                return;
+            }
+        }
+
+        // Fallback to original thread if no TaskManager/runtime available
         std::thread::Builder::new()
             .name("catalog-refresh".into())
             .spawn(|| {
                 // Use hot-swappable i18n when logging so messages reflect current language
-                let prev_lang = crate::config::i18n::get_current().meta.code.clone();
+                let current_lang = crate::config::i18n::get_current().meta.code.clone();
                 match Self::fetch_and_update(false) {
                     Ok(catalog) => {
-                        let current_lang = crate::config::i18n::get_current().meta.code.clone();
-                        if current_lang != prev_lang {
-                            log::info!("Language changed to {} during catalog refresh", current_lang);
+                        let new_lang = crate::config::i18n::get_current().meta.code.clone();
+                        if new_lang != current_lang {
+                            log::info!("Language changed to {} during catalog refresh", new_lang);
                         }
                         log::info!(
                             "Catalog refreshed: {} tools found (version {})",
