@@ -365,7 +365,6 @@ pub fn get_resume_label(state: &WzllamaState, i18n: &I18n) -> Option<String> {
 }
 
 /// Model helpers from menu_models.rs
-
 /// Convert an OllamaModel to a LocalMaxModel by finding matching entry in models list
 /// or creating a minimal one for local-only models
 pub fn ollama_to_localmax_model(
