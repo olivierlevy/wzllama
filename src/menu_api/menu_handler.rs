@@ -6,7 +6,7 @@ use crate::menu_api::menu_item::MenuItem;
 use crate::menu_api::menu_tree::MenuTree;
 use crate::menu_api::tool_action::{ActionContext, ActionDispatcher, ActionResult};
 use anyhow::Result;
-use dialoguer::{Confirm, Input, Select};
+use dialoguer::Select;
 use log::{error, warn};
 
 /// Navigation state tracking

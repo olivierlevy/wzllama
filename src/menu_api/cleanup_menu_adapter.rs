@@ -7,7 +7,7 @@ use crate::config::WzllamaState;
 use crate::core::HardwareInfo;
 use crate::menu_api::arc_action::ArcActionRunner;
 use crate::menu_api::{
-    ActionDispatcher, ActionResult, ClosureAction, MenuHandler, MenuItem, MenuMetadata, MenuTree,
+    ActionDispatcher, MenuHandler, MenuItem, MenuMetadata, MenuTree,
 };
 use anyhow::Result;
 
