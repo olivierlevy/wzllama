@@ -18,9 +18,10 @@ pub mod flatpak; // Utility tool, not exposed in menus
 pub mod llmfit;
 
 use crate::config::{I18n, WzllamaState};
-use tool_trait::Tool;
+use tool_trait::{Tool, ToolStatus};
 
-pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
+/// Returns all built-in (hardcoded) tools. These take priority over catalog tools.
+fn get_static_tools() -> Vec<Box<dyn Tool>> {
     vec![
         Box::new(ollama::OllamaTool),
         Box::new(open_webui::OpenWebUITool),
@@ -39,36 +40,54 @@ pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
     ]
 }
 
+/// Returns all tools: static tools first, then catalog tools not already present.
+pub fn get_all_tools() -> Vec<Box<dyn Tool>> {
+    let mut tools = get_static_tools();
+    let static_ids: Vec<&str> = tools.iter().map(|t| t.id()).collect();
+    let cat = catalog::ToolCatalog::load();
+    for entry in cat.new_entries(&static_ids) {
+        tools.push(Box::new(
+            catalog::ollama_native::OllamaNativeTool::new(entry.clone()),
+        ));
+    }
+    tools
+}
+
 pub fn get_tool(id: &str) -> Option<Box<dyn Tool>> {
     get_all_tools().into_iter().find(|t| t.id() == id)
 }
 
 pub fn get_available_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
-    get_all_tools().iter().map(|t| {
-        let installed = match t.id() {
-            "ollama" => state.installed.ollama,
-            "open_webui" => state.installed.open_webui,
-            "openclaw" => state.installed.openclaw,
-            "claude_code" => state.installed.claude_code,
-            "hermes_agent" => state.installed.hermes_agent,
-            "opencode" => state.installed.opencode,
-            "codex" => state.installed.codex,
-            "copilot_cli" => state.installed.copilot_cli,
-            "droid" => state.installed.droid,
-            "pi" => state.installed.pi,
-            "pool" => state.installed.pool,
-            "obsidian" => state.installed.obsidian,
-            "goose" => state.installed.goose,
-            "llmfit" => state.installed.llmfit,
-            _ => false,
-        };
-        ToolInfo {
-            id: t.id().to_string(),
-            name: t.name().to_string(),
-            description: t.description(i18n),
-            installed,
-        }
-    }).collect()
+    get_all_tools()
+        .iter()
+        .map(|t| {
+            // For static tools, use the state booleans (avoids shell::which overhead).
+            // For catalog tools, detect dynamically via tool.status().
+            let installed = match t.id() {
+                "ollama" => state.installed.ollama,
+                "open_webui" => state.installed.open_webui,
+                "openclaw" => state.installed.openclaw,
+                "claude_code" => state.installed.claude_code,
+                "hermes_agent" => state.installed.hermes_agent,
+                "opencode" => state.installed.opencode,
+                "codex" => state.installed.codex,
+                "copilot_cli" => state.installed.copilot_cli,
+                "droid" => state.installed.droid,
+                "pi" => state.installed.pi,
+                "pool" => state.installed.pool,
+                "obsidian" => state.installed.obsidian,
+                "goose" => state.installed.goose,
+                "llmfit" => state.installed.llmfit,
+                _ => matches!(t.status(state), ToolStatus::Installed),
+            };
+            ToolInfo {
+                id: t.id().to_string(),
+                name: t.name().to_string(),
+                description: t.description(i18n),
+                installed,
+            }
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone)]

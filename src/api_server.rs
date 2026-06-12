@@ -6,24 +6,23 @@
 //! - Model management
 //! - Configuration
 
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use serde_json::Value;
 use axum::{
-    routing::{get, post, delete},
-    Router,
-    Json,
     extract::Path,
     http::StatusCode,
     response::{Html, IntoResponse, Response},
+    routing::{delete, get, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use tower_http::cors::{CorsLayer, Any};
+use serde_json::Value;
+use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 
+use crate::config::{I18n, WzllamaState};
 use crate::menu_api::api_service::ApiService;
 use crate::menu_api::ActionResponse;
-use crate::config::{WzllamaState, I18n};
 
 /// API state shared between handlers
 #[derive(Clone)]
@@ -35,7 +34,9 @@ pub struct ApiState {
 pub static API_SHUTDOWN: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
 
 pub fn get_shutdown_flag() -> Arc<AtomicBool> {
-    API_SHUTDOWN.get_or_init(|| Arc::new(AtomicBool::new(false))).clone()
+    API_SHUTDOWN
+        .get_or_init(|| Arc::new(AtomicBool::new(false)))
+        .clone()
 }
 
 /// Menu tree response
@@ -56,16 +57,14 @@ pub struct MenuActionRequest {
 /// Create the API router
 pub fn create_router() -> Router {
     let shutdown_flag = get_shutdown_flag();
-    
+
     Router::new()
         // Web UI - serve HTML at root
         .route("/", get(serve_web_ui))
-        
         // Menu endpoints
         .route("/api/v1/menu", get(get_menu_tree))
         .route("/api/v1/menu/{id}", get(get_menu_item))
         .route("/api/v1/menu/{id}/select", post(select_menu_item))
-        
         // Tool endpoints
         .route("/api/v1/tools", get(list_tools))
         .route("/api/v1/tools/{id}", get(get_tool))
@@ -74,31 +73,29 @@ pub fn create_router() -> Router {
         .route("/api/v1/tools/{id}/uninstall", post(uninstall_tool))
         .route("/api/v1/tools/{id}/status", get(get_tool_status))
         .route("/api/v1/tools/{id}/launch", post(launch_tool))
-        
+        .route("/api/v1/tools/update-all", post(update_all_tools))
         // Model endpoints
         .route("/api/v1/models", get(list_models))
         .route("/api/v1/models/{name}/pull", post(pull_model))
         .route("/api/v1/models/{name}/delete", delete(delete_model))
-        
         // System endpoints
         .route("/api/v1/status", get(get_system_status))
         .route("/api/v1/hardware", get(get_hardware_info))
-        
         // Health check
         .route("/health", get(health_check))
-        
         // /api/menu/* endpoints
         .route("/api/menu/state", get(get_menu_state))
         .route("/api/menu/action", post(execute_menu_action))
         .route("/api/menu/i18n", get(get_i18n_map))
-        
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
                 .allow_methods(Any)
                 .allow_headers(Any),
         )
-        .with_state(ApiState { shutdown_requested: shutdown_flag })
+        .with_state(ApiState {
+            shutdown_requested: shutdown_flag,
+        })
 }
 
 /// Signal the API server to shutdown gracefully
@@ -110,7 +107,8 @@ pub fn request_shutdown() {
 
 /// Check if shutdown has been requested
 pub fn is_shutdown_requested() -> bool {
-    API_SHUTDOWN.get()
+    API_SHUTDOWN
+        .get()
         .map(|flag| flag.load(Ordering::SeqCst))
         .unwrap_or(false)
 }
@@ -118,14 +116,14 @@ pub fn is_shutdown_requested() -> bool {
 /// Start the API server with graceful shutdown support
 pub async fn start_server(addr: SocketAddr) {
     let app = create_router();
-    
+
     match tokio::net::TcpListener::bind(addr).await {
         Ok(listener) => {
             log::info!("wzllama API server listening on http://{}", addr);
-            
+
             // Create shutdown signal
             let shutdown_flag = get_shutdown_flag();
-            
+
             axum::serve(listener, app)
                 .with_graceful_shutdown(async move {
                     // Wait for shutdown signal
@@ -135,7 +133,7 @@ pub async fn start_server(addr: SocketAddr) {
                 })
                 .await
                 .ok();
-                
+
             log::info!("API server shutdown gracefully");
         }
         Err(e) => {
@@ -159,19 +157,20 @@ async fn get_menu_tree() -> Json<Value> {
     Json(ApiService::get_menu_structure(&i18n, &state))
 }
 
-async fn get_menu_item(
-    Path(id): Path<String>,
-) -> Json<Value> {
+async fn get_menu_item(Path(id): Path<String>) -> Json<Value> {
     let state = ApiService::get_state();
     let lang = state.language.clone().unwrap_or_else(|| "en".to_string());
     let i18n = ApiService::get_i18n(Some(&lang));
-    
+
     // Get the main menu structure
     let menu = ApiService::get_menu_structure(&i18n, &state);
-    
+
     // Check if the item has children
     if let Some(items) = menu.get("items").and_then(|i| i.as_array()) {
-        if let Some(item) = items.iter().find(|i| i.get("id").and_then(|v| v.as_str()) == Some(&id)) {
+        if let Some(item) = items
+            .iter()
+            .find(|i| i.get("id").and_then(|v| v.as_str()) == Some(&id))
+        {
             if let Some(children) = item.get("children") {
                 // Return submenu with children
                 return Json(serde_json::json!({
@@ -183,14 +182,12 @@ async fn get_menu_item(
             }
         }
     }
-    
+
     Json(serde_json::json!({ "id": id, "label": "Menu Item", "type": "item", "items": [] }))
 }
 
 /// Execute an action by ID (for menu items and tool actions)
-async fn select_menu_item(
-    Path(id): Path<String>,
-) -> Json<Value> {
+async fn select_menu_item(Path(id): Path<String>) -> Json<Value> {
     // Map menu item IDs to actual actions
     let result = match id.as_str() {
         "wizard" | "models" | "tools" | "scientific" | "cleanup" | "config" | "language" => {
@@ -228,12 +225,10 @@ async fn list_tools() -> Json<Value> {
     Json(ApiService::get_tools_menu(&i18n, &state))
 }
 
-async fn get_tool(
-    Path(id): Path<String>,
-) -> Response {
+async fn get_tool(Path(id): Path<String>) -> Response {
     let state = ApiService::get_state();
     let i18n = I18n::default();
-    
+
     if let Some(tool_info) = ApiService::get_tool(&id, &i18n, &state) {
         Json(serde_json::json!({
             "id": tool_info.id,
@@ -243,7 +238,8 @@ async fn get_tool(
             "status": tool_info.status,
             "supports_agentic": tool_info.supports_agentic,
             "requires_docker": tool_info.requires_docker,
-        })).into_response()
+        }))
+        .into_response()
     } else {
         (
             StatusCode::NOT_FOUND,
@@ -251,13 +247,12 @@ async fn get_tool(
                 "error": "not_found",
                 "message": format!("Tool '{}' not found", id),
             })),
-        ).into_response()
+        )
+            .into_response()
     }
 }
 
-async fn install_tool(
-    Path(id): Path<String>,
-) -> Json<ActionResponse> {
+async fn install_tool(Path(id): Path<String>) -> Json<ActionResponse> {
     let result = ApiService::install_tool(&id, &I18n::default()).unwrap_or(ActionResponse {
         success: false,
         message: "Installation failed".to_string(),
@@ -265,9 +260,7 @@ async fn install_tool(
     Json(result)
 }
 
-async fn update_tool(
-    Path(id): Path<String>,
-) -> Json<ActionResponse> {
+async fn update_tool(Path(id): Path<String>) -> Json<ActionResponse> {
     let result = ApiService::update_tool(&id, &I18n::default()).unwrap_or(ActionResponse {
         success: false,
         message: "Update failed".to_string(),
@@ -275,9 +268,7 @@ async fn update_tool(
     Json(result)
 }
 
-async fn uninstall_tool(
-    Path(id): Path<String>,
-) -> Json<ActionResponse> {
+async fn uninstall_tool(Path(id): Path<String>) -> Json<ActionResponse> {
     let result = ApiService::uninstall_tool(&id, &I18n::default()).unwrap_or(ActionResponse {
         success: false,
         message: "Uninstall failed".to_string(),
@@ -285,12 +276,10 @@ async fn uninstall_tool(
     Json(result)
 }
 
-async fn get_tool_status(
-    Path(id): Path<String>,
-) -> Json<Value> {
+async fn get_tool_status(Path(id): Path<String>) -> Json<Value> {
     let state = ApiService::get_state();
     let installed = ApiService::is_tool_installed(&id, &state);
-    
+
     Json(serde_json::json!({
         "id": id,
         "installed": installed,
@@ -298,9 +287,7 @@ async fn get_tool_status(
     }))
 }
 
-async fn launch_tool(
-    Path(id): Path<String>,
-) -> (StatusCode, Json<ActionResponse>) {
+async fn launch_tool(Path(id): Path<String>) -> (StatusCode, Json<ActionResponse>) {
     // Interactive launch is not possible in API mode
     (
         StatusCode::NOT_IMPLEMENTED,
@@ -314,6 +301,23 @@ async fn launch_tool(
     )
 }
 
+async fn update_all_tools() -> Json<Value> {
+    let state = ApiService::get_state();
+    let i18n = I18n::default();
+    match crate::core::tool_updater::ToolUpdater::update_all_verbose(&state, &i18n) {
+        Ok(summary) => Json(serde_json::json!({
+            "success": true,
+            "updated": summary.updated,
+            "failed": summary.failed.iter().map(|(n, e)| serde_json::json!({"tool": n, "error": e})).collect::<Vec<_>>(),
+            "skipped": summary.skipped,
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": e.to_string(),
+        })),
+    }
+}
+
 async fn list_models() -> Json<Value> {
     let state = ApiService::get_state();
     let lang = state.language.clone().unwrap_or_else(|| "en".to_string());
@@ -321,27 +325,29 @@ async fn list_models() -> Json<Value> {
     Json(ApiService::get_models_menu(&i18n, &state))
 }
 
-async fn pull_model(
-    Path(name): Path<String>,
-) -> (StatusCode, Json<ActionResponse>) {
+async fn pull_model(Path(name): Path<String>) -> (StatusCode, Json<ActionResponse>) {
     // Model pull is a long-running interactive operation not suited for HTTP API
     (
         StatusCode::NOT_IMPLEMENTED,
         Json(ActionResponse {
             success: false,
-            message: format!("Model pull cannot be executed via API. Run: ollama pull {}", name),
+            message: format!(
+                "Model pull cannot be executed via API. Run: ollama pull {}",
+                name
+            ),
         }),
     )
 }
 
-async fn delete_model(
-    Path(name): Path<String>,
-) -> (StatusCode, Json<ActionResponse>) {
+async fn delete_model(Path(name): Path<String>) -> (StatusCode, Json<ActionResponse>) {
     (
         StatusCode::NOT_IMPLEMENTED,
         Json(ActionResponse {
             success: false,
-            message: format!("Model deletion cannot be executed via API. Run: ollama rm {}", name),
+            message: format!(
+                "Model deletion cannot be executed via API. Run: ollama rm {}",
+                name
+            ),
         }),
     )
 }
@@ -376,7 +382,7 @@ async fn execute_menu_action(
     Json(payload): Json<MenuActionRequest>,
 ) -> (StatusCode, Json<ActionResponse>) {
     let action_id = &payload.action_id;
-    
+
     // Dispatch known stateless actions
     let response = match action_id.as_str() {
         id if id.starts_with("install_") => {
@@ -389,11 +395,18 @@ async fn execute_menu_action(
         }
         _ => ActionResponse {
             success: false,
-            message: format!("Action '{}' is not executable via API or does not exist", action_id),
+            message: format!(
+                "Action '{}' is not executable via API or does not exist",
+                action_id
+            ),
         },
     };
-    
-    let status = if response.success { StatusCode::OK } else { StatusCode::UNPROCESSABLE_ENTITY };
+
+    let status = if response.success {
+        StatusCode::OK
+    } else {
+        StatusCode::UNPROCESSABLE_ENTITY
+    };
     (status, Json(response))
 }
 

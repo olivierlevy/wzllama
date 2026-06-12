@@ -1,12 +1,12 @@
+mod api_server;
 mod cli;
 mod config;
 mod core;
 mod display;
 mod error;
+mod menu_api;
 mod tools;
 mod wizard;
-mod menu_api;
-mod api_server;
 
 use anyhow::Result;
 use cli::Cli;
@@ -32,14 +32,12 @@ fn start_api_server_background() {
         // Start in background thread with proper error logging
         let handle = std::thread::Builder::new()
             .name("api-server".to_string())
-            .spawn(|| {
-                match tokio::runtime::Runtime::new() {
-                    Ok(rt) => rt.block_on(async {
-                        let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 1133));
-                        crate::api_server::start_server(addr).await;
-                    }),
-                    Err(e) => log::error!("Failed to create Tokio runtime for API server: {}", e),
-                }
+            .spawn(|| match tokio::runtime::Runtime::new() {
+                Ok(rt) => rt.block_on(async {
+                    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 1133));
+                    crate::api_server::start_server(addr).await;
+                }),
+                Err(e) => log::error!("Failed to create Tokio runtime for API server: {}", e),
             });
 
         if let Err(e) = handle {
@@ -58,19 +56,28 @@ fn main() -> Result<()> {
     info!("wzllama v0.3.0 started");
 
     let cli = Cli::parse_args();
-    
+
     // Start API server in background for wizard mode only (not for serve command)
     if matches!(cli.command, None | Some(Command::Wizard)) {
         start_api_server_background();
     }
-    
+
+    // Background catalog refresh (24h TTL, non-blocking)
+    crate::core::catalog_refresh::CatalogRefresher::spawn_background_check();
+
+    // Background tool update check (24h TTL, non-blocking, wizard mode only)
+    if matches!(cli.command, None | Some(Command::Wizard)) {
+        let state = crate::config::WzllamaState::load();
+        crate::core::tool_updater::ToolUpdater::spawn_background_check(state);
+    }
+
     let result = cli.execute();
-    
+
     // Request API server shutdown when exiting (only if we started it)
     if matches!(cli.command, None | Some(Command::Wizard)) {
         crate::api_server::request_shutdown();
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
-    
+
     result
 }
