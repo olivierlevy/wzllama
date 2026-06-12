@@ -67,12 +67,34 @@ impl<'a> MenuHandler<'a> {
         use crate::wizard::menu_header;
 
         loop {
-            // Build dynamic submenu if needed
-            self.build_dynamic_submenus();
+            // Load current i18n from state so language changes apply immediately
+            let i18n = {
+                use crate::config::i18n as i18n_mod;
+                // Try to load from state.language, fallback to default loader
+                let lang_code = self
+                    .app_state
+                    .language
+                    .as_deref()
+                    .unwrap_or_else(|| crate::config::state::load_language().as_str());
+                match i18n_mod::load(lang_code) {
+                    Ok(x) => x,
+                    Err(_) => i18n_mod::load("fr").unwrap_or_default(),
+                }
+            };
+
+            // Rebuild the full menu tree each loop using API-first generator so labels
+            // reflect the current i18n immediately.
+            let menu_json = crate::menu_api::api_first::get_menu_structure(&i18n, &self.app_state);
+            if let Some(root_item) = Self::menu_from_json(&menu_json) {
+                self.tree.root = root_item.clone();
+                // Reset current_menu to root and then rebuild according to history
+                self.current_menu = self.tree.root.clone();
+                self.rebuild_current_menu();
+            }
 
             // Display header with resources (like original wizard menu)
             menu_header::render(
-                self.i18n,
+                &i18n,
                 "menu.main.title",
                 true,
                 self.app_state.last_model.as_deref(),
@@ -131,8 +153,54 @@ impl<'a> MenuHandler<'a> {
 
     /// Build dynamic submenus for items that have dynamic generators
     fn build_dynamic_submenus(&mut self) {
-        // Dynamic submenu support - items can have dynamic generators
-        // This is handled via the dynamic_generators module
+        // Kept for compatibility but actual dynamic labels are rebuilt from
+        // api_first::get_menu_structure each loop in run(), so no-op here.
+    }
+
+    /// Helper: convert API-first menu JSON into MenuItem structure
+    fn menu_from_json(json: &serde_json::Value) -> Option<MenuItem> {
+        use serde_json::Value;
+
+        fn parse_item(v: &Value) -> Option<MenuItem> {
+            let label = v.get("label")?.as_str()?.to_string();
+            let action_id = v.get("action_id").and_then(|a| a.as_str()).map(|s| s.to_string());
+            let item_type = v.get("type").and_then(|t| t.as_str()).unwrap_or("item");
+
+            let mut mi = if item_type == "submenu" {
+                MenuItem::branch(&label)
+            } else {
+                MenuItem::leaf(&label)
+            };
+
+            if let Some(a) = action_id {
+                mi.action_id = Some(a);
+            }
+
+            // children may be under "children" or "items"
+            if let Some(children) = v.get("children").or_else(|| v.get("items")) {
+                if let Some(arr) = children.as_array() {
+                    for child in arr {
+                        if let Some(child_item) = parse_item(child) {
+                            mi = mi.add_submenu(child_item);
+                        }
+                    }
+                }
+            }
+
+            Some(mi)
+        }
+
+        // Root has items array under "items"
+        let root_label = json.get("label").and_then(|l| l.as_str()).unwrap_or("main");
+        let mut root = MenuItem::branch(root_label);
+        if let Some(items) = json.get("items").and_then(|i| i.as_array()) {
+            for it in items {
+                if let Some(mi) = parse_item(it) {
+                    root = root.add_submenu(mi);
+                }
+            }
+        }
+        Some(root)
     }
 
     /// Get the current menu items (cloned)
@@ -202,7 +270,7 @@ impl<'a> MenuHandler<'a> {
     }
 
     /// Execute an action by ID
-    fn execute_action(&self, action_id: &str) -> Result<()> {
+    fn execute_action(&mut self, action_id: &str) -> Result<()> {
         let ctx = ActionContext::new();
 
         match self.dispatcher.execute(action_id, &ctx) {
@@ -210,6 +278,11 @@ impl<'a> MenuHandler<'a> {
                 if result.success {
                     if let Some(msg) = result.message {
                         println!("✓ {}", msg);
+                    }
+                    // If a language change action, ensure in-memory state is updated so
+                    // the menu reloads immediately without requiring a restart.
+                    if let Some(code) = action_id.strip_prefix("set_language_") {
+                        crate::config::state::set_language(code, self.app_state);
                     }
                 } else if let Some(msg) = result.message {
                     warn!("{}", msg);
