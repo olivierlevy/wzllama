@@ -23,7 +23,7 @@ impl CatalogRefresher {
             .name("catalog-refresh".into())
             .spawn(|| {
                 // Use hot-swappable i18n when logging so messages reflect current language
-                let mut prev_lang = crate::config::i18n::get_current().meta.code.clone();
+                let prev_lang = crate::config::i18n::get_current().meta.code.clone();
                 match Self::fetch_and_update(false) {
                     Ok(catalog) => {
                         let current_lang = crate::config::i18n::get_current().meta.code.clone();

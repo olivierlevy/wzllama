@@ -28,7 +28,7 @@ impl ToolUpdater {
             .name("tool-updater".into())
             .spawn(move || {
                 // Use hot-swappable i18n during updates so messages reflect current language.
-                let mut prev_lang = crate::config::i18n::get_current().meta.code.clone();
+                let prev_lang = crate::config::i18n::get_current().meta.code.clone();
                 match Self::update_all_silent(&state, &I18n::default()) {
                     Ok(summary) => {
                         let current_lang = crate::config::i18n::get_current().meta.code.clone();
