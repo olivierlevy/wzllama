@@ -160,20 +160,16 @@ pub async fn start_test_server(addr: SocketAddr) -> SocketAddr {
         let listener = match tokio::net::TcpListener::bind(addr).await {
             Ok(l) => l,
             Err(e) => {
-                error!("Failed to bind test API server socket: {}", e);
-                return;
+                    log::error!("Failed to bind test API server socket: {}", e);
+                    return;
+                }
+            };
+            let local = listener.local_addr().expect("listener local_addr");
+            let _ = bound_tx.send(local);
+
+            if let Err(e) = axum::serve(listener, app).await {
+                log::error!("Test API server error: {}", e);
             }
-        };
-        let local = listener.local_addr().expect("listener local_addr");
-        let _ = bound_tx.send(local);
-
-        let server = axum::Server::from_tcp(listener)
-            .expect("failed to create axum server")
-            .serve(app.into_make_service());
-
-        if let Err(e) = server.await {
-            error!("Test API server error: {}", e);
-        }
     });
 
     bound_rx.await.expect("failed to receive bound address")
