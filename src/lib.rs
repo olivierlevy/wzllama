@@ -2,6 +2,7 @@ pub mod api_server;
 pub mod cli;
 pub mod config;
 pub mod core;
+pub mod telemetry;
 pub mod display;
 pub mod error;
 pub mod menu_api;
