@@ -9,6 +9,7 @@ pub mod ollama_models;
 pub mod shell;
 pub mod system;
 pub mod task_manager;
+pub mod init;
 pub mod tool_updater;
 
 pub use hardware::HardwareInfo;
