@@ -1,15 +1,15 @@
+use crate::config::{I18n, WzllamaState};
+use crate::core::{ollama_api, ollama_models, HardwareInfo};
+use crate::display;
 use anyhow::Result;
 use colored::*;
 use dialoguer::Confirm;
-use crate::config::{I18n, WzllamaState};
-use crate::core::{HardwareInfo, ollama_api, ollama_models};
-use crate::display;
 
 pub fn ensure_first_models(i18n: &I18n, hw: &HardwareInfo, state: &mut WzllamaState) -> Result<()> {
     let local = ollama_api::detect_url()
         .and_then(|u| ollama_api::fetch_local_models(&u).ok())
         .unwrap_or_default();
-    
+
     if !local.is_empty() {
         return Ok(());
     }
@@ -18,19 +18,22 @@ pub fn ensure_first_models(i18n: &I18n, hw: &HardwareInfo, state: &mut WzllamaSt
     display::info(&i18n.t("models.no_models_yet"));
 
     let remote = ollama_api::fetch_full_catalog().unwrap_or_default();
-    
+
     // 1. Meilleur modèle qualité (gros)
     let heavy = ollama_models::rank_models(&remote, "mixed", hw, 1);
-    
+
     // 2. Modèle léger : forcer un petit modèle connu
     let light_model = "qwen2.5:1.5b".to_string();
-    let light = vec![(ollama_api::OllamaModel {
-        name: light_model.clone(),
-        model: light_model.clone(),
-        modified_at: None,
-        size: Some(1_000_000_000),  // ~1 Go
-        details: None,
-    }, 0.8)];
+    let light = vec![(
+        ollama_api::OllamaModel {
+            name: light_model.clone(),
+            model: light_model.clone(),
+            modified_at: None,
+            size: Some(1_000_000_000), // ~1 Go
+            details: None,
+        },
+        0.8,
+    )];
 
     println!("\n   {}", i18n.t("models.recommended_pair"));
 
@@ -47,7 +50,7 @@ pub fn ensure_first_models(i18n: &I18n, hw: &HardwareInfo, state: &mut WzllamaSt
             }
         }
     }
-    
+
     // After the loop d'installation des modèles
     if let Some((heavy_model, _)) = heavy.first() {
         crate::config::state::set_last_model(&heavy_model.name, state);

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
+use crate::config::paths;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::config::paths;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct LanguageMeta {
@@ -15,7 +15,9 @@ pub struct LanguageMeta {
     pub direction: String,
 }
 
-fn default_direction() -> String { "ltr".to_string() }
+fn default_direction() -> String {
+    "ltr".to_string()
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct I18nFile {
@@ -36,11 +38,11 @@ pub struct I18n {
 impl Default for I18n {
     fn default() -> Self {
         Self {
-            meta: LanguageMeta { 
-                code: "en".into(), 
-                name: "English".into(), 
-                name_en: Some("English".into()), 
-                direction: "ltr".into() 
+            meta: LanguageMeta {
+                code: "en".into(),
+                name: "English".into(),
+                name_en: Some("English".into()),
+                direction: "ltr".into(),
             },
             map: HashMap::new(),
         }
@@ -49,7 +51,10 @@ impl Default for I18n {
 
 impl I18n {
     pub fn t(&self, key: &str) -> String {
-        self.map.get(key).cloned().unwrap_or_else(|| key.to_string())
+        self.map
+            .get(key)
+            .cloned()
+            .unwrap_or_else(|| key.to_string())
     }
 
     pub fn t_with_vars(&self, key: &str, vars: &[(&str, &str)]) -> String {
@@ -64,7 +69,7 @@ impl I18n {
 pub fn get_available_languages() -> Vec<LanguageMeta> {
     let i18n_path = paths::i18n_dir();
     let mut languages = Vec::new();
-    
+
     // Chercher dans ~/.wzllama/i18n d'abord
     if let Ok(entries) = std::fs::read_dir(&i18n_path) {
         for entry in entries.flatten() {
@@ -78,7 +83,7 @@ pub fn get_available_languages() -> Vec<LanguageMeta> {
             }
         }
     }
-    
+
     // Si pas trouvé, chercher dans le répertoire embarqué du projet (config/i18n)
     if languages.is_empty() {
         if let Ok(entries) = std::fs::read_dir("config/i18n") {
@@ -94,11 +99,13 @@ pub fn get_available_languages() -> Vec<LanguageMeta> {
             }
         }
     }
-    
+
     if languages.is_empty() {
         languages.push(LanguageMeta {
-            code: "fr".into(), name: "Français".into(),
-            name_en: Some("French".into()), direction: "ltr".into(),
+            code: "fr".into(),
+            name: "Français".into(),
+            name_en: Some("French".into()),
+            direction: "ltr".into(),
         });
     }
     languages.sort_by(|a, b| a.code.cmp(&b.code));
@@ -108,8 +115,14 @@ pub fn get_available_languages() -> Vec<LanguageMeta> {
 pub fn detect_system_language() -> String {
     for var in &["LANG", "LANGUAGE", "LC_ALL", "LC_MESSAGES"] {
         if let Ok(lang) = std::env::var(var) {
-            let code = lang.split('.').next().unwrap_or("fr")
-                .split('_').next().unwrap_or("fr").to_lowercase();
+            let code = lang
+                .split('.')
+                .next()
+                .unwrap_or("fr")
+                .split('_')
+                .next()
+                .unwrap_or("fr")
+                .to_lowercase();
             if paths::i18n_dir().join(format!("{}.json", code)).exists() {
                 return code;
             }
@@ -134,13 +147,18 @@ pub fn load(lang_code: &str) -> Result<I18n> {
         std::fs::read_to_string(&embedded_fallback)?
     } else {
         return Ok(I18n {
-            meta: LanguageMeta { code: "fr".into(), name: "Français".into(), name_en: None, direction: "ltr".into() },
+            meta: LanguageMeta {
+                code: "fr".into(),
+                name: "Français".into(),
+                name_en: None,
+                direction: "ltr".into(),
+            },
             map: HashMap::new(),
         });
     };
 
-    let file: I18nFile = serde_json::from_str(&content)
-        .context(format!("Fichier i18n '{}' invalide", lang_code))?;
+    let file: I18nFile =
+        serde_json::from_str(&content).context(format!("Fichier i18n '{}' invalide", lang_code))?;
 
     let mut map = HashMap::new();
     for (key, value) in &file.translations {
@@ -151,17 +169,30 @@ pub fn load(lang_code: &str) -> Result<I18n> {
         map.insert(key.clone(), s);
     }
 
-    Ok(I18n { meta: file.language, map })
+    Ok(I18n {
+        meta: file.language,
+        map,
+    })
 }
 
 pub fn check_integrity() -> Result<()> {
     let languages = get_available_languages();
-    let ref_lang = if languages.iter().any(|l| l.code == "fr") { "fr" } else { &languages[0].code };
+    let ref_lang = if languages.iter().any(|l| l.code == "fr") {
+        "fr"
+    } else {
+        &languages[0].code
+    };
     let reference = load(ref_lang)?;
     for lang in &languages {
-        if lang.code == ref_lang { continue; }
+        if lang.code == ref_lang {
+            continue;
+        }
         let i18n = load(&lang.code)?;
-        let missing: Vec<_> = reference.map.keys().filter(|k| !i18n.map.contains_key(*k)).collect();
+        let missing: Vec<_> = reference
+            .map
+            .keys()
+            .filter(|k| !i18n.map.contains_key(*k))
+            .collect();
         if !missing.is_empty() {
             println!("⚠️  {} : {} clés manquantes", lang.code, missing.len());
         }

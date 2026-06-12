@@ -41,15 +41,24 @@ pub struct ActionResult {
 
 impl ActionResult {
     pub fn success() -> Self {
-        Self { success: true, message: None }
+        Self {
+            success: true,
+            message: None,
+        }
     }
 
     pub fn success_with(message: &str) -> Self {
-        Self { success: true, message: Some(message.to_string()) }
+        Self {
+            success: true,
+            message: Some(message.to_string()),
+        }
     }
 
     pub fn failure(message: &str) -> Self {
-        Self { success: false, message: Some(message.to_string()) }
+        Self {
+            success: false,
+            message: Some(message.to_string()),
+        }
     }
 }
 
@@ -148,9 +157,11 @@ impl ActionDispatcher {
     }
 
     pub fn execute(&self, id: &str, ctx: &ActionContext) -> Result<ActionResult> {
-        let action = self.actions.get(id)
+        let action = self
+            .actions
+            .get(id)
             .ok_or_else(|| anyhow::anyhow!("Action '{}' not found", id))?;
-        
+
         action.validate(ctx)?;
         action.execute(ctx)
     }

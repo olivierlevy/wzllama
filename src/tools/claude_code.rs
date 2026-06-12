@@ -1,18 +1,28 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct ClaudeCodeTool;
 
 impl Tool for ClaudeCodeTool {
-    fn id(&self) -> &str { "claude_code" }
-    fn name(&self) -> &str { "Claude Code" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.claude.description") }
+    fn id(&self) -> &str {
+        "claude_code"
+    }
+    fn name(&self) -> &str {
+        "Claude Code"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.claude.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        if shell::is_installed_with_local_bin("claude") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("claude") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
         ClaudeCodeTool::install(i18n)
@@ -26,8 +36,10 @@ impl Tool for ClaudeCodeTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         ClaudeCodeTool::launch(i18n, state, model)
     }
-    
-    fn supports_agentic(&self) -> bool { true }
+
+    fn supports_agentic(&self) -> bool {
+        true
+    }
 }
 
 impl ClaudeCodeTool {
@@ -53,7 +65,11 @@ impl ClaudeCodeTool {
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.claude.uninstall_confirm")).default(false).interact()? {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.claude.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
             return Ok(());
         }
         #[cfg(unix)]
@@ -78,7 +94,8 @@ impl ClaudeCodeTool {
             Some(m) => {
                 display::run(&i18n.t_with_vars("tool.claude_code.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch claude --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 display::comment(&i18n.t("tool.claude_code.no_model"));

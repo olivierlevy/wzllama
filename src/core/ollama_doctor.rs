@@ -1,6 +1,6 @@
-use anyhow::Result;
 use crate::core::ollama_api;
 use crate::display;
+use anyhow::Result;
 
 pub struct OllamaDoctor;
 
@@ -45,7 +45,9 @@ impl OllamaDoctor {
             if ollama_api::detect_url().is_none() {
                 let _ = shell::run_quiet("sudo systemctl start ollama");
                 for _ in 0..10 {
-                    if ollama_api::detect_url().is_some() { break; }
+                    if ollama_api::detect_url().is_some() {
+                        break;
+                    }
                     std::thread::sleep(std::time::Duration::from_secs(1));
                 }
                 fixes.push("Ollama started".into());
@@ -69,7 +71,9 @@ impl OllamaDoctor {
                     Ok(_) => {
                         for _ in 0..15 {
                             std::thread::sleep(std::time::Duration::from_millis(500));
-                            if ollama_api::detect_url().is_some() { break; }
+                            if ollama_api::detect_url().is_some() {
+                                break;
+                            }
                         }
                         fixes.push("Ollama started".into());
                     }
@@ -96,12 +100,15 @@ impl OllamaDoctor {
             .spawn()?;
 
         for _ in 0..30 {
-            if key_path.exists() { break; }
+            if key_path.exists() {
+                break;
+            }
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
         let _ = child.kill();
         std::thread::sleep(std::time::Duration::from_secs(1));
-        let _ = crate::core::shell::run_quiet("sudo kill $(lsof -ti :11434 2>/dev/null) 2>/dev/null");
+        let _ =
+            crate::core::shell::run_quiet("sudo kill $(lsof -ti :11434 2>/dev/null) 2>/dev/null");
         Ok(())
     }
 

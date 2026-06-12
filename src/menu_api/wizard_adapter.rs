@@ -3,20 +3,20 @@
 //! This module provides adapters to wrap existing `fn run(i18n, state, hw)` style
 //! menu functions into the new ToolAction-based system.
 
-use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::menu_api::{
+    menu_tree::{MenuConfig, MenuConfigItem, MenuTree},
     tool_action::{ActionContext, ActionResult, ToolAction},
-    menu_tree::{MenuTree, MenuConfig, MenuConfigItem},
     ActionDispatcher,
 };
+use anyhow::Result;
 
 /// Wrapper for existing wizard menu functions
-/// 
+///
 /// Existing wizard menus have signature: `fn run(&I18n, &mut WzllamaState, &HardwareInfo) -> Result<()>`
 #[allow(dead_code)]
-pub struct WizardAction<F> 
+pub struct WizardAction<F>
 where
     F: Fn(&I18n, &mut WzllamaState, &HardwareInfo) -> Result<()> + Send + Sync,
 {
@@ -144,20 +144,23 @@ impl WizardMenuBuilder {
 #[allow(dead_code)]
 pub fn create_main_menu_tree() -> MenuTree {
     WizardMenuBuilder::new()
-        .add_branch(&i18n_key_to_label("menu.main.wizard"), vec![
-            MenuConfigItem {
-                label: i18n_key_to_label("menu.main.models"),
-                action_id: Some("wizard_models".to_string()),
-                children: None,
-                condition: None,
-            },
-            MenuConfigItem {
-                label: i18n_key_to_label("menu.main.scientific"),
-                action_id: Some("wizard_scientific".to_string()),
-                children: None,
-                condition: None,
-            },
-        ])
+        .add_branch(
+            &i18n_key_to_label("menu.main.wizard"),
+            vec![
+                MenuConfigItem {
+                    label: i18n_key_to_label("menu.main.models"),
+                    action_id: Some("wizard_models".to_string()),
+                    children: None,
+                    condition: None,
+                },
+                MenuConfigItem {
+                    label: i18n_key_to_label("menu.main.scientific"),
+                    action_id: Some("wizard_scientific".to_string()),
+                    children: None,
+                    condition: None,
+                },
+            ],
+        )
         .add_item(&i18n_key_to_label("menu.main.tools"), "wizard_tools")
         .add_item(&i18n_key_to_label("menu.main.cleanup"), "wizard_cleanup")
         .add_item(&i18n_key_to_label("menu.main.config"), "wizard_config")
@@ -213,13 +216,13 @@ impl WizardAdapter {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
 
 /// Example of how to migrate a wizard menu function to menu_api
-/// 
+///
 /// Before (current style):
 /// ```ignore
 /// pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
@@ -228,7 +231,7 @@ impl WizardAdapter {
 ///     }
 /// }
 /// ```
-/// 
+///
 /// After (new style):
 /// ```ignore
 /// pub fn run(handler: &mut MenuHandler, i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
@@ -245,28 +248,32 @@ pub mod migration_example {
     #[allow(dead_code)]
     pub fn create_tools_menu() -> MenuTree {
         WizardMenuBuilder::new()
-            .add_branch("Installer", vec![
-                MenuConfigItem {
-                    label: "Ollama".to_string(),
-                    action_id: Some("install_ollama".to_string()),
-                    children: None,
-                    condition: None,
-                },
-                MenuConfigItem {
-                    label: "Open WebUI".to_string(),
-                    action_id: Some("install_openwebui".to_string()),
-                    children: None,
-                    condition: None,
-                },
-            ])
-            .add_branch("Lancer", vec![
-                MenuConfigItem {
+            .add_branch(
+                "Installer",
+                vec![
+                    MenuConfigItem {
+                        label: "Ollama".to_string(),
+                        action_id: Some("install_ollama".to_string()),
+                        children: None,
+                        condition: None,
+                    },
+                    MenuConfigItem {
+                        label: "Open WebUI".to_string(),
+                        action_id: Some("install_openwebui".to_string()),
+                        children: None,
+                        condition: None,
+                    },
+                ],
+            )
+            .add_branch(
+                "Lancer",
+                vec![MenuConfigItem {
                     label: "Chat".to_string(),
                     action_id: Some("launch_chat".to_string()),
                     children: None,
                     condition: None,
-                },
-            ])
+                }],
+            )
             .build("Tools Menu")
     }
 }

@@ -1,7 +1,7 @@
+use crate::config::paths;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use crate::config::paths;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EnvConfig {
@@ -54,16 +54,36 @@ pub struct OpenClawEnv {
     pub api_key: String,
 }
 
-fn default_ollama_host() -> String { "127.0.0.1:11434".into() }
-fn default_ollama_origins() -> String { "http://localhost:*".into() }
-fn default_keep_alive() -> i32 { -1 }
-fn default_true() -> bool { true }
-fn default_num_parallel() -> u32 { 4 }
-fn default_max_loaded() -> u32 { 3 }
-fn default_kv_cache() -> String { "q8_0".into() }
-fn default_context() -> u32 { 16384 }
-fn default_max_vram() -> u64 { 0 }  // 0 = auto
-fn default_cuda_device() -> String { "".into() }  // empty = all GPUs
+fn default_ollama_host() -> String {
+    "127.0.0.1:11434".into()
+}
+fn default_ollama_origins() -> String {
+    "http://localhost:*".into()
+}
+fn default_keep_alive() -> i32 {
+    -1
+}
+fn default_true() -> bool {
+    true
+}
+fn default_num_parallel() -> u32 {
+    4
+}
+fn default_max_loaded() -> u32 {
+    3
+}
+fn default_kv_cache() -> String {
+    "q8_0".into()
+}
+fn default_context() -> u32 {
+    16384
+}
+fn default_max_vram() -> u64 {
+    0
+} // 0 = auto
+fn default_cuda_device() -> String {
+    "".into()
+} // empty = all GPUs
 
 impl Default for EnvConfig {
     fn default() -> Self {
@@ -131,45 +151,96 @@ impl EnvConfig {
     pub fn generate_env_file(&self) -> Result<()> {
         let mut content = String::new();
         content.push_str("# wzllama - Environnement IA 100% locale\n");
-        content.push_str(&format!("# Généré le {}\n\n", chrono::Local::now().format("%Y-%m-%d")));
-        
+        content.push_str(&format!(
+            "# Généré le {}\n\n",
+            chrono::Local::now().format("%Y-%m-%d")
+        ));
+
         content.push_str("# ═══ Ollama ═══════════════════════════════\n");
-        
+
         content.push_str(&format!("export OLLAMA_HOST='{}'\n", self.ollama.host));
-        content.push_str(&format!("export OLLAMA_ORIGINS='{}'\n", self.ollama.origins));
-        content.push_str(&format!("export OLLAMA_KEEP_ALIVE={}\n", self.ollama.keep_alive));
-        content.push_str(&format!("export OLLAMA_NO_CLOUD={}\n", if self.ollama.no_cloud { 1 } else { 0 }));
-        content.push_str(&format!("export OLLAMA_NUM_PARALLEL={}\n", self.ollama.num_parallel));
-        content.push_str(&format!("export OLLAMA_MAX_LOADED_MODELS={}\n", self.ollama.max_loaded_models));
-        content.push_str(&format!("export OLLAMA_FLASH_ATTENTION={}\n", if self.ollama.flash_attention { 1 } else { 0 }));
-        content.push_str(&format!("export OLLAMA_KV_CACHE_TYPE={}\n", self.ollama.kv_cache_type));
-        content.push_str(&format!("export OLLAMA_CONTEXT_LENGTH={}\n", self.ollama.context_length));
+        content.push_str(&format!(
+            "export OLLAMA_ORIGINS='{}'\n",
+            self.ollama.origins
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_KEEP_ALIVE={}\n",
+            self.ollama.keep_alive
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_NO_CLOUD={}\n",
+            if self.ollama.no_cloud { 1 } else { 0 }
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_NUM_PARALLEL={}\n",
+            self.ollama.num_parallel
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_MAX_LOADED_MODELS={}\n",
+            self.ollama.max_loaded_models
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_FLASH_ATTENTION={}\n",
+            if self.ollama.flash_attention { 1 } else { 0 }
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_KV_CACHE_TYPE={}\n",
+            self.ollama.kv_cache_type
+        ));
+        content.push_str(&format!(
+            "export OLLAMA_CONTEXT_LENGTH={}\n",
+            self.ollama.context_length
+        ));
         // GPU/VRAM settings
         if self.ollama.max_vram > 0 {
-            content.push_str(&format!("export OLLAMA_MAX_VRAM={}\n", self.ollama.max_vram));
+            content.push_str(&format!(
+                "export OLLAMA_MAX_VRAM={}\n",
+                self.ollama.max_vram
+            ));
         }
         if !self.ollama.cuda_visible_devices.is_empty() {
-            content.push_str(&format!("export CUDA_VISIBLE_DEVICES='{}'\n", self.ollama.cuda_visible_devices));
+            content.push_str(&format!(
+                "export CUDA_VISIBLE_DEVICES='{}'\n",
+                self.ollama.cuda_visible_devices
+            ));
         }
         content.push('\n');
-        
+
         content.push_str("# ═══ Providers ════════════════════════════\n");
-        content.push_str(&format!("export OPENAI_API_KEY='{}'\n", self.providers.openai.api_key));
-        content.push_str(&format!("export OPENAI_BASE_URL='{}'\n", self.providers.openai.base_url));
-        content.push_str(&format!("export ANTHROPIC_API_KEY='{}'\n", self.providers.anthropic.api_key));
-        content.push_str(&format!("export ANTHROPIC_BASE_URL='{}'\n\n", self.providers.anthropic.base_url));
-        
+        content.push_str(&format!(
+            "export OPENAI_API_KEY='{}'\n",
+            self.providers.openai.api_key
+        ));
+        content.push_str(&format!(
+            "export OPENAI_BASE_URL='{}'\n",
+            self.providers.openai.base_url
+        ));
+        content.push_str(&format!(
+            "export ANTHROPIC_API_KEY='{}'\n",
+            self.providers.anthropic.api_key
+        ));
+        content.push_str(&format!(
+            "export ANTHROPIC_BASE_URL='{}'\n\n",
+            self.providers.anthropic.base_url
+        ));
+
         content.push_str("# ═══ OpenClaw ═════════════════════════════\n");
-        content.push_str(&format!("export OLLAMA_API_KEY='{}'\n\n", self.openclaw.api_key));
-        
+        content.push_str(&format!(
+            "export OLLAMA_API_KEY='{}'\n\n",
+            self.openclaw.api_key
+        ));
+
         content.push_str("# ═══ wzllama ══════════════════════════════\n");
-        content.push_str(&format!("export WZLLAMA_HOME='{}'\n", paths::wzllama_dir().display()));
+        content.push_str(&format!(
+            "export WZLLAMA_HOME='{}'\n",
+            paths::wzllama_dir().display()
+        ));
         // Ajouter la langue si disponible dans le state
         let state = crate::config::WzllamaState::load();
         if let Some(ref lang) = state.language {
             content.push_str(&format!("export WZLLAMA_LANG='{}'\n", lang));
         }
-        
+
         fs::write(Self::env_path(), content)?;
         Ok(())
     }

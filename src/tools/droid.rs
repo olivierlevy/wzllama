@@ -1,17 +1,27 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 pub struct DroidTool;
 
 impl Tool for DroidTool {
-    fn id(&self) -> &str { "droid" }
-    fn name(&self) -> &str { "Droid" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.droid.description") }
+    fn id(&self) -> &str {
+        "droid"
+    }
+    fn name(&self) -> &str {
+        "Droid"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.droid.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        if shell::is_installed_with_local_bin("droid") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("droid") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
         DroidTool::install(i18n)
@@ -25,8 +35,10 @@ impl Tool for DroidTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         DroidTool::launch(i18n, state, model)
     }
-    
-    fn supports_agentic(&self) -> bool { true }
+
+    fn supports_agentic(&self) -> bool {
+        true
+    }
 }
 
 impl DroidTool {
@@ -60,7 +72,11 @@ impl DroidTool {
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.droid.uninstall_confirm")).default(false).interact()? {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.droid.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
             return Ok(());
         }
         #[cfg(unix)]
@@ -83,7 +99,8 @@ impl DroidTool {
             Some(m) => {
                 display::run(&i18n.t_with_vars("tool.droid.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch droid --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 display::comment(&i18n.t("tool.droid.no_model"));

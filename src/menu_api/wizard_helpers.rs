@@ -28,7 +28,7 @@ impl UseCase {
             UseCase::Embedding,
         ]
     }
-    
+
     pub fn as_str(&self) -> &'static str {
         match self {
             UseCase::General => "general",
@@ -39,7 +39,7 @@ impl UseCase {
             UseCase::Embedding => "embedding",
         }
     }
-    
+
     pub fn display_name(&self, i18n: &I18n) -> String {
         match self {
             UseCase::General => i18n.t("wizard.usecase.general"),
@@ -55,36 +55,62 @@ impl UseCase {
 /// Get priority tools for a use case (installed ones ranked by relevance)
 pub fn get_priority_tools_for_usecase(use_case: UseCase, state: &WzllamaState) -> Vec<String> {
     let mut tool_ids = vec![];
-    
+
     match use_case {
         UseCase::Coding => {
-            if state.installed.claude_code { tool_ids.push("claude_code".to_string()); }
-            if state.installed.opencode { tool_ids.push("opencode".to_string()); }
-            if state.installed.droid { tool_ids.push("droid".to_string()); }
-            if state.installed.codex { tool_ids.push("codex".to_string()); }
+            if state.installed.claude_code {
+                tool_ids.push("claude_code".to_string());
+            }
+            if state.installed.opencode {
+                tool_ids.push("opencode".to_string());
+            }
+            if state.installed.droid {
+                tool_ids.push("droid".to_string());
+            }
+            if state.installed.codex {
+                tool_ids.push("codex".to_string());
+            }
         }
         UseCase::Reasoning => {
-            if state.installed.openclaw { tool_ids.push("openclaw".to_string()); }
-            if state.installed.hermes_agent { tool_ids.push("hermes_agent".to_string()); }
+            if state.installed.openclaw {
+                tool_ids.push("openclaw".to_string());
+            }
+            if state.installed.hermes_agent {
+                tool_ids.push("hermes_agent".to_string());
+            }
         }
         UseCase::Chat => {
-            if state.installed.goose { tool_ids.push("goose".to_string()); }
-            if state.installed.pool { tool_ids.push("pool".to_string()); }
-            if state.installed.pi { tool_ids.push("pi".to_string()); }
+            if state.installed.goose {
+                tool_ids.push("goose".to_string());
+            }
+            if state.installed.pool {
+                tool_ids.push("pool".to_string());
+            }
+            if state.installed.pi {
+                tool_ids.push("pi".to_string());
+            }
         }
         UseCase::Multimodal => {
-            if state.installed.openclaw { tool_ids.push("openclaw".to_string()); }
-            if state.installed.goose { tool_ids.push("goose".to_string()); }
+            if state.installed.openclaw {
+                tool_ids.push("openclaw".to_string());
+            }
+            if state.installed.goose {
+                tool_ids.push("goose".to_string());
+            }
         }
         UseCase::General | UseCase::Embedding => {
-            if state.installed.openclaw { tool_ids.push("openclaw".to_string()); }
-            if state.installed.goose { tool_ids.push("goose".to_string()); }
+            if state.installed.openclaw {
+                tool_ids.push("openclaw".to_string());
+            }
+            if state.installed.goose {
+                tool_ids.push("goose".to_string());
+            }
         }
     }
-    
+
     // Add ollama as last resort (always available)
     tool_ids.push("ollama".to_string());
-    
+
     tool_ids
 }
 
@@ -99,7 +125,14 @@ impl ScientificCategory {
         vec![
             ScientificCategory {
                 name_key: "scientific.bioinformatics",
-                skills: &["biopython", "bioservices", "gget", "scanpy", "anndata", "cellxgene-census"],
+                skills: &[
+                    "biopython",
+                    "bioservices",
+                    "gget",
+                    "scanpy",
+                    "anndata",
+                    "cellxgene-census",
+                ],
             },
             ScientificCategory {
                 name_key: "scientific.cheminformatics",
@@ -119,7 +152,13 @@ impl ScientificCategory {
             },
             ScientificCategory {
                 name_key: "scientific.ml",
-                skills: &["scikit-learn", "pytorch-lightning", "pennylane", "qiskit", "cirq"],
+                skills: &[
+                    "scikit-learn",
+                    "pytorch-lightning",
+                    "pennylane",
+                    "qiskit",
+                    "cirq",
+                ],
             },
         ]
     }
@@ -166,8 +205,7 @@ impl AgenticToolInfo {
 
 /// Check if a scientific skill is installed
 pub fn is_skill_installed(skill: &str) -> bool {
-    let home = dirs::home_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
     let skill_path = home
         .join(".wzllama")
         .join("scientific-skills")
@@ -191,7 +229,7 @@ pub fn get_install_cmd(tool_id: &str) -> &'static str {
 pub fn sync_tools_state(state: &mut WzllamaState) {
     use crate::core::shell;
     use crate::tools::docker;
-    
+
     state.installed.docker = docker::is_installed();
     state.installed.ollama = shell::is_installed_quiet("ollama");
     state.installed.open_webui = shell::run_quiet("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok();
@@ -203,7 +241,7 @@ pub fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.droid = shell::is_installed_quiet("droid");
     state.installed.pi = shell::is_installed_with_local_bin("pi");
     state.installed.pool = shell::is_installed_quiet("pool");
-    
+
     // Obsidian - check flatpak first, then binary
     state.installed.obsidian = if shell::run("flatpak --version").is_ok() {
         shell::run_quiet("flatpak info md.obsidian.Obsidian").is_ok()
@@ -215,7 +253,7 @@ pub fn sync_tools_state(state: &mut WzllamaState) {
 /// Check if a tool is installed (cleanup logic)
 pub fn cleanup_is_installed(id: &str) -> bool {
     use crate::core::shell;
-    
+
     match id {
         "ollama" => shell::is_installed_quiet("ollama"),
         "open_webui" => shell::run_quiet("docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui || sudo docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q open-webui").is_ok(),
@@ -308,15 +346,18 @@ impl MenuIndices {
 }
 
 /// Get resume label if available
-pub fn get_resume_label(
-    state: &WzllamaState, 
-    i18n: &I18n,
-) -> Option<String> {
+pub fn get_resume_label(state: &WzllamaState, i18n: &I18n) -> Option<String> {
     if state.last_tool.is_some() && state.last_model.is_some() {
         if let Some(ref last_tool) = state.last_tool {
             if let Some(tool) = tools::get_tool(last_tool) {
                 let tool_name = tool.name();
-                return Some(i18n.t_with_vars("menu.main.resume", &[("tool", tool_name), ("model", state.last_model.as_ref().unwrap())]));
+                return Some(i18n.t_with_vars(
+                    "menu.main.resume",
+                    &[
+                        ("tool", tool_name),
+                        ("model", state.last_model.as_ref().unwrap()),
+                    ],
+                ));
             }
         }
     }
@@ -332,7 +373,7 @@ pub fn ollama_to_localmax_model(
     models: &[crate::core::localmax_models::LocalMaxModel],
 ) -> crate::core::localmax_models::LocalMaxModel {
     let ollama_name = &ollama_model.name;
-    
+
     // Try to find matching model in localmaxxing database
     let matching_model = models.iter().find(|m| {
         // Check if hf_id directly matches (already ollama name)
@@ -343,7 +384,7 @@ pub fn ollama_to_localmax_model(
         let converted_name = m.to_ollama_name();
         converted_name == *ollama_name
     });
-    
+
     match matching_model {
         Some(m) => m.clone(),
         None => {
@@ -369,16 +410,46 @@ pub struct LanguageInfo {
 impl LanguageInfo {
     pub fn all() -> Vec<Self> {
         vec![
-            LanguageInfo { code: "fr", name: "Français" },
-            LanguageInfo { code: "en", name: "English" },
-            LanguageInfo { code: "es", name: "Español" },
-            LanguageInfo { code: "de", name: "Deutsch" },
-            LanguageInfo { code: "it", name: "Italiano" },
-            LanguageInfo { code: "pt", name: "Português" },
-            LanguageInfo { code: "ru", name: "Русский" },
-            LanguageInfo { code: "zh", name: "中文" },
-            LanguageInfo { code: "ja", name: "日本語" },
-            LanguageInfo { code: "ko", name: "한국어" },
+            LanguageInfo {
+                code: "fr",
+                name: "Français",
+            },
+            LanguageInfo {
+                code: "en",
+                name: "English",
+            },
+            LanguageInfo {
+                code: "es",
+                name: "Español",
+            },
+            LanguageInfo {
+                code: "de",
+                name: "Deutsch",
+            },
+            LanguageInfo {
+                code: "it",
+                name: "Italiano",
+            },
+            LanguageInfo {
+                code: "pt",
+                name: "Português",
+            },
+            LanguageInfo {
+                code: "ru",
+                name: "Русский",
+            },
+            LanguageInfo {
+                code: "zh",
+                name: "中文",
+            },
+            LanguageInfo {
+                code: "ja",
+                name: "日本語",
+            },
+            LanguageInfo {
+                code: "ko",
+                name: "한국어",
+            },
         ]
     }
 }
@@ -387,12 +458,16 @@ impl LanguageInfo {
 pub fn get_default_language_index() -> usize {
     let languages = LanguageInfo::all();
     let system_lang = crate::config::i18n::detect_system_language();
-    languages.iter().position(|l| l.code == system_lang).unwrap_or(0)
+    languages
+        .iter()
+        .position(|l| l.code == system_lang)
+        .unwrap_or(0)
 }
 
 /// Get language info for display
 pub fn get_language_items() -> Vec<(String, String)> {
-    LanguageInfo::all().into_iter()
+    LanguageInfo::all()
+        .into_iter()
         .map(|l| (l.code.to_string(), format!("{} ({})", l.name, l.code)))
         .collect()
 }

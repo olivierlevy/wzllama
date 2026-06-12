@@ -152,10 +152,15 @@ impl LLMFitClient {
     }
 
     /// Get top models
-    pub fn get_top_models(&self, limit: Option<u32>, min_fit: Option<&str>, use_case: Option<&str>) -> Result<Vec<LLMFitModel>> {
+    pub fn get_top_models(
+        &self,
+        limit: Option<u32>,
+        min_fit: Option<&str>,
+        use_case: Option<&str>,
+    ) -> Result<Vec<LLMFitModel>> {
         let mut url = format!("{}/api/v1/models/top", self.base_url());
         let mut params = Vec::new();
-        
+
         if let Some(l) = limit {
             params.push(format!("limit={}", l));
         }
@@ -165,7 +170,7 @@ impl LLMFitClient {
         if let Some(u) = use_case {
             params.push(format!("use_case={}", u));
         }
-        
+
         if !params.is_empty() {
             url = format!("{}?{}", url, params.join("&"));
         }
@@ -179,11 +184,11 @@ impl LLMFitClient {
     pub fn search_models(&self, query: &str, limit: Option<u32>) -> Result<Vec<LLMFitModel>> {
         let mut url = format!("{}/api/v1/models", self.base_url());
         let mut params = vec![format!("search={}", query)];
-        
+
         if let Some(l) = limit {
             params.push(format!("limit={}", l));
         }
-        
+
         url = format!("{}?{}", url, params.join("&"));
 
         let response = reqwest::blocking::get(&url)?;
@@ -211,7 +216,7 @@ impl LLMFitClient {
 /// Start llmfit server (HTTP mode)
 pub fn start_server(port: Option<u16>) -> Result<()> {
     let port = port.unwrap_or(DEFAULT_PORT);
-    
+
     // Check if already running
     let client = LLMFitClient::with_port(port);
     if client.is_running() {
@@ -222,21 +227,19 @@ pub fn start_server(port: Option<u16>) -> Result<()> {
     let _output = Command::new("llmfit")
         .args(["serve", "--port", &port.to_string()])
         .spawn()?;
-    
+
     // Give it time to start
     std::thread::sleep(std::time::Duration::from_secs(2));
-    
+
     if !client.is_running() {
         return Err(anyhow!("Failed to start llmfit server"));
     }
-    
+
     Ok(())
 }
 
 /// Stop llmfit server
 pub fn stop_server() -> Result<()> {
-    let _ = Command::new("pkill")
-        .args(["-f", "llmfit serve"])
-        .output();
+    let _ = Command::new("pkill").args(["-f", "llmfit serve"]).output();
     Ok(())
 }

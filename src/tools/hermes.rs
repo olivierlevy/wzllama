@@ -1,18 +1,28 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct HermesTool;
 
 impl Tool for HermesTool {
-    fn id(&self) -> &str { "hermes_agent" }
-    fn name(&self) -> &str { "Hermes Agent" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.hermes.description") }
+    fn id(&self) -> &str {
+        "hermes_agent"
+    }
+    fn name(&self) -> &str {
+        "Hermes Agent"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.hermes.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        if shell::is_installed_with_local_bin("hermes") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("hermes") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
         HermesTool::install(i18n)
@@ -43,7 +53,9 @@ impl HermesTool {
                 {
                     display::info("Opening Hermes Agent download page...");
                     shell::open_url("https://github.com/NousResearch/hermes-agent");
-                    display::info("Install Hermes Agent from https://github.com/NousResearch/hermes-agent");
+                    display::info(
+                        "Install Hermes Agent from https://github.com/NousResearch/hermes-agent",
+                    );
                 }
             }
         }
@@ -60,7 +72,11 @@ impl HermesTool {
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.hermes.uninstall_confirm")).default(false).interact()? {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.hermes.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
             return Ok(());
         }
         #[cfg(unix)]
@@ -82,7 +98,8 @@ impl HermesTool {
             Some(m) => {
                 display::run(&i18n.t_with_vars("tool.hermes.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch hermes --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 display::comment(&i18n.t("tool.hermes.no_model"));

@@ -2,14 +2,14 @@
 //!
 //! This menu uses the MenuTree/MenuHandler system with ToolAction dispatch.
 
-use anyhow::Result;
-use colored::*;
-use dialoguer::{Select, Confirm, Input};
+use super::menu_header;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::display;
-use crate::menu_api::{MenuTree, MenuItem, MenuMetadata};
-use super::menu_header;
+use crate::menu_api::{MenuItem, MenuMetadata, MenuTree};
+use anyhow::Result;
+use colored::*;
+use dialoguer::{Confirm, Input, Select};
 
 /// Create the config menu tree structure
 pub fn build_menu_tree() -> MenuTree {
@@ -22,7 +22,7 @@ pub fn build_menu_tree() -> MenuTree {
         .add_submenu(MenuItem::leaf("🐚 Shells").with_action("manage_shells"))
         .add_submenu(MenuItem::leaf("🔄 Regenerate env file").with_action("regenerate_env"))
         .add_submenu(MenuItem::leaf("🗑️ Uninstall wzllama").with_action("uninstall_wzllama"));
-    
+
     MenuTree::new("config")
         .with_metadata(MenuMetadata {
             title: Some("⚙️ Configuration".to_string()),
@@ -33,7 +33,7 @@ pub fn build_menu_tree() -> MenuTree {
 
 pub fn run(i18n: &I18n, _state: &mut WzllamaState, hw: &HardwareInfo) -> Result<()> {
     let mut config = config::env::EnvConfig::load();
-    
+
     loop {
         // Affiche le header avec ressources comme le menu principal
         menu_header::render(
@@ -42,9 +42,9 @@ pub fn run(i18n: &I18n, _state: &mut WzllamaState, hw: &HardwareInfo) -> Result<
             true,
             _state.last_model.as_deref(),
             hw.ram_gb,
-            hw.total_vram_mb as f64 / 1024.0
+            hw.total_vram_mb as f64 / 1024.0,
         );
-        
+
         // Build menu items from MenuTree for consistent display
         // Retour en premier item (selon TODO.md ligne 72)
         let items = vec![
@@ -63,13 +63,14 @@ pub fn run(i18n: &I18n, _state: &mut WzllamaState, hw: &HardwareInfo) -> Result<
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact_opt()? {
+            .interact_opt()?
+        {
             Some(s) => s,
             None => return Ok(()), // Escape pressed
         };
 
         match sel {
-            0 => return Ok(()),  // Retour en position 0
+            0 => return Ok(()), // Retour en position 0
             1 => edit_performance(i18n, &mut config)?,
             2 => edit_ollama_settings(i18n, &mut config)?,
             3 => edit_providers(i18n, &mut config)?,
@@ -93,8 +94,22 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
             i18n.t("menu.back").to_string(),
             format!("📐 {} tokens", config.ollama.context_length),
             format!("💾 Cache KV: {}", config.ollama.kv_cache_type),
-            format!("⚡ Flash Attention: {}", if config.ollama.flash_attention { "✅" } else { "❌" }),
-            format!("☁️  Cloud: {}", if config.ollama.no_cloud { "❌ Bloqué" } else { "✅ Autorisé" }),
+            format!(
+                "⚡ Flash Attention: {}",
+                if config.ollama.flash_attention {
+                    "✅"
+                } else {
+                    "❌"
+                }
+            ),
+            format!(
+                "☁️  Cloud: {}",
+                if config.ollama.no_cloud {
+                    "❌ Bloqué"
+                } else {
+                    "✅ Autorisé"
+                }
+            ),
         ];
 
         let sel = match Select::new()
@@ -102,17 +117,30 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact_opt()? {
+            .interact_opt()?
+        {
             Some(s) => s,
             None => return Ok(()), // Escape pressed
         };
 
         match sel {
-            0 => return Ok(()),  // Retour en position 0
+            0 => return Ok(()), // Retour en position 0
             1 => {
-                let options = [("4K", "4096"), ("8K", "8192"), ("16K", "16384"), ("32K", "32768"), ("64K", "65536")];
+                let options = [
+                    ("4K", "4096"),
+                    ("8K", "8192"),
+                    ("16K", "16384"),
+                    ("32K", "32768"),
+                    ("64K", "65536"),
+                ];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
-                let s = match Select::new().with_prompt("Context").items(&labels).default(2).max_length(10).interact_opt()? {
+                let s = match Select::new()
+                    .with_prompt("Context")
+                    .items(&labels)
+                    .default(2)
+                    .max_length(10)
+                    .interact_opt()?
+                {
                     Some(v) => v,
                     None => continue, // Escape - redo menu
                 };
@@ -121,7 +149,13 @@ fn edit_performance(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<
             2 => {
                 let options = [("f16", "f16"), ("q8_0", "q8_0"), ("q4_0", "q4_0")];
                 let labels: Vec<&str> = options.iter().map(|(l, _)| *l).collect();
-                let s = match Select::new().with_prompt("KV Cache").items(&labels).default(1).max_length(10).interact_opt()? {
+                let s = match Select::new()
+                    .with_prompt("KV Cache")
+                    .items(&labels)
+                    .default(1)
+                    .max_length(10)
+                    .interact_opt()?
+                {
                     Some(v) => v,
                     None => continue, // Escape - redo menu
                 };
@@ -144,8 +178,22 @@ fn edit_ollama_settings(i18n: &I18n, config: &mut config::env::EnvConfig) -> Res
             format!("⏱️  Keep alive: {}s", config.ollama.keep_alive),
             format!("🔀 Parallel: {}", config.ollama.num_parallel),
             format!("📦 Max loaded: {}", config.ollama.max_loaded_models),
-            format!("💾 Max VRAM: {} MB", if config.ollama.max_vram > 0 { config.ollama.max_vram.to_string() } else { "auto".to_string() }),
-            format!("🎮 CUDA: {}", if config.ollama.cuda_visible_devices.is_empty() { "all" } else { &config.ollama.cuda_visible_devices }),
+            format!(
+                "💾 Max VRAM: {} MB",
+                if config.ollama.max_vram > 0 {
+                    config.ollama.max_vram.to_string()
+                } else {
+                    "auto".to_string()
+                }
+            ),
+            format!(
+                "🎮 CUDA: {}",
+                if config.ollama.cuda_visible_devices.is_empty() {
+                    "all"
+                } else {
+                    &config.ollama.cuda_visible_devices
+                }
+            ),
         ];
 
         let sel = match Select::new()
@@ -153,13 +201,14 @@ fn edit_ollama_settings(i18n: &I18n, config: &mut config::env::EnvConfig) -> Res
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact_opt()? {
+            .interact_opt()?
+        {
             Some(s) => s,
             None => return Ok(()),
         };
 
         match sel {
-            0 => return Ok(()),  // Retour en position 0
+            0 => return Ok(()), // Retour en position 0
             1 => {
                 let new: String = Input::new()
                     .with_prompt(i18n.t("config.ollama.host"))
@@ -219,8 +268,26 @@ fn edit_providers(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()
         // Retour en premier item (selon TODO.md ligne 72)
         let items = vec![
             i18n.t("menu.back").to_string(),
-            format!("🔓 OpenAI: {}", if config.providers.openai.api_key.is_empty() || config.providers.openai.api_key == "ollama" { "not set" } else { "***" }),
-            format!("🔓 Anthropic: {}", if config.providers.anthropic.api_key.is_empty() || config.providers.anthropic.api_key == "ollama" { "not set" } else { "***" }),
+            format!(
+                "🔓 OpenAI: {}",
+                if config.providers.openai.api_key.is_empty()
+                    || config.providers.openai.api_key == "ollama"
+                {
+                    "not set"
+                } else {
+                    "***"
+                }
+            ),
+            format!(
+                "🔓 Anthropic: {}",
+                if config.providers.anthropic.api_key.is_empty()
+                    || config.providers.anthropic.api_key == "ollama"
+                {
+                    "not set"
+                } else {
+                    "***"
+                }
+            ),
             format!("🔗 OpenAI URL: {}", config.providers.openai.base_url),
             format!("🔗 Anthropic URL: {}", config.providers.anthropic.base_url),
         ];
@@ -230,13 +297,14 @@ fn edit_providers(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact_opt()? {
+            .interact_opt()?
+        {
             Some(s) => s,
             None => return Ok(()),
         };
 
         match sel {
-            0 => return Ok(()),  // Retour en position 0
+            0 => return Ok(()), // Retour en position 0
             1 => {
                 let new: String = Input::new()
                     .with_prompt(i18n.t("config.provider.openai"))
@@ -275,7 +343,14 @@ fn edit_openclaw(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()>
         // Retour en premier item (selon TODO.md ligne 72)
         let items = vec![
             i18n.t("menu.back").to_string(),
-            format!("🔑 API Key: {}", if config.openclaw.api_key.is_empty() || config.openclaw.api_key == "ollama-local" { "default (ollama-local)" } else { "***" }),
+            format!(
+                "🔑 API Key: {}",
+                if config.openclaw.api_key.is_empty() || config.openclaw.api_key == "ollama-local" {
+                    "default (ollama-local)"
+                } else {
+                    "***"
+                }
+            ),
         ];
 
         let sel = match Select::new()
@@ -283,13 +358,14 @@ fn edit_openclaw(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()>
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact_opt()? {
+            .interact_opt()?
+        {
             Some(s) => s,
             None => return Ok(()),
         };
 
         match sel {
-            0 => return Ok(()),  // Retour en position 0
+            0 => return Ok(()), // Retour en position 0
             1 => {
                 let new: String = Input::new()
                     .with_prompt(i18n.t("config.openclaw.api_key"))
@@ -305,8 +381,10 @@ fn edit_openclaw(i18n: &I18n, config: &mut config::env::EnvConfig) -> Result<()>
 fn manage_shells(i18n: &I18n) -> Result<()> {
     let statuses = config::shells::get_shells_status(i18n);
     display::section(&i18n.t("config.shells"));
-    for s in &statuses { println!("   {}", s); }
-    
+    for s in &statuses {
+        println!("   {}", s);
+    }
+
     // Retour en premier item (selon TODO.md ligne 72)
     let items = vec![
         i18n.t("menu.back"),
@@ -322,7 +400,7 @@ fn manage_shells(i18n: &I18n) -> Result<()> {
         .interact()?;
 
     match sel {
-        0 => return Ok(()),  // Retour en position 0
+        0 => return Ok(()), // Retour en position 0
         1 => config::shells::install_all_shells(i18n)?,
         2 => config::shells::uninstall_all_shells(i18n)?,
         _ => {}
@@ -332,8 +410,12 @@ fn manage_shells(i18n: &I18n) -> Result<()> {
 
 fn uninstall_wzllama(i18n: &I18n) -> Result<()> {
     display::warning(&i18n.t("config.uninstall_warning"));
-    
-    if !Confirm::new().with_prompt(i18n.t("config.uninstall_confirm")).default(false).interact()? {
+
+    if !Confirm::new()
+        .with_prompt(i18n.t("config.uninstall_confirm"))
+        .default(false)
+        .interact()?
+    {
         return Ok(());
     }
 
@@ -341,8 +423,10 @@ fn uninstall_wzllama(i18n: &I18n) -> Result<()> {
         .with_prompt(i18n.t("config.uninstall_final"))
         .default(false)
         .interact()?;
-    
-    if !confirm2 { return Ok(()); }
+
+    if !confirm2 {
+        return Ok(());
+    }
 
     display::section(&i18n.t("config.uninstalling"));
 
@@ -351,7 +435,9 @@ fn uninstall_wzllama(i18n: &I18n) -> Result<()> {
 
     // 2. Modèles wzllama
     let models = crate::core::ollama_api::list_wzllama_models();
-    for m in &models { let _ = crate::core::ollama_api::delete_model(m); }
+    for m in &models {
+        let _ = crate::core::ollama_api::delete_model(m);
+    }
     display::success(&i18n.t("config.uninstall_models_removed"));
 
     // 3. Dossiers
@@ -369,10 +455,10 @@ fn uninstall_wzllama(i18n: &I18n) -> Result<()> {
 pub fn uninstall_wzllama_cli() -> Result<()> {
     println!("⚠️  This will remove wzllama, all its models and configuration.");
     println!("   Type 'YES' to confirm:");
-    
+
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
-    
+
     if input.trim() != "YES" {
         println!("Cancelled.");
         return Ok(());
@@ -385,7 +471,9 @@ pub fn uninstall_wzllama_cli() -> Result<()> {
 
     // Models
     let models = crate::core::ollama_api::list_wzllama_models();
-    for m in &models { let _ = crate::core::ollama_api::delete_model(m); }
+    for m in &models {
+        let _ = crate::core::ollama_api::delete_model(m);
+    }
     println!("   ✅ {} models removed", models.len());
 
     // Config

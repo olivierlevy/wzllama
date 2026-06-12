@@ -1,17 +1,23 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::docker;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct OpenWebUITool;
 
 impl Tool for OpenWebUITool {
-    fn id(&self) -> &str { "open_webui" }
-    fn name(&self) -> &str { "Open WebUI" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openwebui.description") }
+    fn id(&self) -> &str {
+        "open_webui"
+    }
+    fn name(&self) -> &str {
+        "Open WebUI"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.openwebui.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
         // Check if container exists with docker inspect (more reliable)
         // If Docker is not running, return NotInstalled (menu will launch ensure_ready)
@@ -20,47 +26,56 @@ impl Tool for OpenWebUITool {
         }
         // Try without sudo first
         let exists = docker::run("inspect open-webui");
-        if exists { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if exists {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
         OpenWebUITool::install(i18n)
     }
-    
+
     fn update(&self, i18n: &I18n) -> Result<()> {
         OpenWebUITool::update(i18n)
     }
-    
+
     fn uninstall(&self, i18n: &I18n) -> Result<()> {
         OpenWebUITool::uninstall(i18n)
     }
-    
-    fn requires_docker(&self) -> bool { true }
+
+    fn requires_docker(&self) -> bool {
+        true
+    }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         OpenWebUITool::launch(i18n, state, model)
     }
 }
 
-
 impl OpenWebUITool {
     pub fn pull() -> Result<()> {
         docker::run_live("pull ghcr.io/open-webui/open-webui:ollama")?;
         #[cfg(unix)]
-        docker::run_live("run -d \
+        docker::run_live(
+            "run -d \
             --network=host \
             --add-host=host.docker.internal:host-gateway \
             -v open-webui:/app/backend/data \
             -e OLLAMA_BASE_URL=http://127.0.0.1:11434 \
             --name open-webui \
             --restart always \
-            ghcr.io/open-webui/open-webui:ollama")?;
+            ghcr.io/open-webui/open-webui:ollama",
+        )?;
         #[cfg(not(unix))]
-        docker::run_live("run -d \
+        docker::run_live(
+            "run -d \
             -p 3000:8080 \
             -v open-webui:/app/backend/data \
             -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
             --name open-webui \
             --restart always \
-            ghcr.io/open-webui/open-webui:main")?;
+            ghcr.io/open-webui/open-webui:main",
+        )?;
         Ok(())
     }
     pub fn install(i18n: &I18n) -> Result<()> {
@@ -69,13 +84,13 @@ impl OpenWebUITool {
         if !docker::is_running() {
             anyhow::bail!("Docker is not ready");
         }
-        
+
         display::info("Checking Open WebUI container...");
-        
+
         // Check if container exists with docker inspect (more reliable)
         // Try without sudo first
         let container_exists = docker::run("inspect open-webui");
-        
+
         if container_exists {
             // Container exists - try to start it
             display::info("Starting existing container...");
@@ -132,7 +147,7 @@ impl OpenWebUITool {
         let url = "http://localhost:8080";
         println!("🌐 Open WebUI : {}", url);
         println!("💡 {}", i18n.t("url.refresh_hint"));
-    
+
         if Confirm::new()
             .with_prompt(i18n.t("url.open"))
             .default(true)

@@ -1,9 +1,9 @@
+pub mod api_server;
+pub mod cli;
 pub mod config;
 pub mod core;
-pub mod wizard;
-pub mod tools;
-pub mod cli;
 pub mod display;
 pub mod error;
 pub mod menu_api;
-pub mod api_server;
+pub mod tools;
+pub mod wizard;

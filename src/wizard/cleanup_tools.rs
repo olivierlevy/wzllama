@@ -1,5 +1,3 @@
-use anyhow::Result;
-use dialoguer::Select;
 use crate::config::{self, I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
@@ -14,13 +12,16 @@ use crate::tools::openclaw::OpenClawTool;
 use crate::tools::opencode::OpenCodeTool;
 use crate::tools::pi::PiTool;
 use crate::tools::tool_trait::Tool;
+use anyhow::Result;
+use dialoguer::Select;
 
 pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
     loop {
         // Resynchroniser l'état with reality at each iteration
         sync_tools_state(state);
         let all_tools = tools::get_all_tools();
-        let installed_tools: Vec<&Box<dyn Tool>> = all_tools.iter()
+        let installed_tools: Vec<&Box<dyn Tool>> = all_tools
+            .iter()
             .filter(|t| cleanup_is_installed(t.id()))
             .collect();
 
@@ -30,23 +31,29 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState) -> Result<()> {
         }
 
         let mut items: Vec<String> = vec![i18n.t("menu.back")];
-        items.extend(installed_tools.iter()
-            .map(|t| format!("🗑️  {}", t.name()))
-            .collect::<Vec<String>>());
+        items.extend(
+            installed_tools
+                .iter()
+                .map(|t| format!("🗑️  {}", t.name()))
+                .collect::<Vec<String>>(),
+        );
 
         let sel = match Select::new()
             .with_prompt(i18n.t("cleanup.choose_tool"))
             .items(&items)
             .default(0)
             .max_length(15)
-            .interact_opt()? {
+            .interact_opt()?
+        {
             Some(s) => s,
             None => return Ok(()), // Escape pressed
         };
 
-        if sel == 0 { return Ok(()); }  // Retour en position 0
+        if sel == 0 {
+            return Ok(());
+        } // Retour en position 0
 
-        let tool = installed_tools[sel - 1];  // -1 car Retour est en position 0
+        let tool = installed_tools[sel - 1]; // -1 car Retour est en position 0
 
         display::section(&i18n.t("cleanup.uninstalling"));
 

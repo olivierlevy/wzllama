@@ -1,8 +1,8 @@
 //! Menu item definition with hierarchical structure support
 
-use std::collections::HashMap;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
+use std::collections::HashMap;
 
 /// A menu item that can be either a leaf (with action) or a branch (has submenus)
 #[derive(Debug, Clone)]

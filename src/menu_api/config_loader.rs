@@ -3,7 +3,7 @@
 use anyhow::Result;
 use std::path::Path;
 
-use super::menu_tree::{MenuTree, MenuConfig};
+use super::menu_tree::{MenuConfig, MenuTree};
 
 /// Configuration file format with [menu] section
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]

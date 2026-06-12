@@ -57,7 +57,7 @@ fn test_set_language() {
         ..Default::default()
     };
     assert_eq!(state.language, Some("en".to_string()));
-    
+
     let state = WzllamaState {
         language: Some("fr".to_string()),
         ..Default::default()
@@ -77,10 +77,10 @@ fn test_state_serialization() {
         last_usage: Some("mixed".to_string()),
         last_tool: None,
     };
-    
+
     let json = serde_json::to_string(&state).unwrap();
     let deserialized: WzllamaState = serde_json::from_str(&json).unwrap();
-    
+
     assert_eq!(deserialized.language, Some("en".to_string()));
     assert!(deserialized.installed.ollama);
     assert_eq!(deserialized.last_model, Some("qwen2.5:7b".to_string()));
@@ -100,11 +100,11 @@ fn test_save_and_load_state() {
         last_usage: Some("big_code".to_string()),
         last_tool: Some("open_webui".to_string()),
     };
-    
+
     // Test JSON serialization roundtrip
     let json = serde_json::to_string(&original_state).unwrap();
     let loaded_state: WzllamaState = serde_json::from_str(&json).unwrap();
-    
+
     assert_eq!(loaded_state.language, Some("en".to_string()));
     assert!(loaded_state.installed.open_webui);
 }

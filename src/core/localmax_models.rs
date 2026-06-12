@@ -12,10 +12,10 @@ const BASE_URL: &str = "https://localmaxxing.com/api";
 /// Extracts model family, variant, and parameter count from the HF ID
 pub fn hf_to_ollama_name(hf_id: &str) -> String {
     let hf_lower = hf_id.to_lowercase();
-    
+
     // Extract parameter size (e.g., "14b", "30b", "72b")
     let param_size = extract_param_size(&hf_lower);
-    
+
     // Detect model family and generate appropriate Ollama name
     if hf_lower.contains("qwen") {
         if hf_lower.contains("qwen3.6") || hf_lower.contains("qwen3_6") {
@@ -26,21 +26,26 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 "27b" | "24b" | "14b" => "qwen3:14b",
                 "8b" => "qwen3:8b",
                 _ => "qwen3:latest",
-            }.to_string()
+            }
+            .to_string()
         } else if hf_lower.contains("qwen3") {
             match param_size.as_str() {
                 "30b" | "32b" => "qwen3:30b",
                 "14b" => "qwen3:14b",
                 "8b" => "qwen3:8b",
                 _ => "qwen3:latest",
-            }.to_string()
-        } else if hf_lower.contains("qwen2.5-coder") || (hf_lower.contains("coder") && hf_lower.contains("qwen2")) {
+            }
+            .to_string()
+        } else if hf_lower.contains("qwen2.5-coder")
+            || (hf_lower.contains("coder") && hf_lower.contains("qwen2"))
+        {
             match param_size.as_str() {
                 "32b" | "35b" => "qwen2.5-coder:32b",
                 "14b" | "27b" | "24b" => "qwen2.5-coder:14b",
                 "7b" | "8b" => "qwen2.5-coder:7b",
                 _ => "qwen2.5-coder:14b",
-            }.to_string()
+            }
+            .to_string()
         } else if hf_lower.contains("qwen2.5") {
             match param_size.as_str() {
                 "72b" => "qwen2.5:72b",
@@ -50,7 +55,8 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 "3b" => "qwen2.5:3b",
                 "1.5b" => "qwen2.5:1.5b",
                 _ => "qwen2.5:latest",
-            }.to_string()
+            }
+            .to_string()
         } else if hf_lower.contains("coder") {
             "qwen2.5-coder:14b".to_string()
         } else {
@@ -76,12 +82,14 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 "27b" => "gemma3:27b",
                 "12b" => "gemma3:12b",
                 _ => "gemma3:latest",
-            }.to_string()
+            }
+            .to_string()
         } else if hf_lower.contains("gemma-2") || hf_lower.contains("gemma2") {
             match param_size.as_str() {
                 "27b" => "gemma2:27b",
                 _ => "gemma2:9b",
-            }.to_string()
+            }
+            .to_string()
         } else {
             "gemma:latest".to_string()
         }
@@ -91,13 +99,15 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 "70b" => "llama3.1:70b",
                 "8b" => "llama3.1:8b",
                 _ => "llama3.1:latest",
-            }.to_string()
+            }
+            .to_string()
         } else if hf_lower.contains("llama-3") || hf_lower.contains("llama3") {
             match param_size.as_str() {
                 "70b" => "llama3:70b",
                 "8b" => "llama3:8b",
                 _ => "llama3:latest",
-            }.to_string()
+            }
+            .to_string()
         } else {
             format!("llama3:{}", param_size)
         }
@@ -112,7 +122,8 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 "3b" => "ministral-3:3b",
                 "8b" => "ministral-3:8b",
                 _ => "ministral-3:3b",
-            }.to_string()
+            }
+            .to_string()
         } else {
             "mistral:latest".to_string()
         }
@@ -123,7 +134,7 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
         // Try to find a reasonable Ollama equivalent based on size and type
         let is_coder = hf_lower.contains("coder") || hf_lower.contains("code");
         let _is_instruct = hf_lower.contains("instruct");
-        
+
         // Map to the best available Ollama model of similar size and purpose
         let base_recommendation = if is_coder {
             // For coding models, recommend Qwen2.5-coder or DeepSeek-coder
@@ -153,7 +164,7 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
                 }
             }
         };
-        
+
         base_recommendation.to_string()
     }
 }
@@ -162,7 +173,7 @@ pub fn hf_to_ollama_name(hf_id: &str) -> String {
 pub fn extract_param_size(hf_lower: &str) -> String {
     // Common pattern: number followed by 'b' (e.g., 7b, 14b, 30b, 32b, 72b, 1.5b)
     // Use simple string parsing instead of regex
-    
+
     // First check for decimal like "1.5b" - keep as-is
     if let Some(start) = hf_lower.find(|c: char| c.is_ascii_digit() || c == '.') {
         if let Some(end) = hf_lower[start..].find('b') {
@@ -173,9 +184,9 @@ pub fn extract_param_size(hf_lower: &str) -> String {
             }
         }
     }
-    
+
     let mut best_match = 0u32;
-    
+
     for part in hf_lower.split(|c: char| !c.is_ascii_digit()) {
         if let Ok(num) = part.parse::<u32>() {
             if (1..=1000).contains(&num) {
@@ -183,24 +194,39 @@ pub fn extract_param_size(hf_lower: &str) -> String {
             }
         }
     }
-    
-    if best_match >= 70 { "72b".to_string() }
-    else if best_match == 32 || best_match == 35 { format!("{}b", best_match) }
-    else if best_match >= 30 { "30b".to_string() }
-    else if best_match >= 14 { "14b".to_string() }
-    else if best_match >= 8 { "8b".to_string() }
-    else if best_match >= 7 { "7b".to_string() }
-    else if best_match >= 3 { "3b".to_string() }
-    else if best_match >= 1 { format!("{}b", best_match) }
-    else { "latest".to_string() }
+
+    if best_match >= 70 {
+        "72b".to_string()
+    } else if best_match == 32 || best_match == 35 {
+        format!("{}b", best_match)
+    } else if best_match >= 30 {
+        "30b".to_string()
+    } else if best_match >= 14 {
+        "14b".to_string()
+    } else if best_match >= 8 {
+        "8b".to_string()
+    } else if best_match >= 7 {
+        "7b".to_string()
+    } else if best_match >= 3 {
+        "3b".to_string()
+    } else if best_match >= 1 {
+        format!("{}b", best_match)
+    } else {
+        "latest".to_string()
+    }
 }
 
 /// Get Qwen variant number from model name
 fn get_qwen_variant(hf_lower: &str) -> &'static str {
-    if hf_lower.contains("qwen3") { "3" }
-    else if hf_lower.contains("qwen2.5") { "2.5" }
-    else if hf_lower.contains("qwen2") { "2" }
-    else { "" }
+    if hf_lower.contains("qwen3") {
+        "3"
+    } else if hf_lower.contains("qwen2.5") {
+        "2.5"
+    } else if hf_lower.contains("qwen2") {
+        "2"
+    } else {
+        ""
+    }
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize, Default)]
@@ -214,13 +240,13 @@ pub struct LocalMaxModel {
     #[serde(default)]
     pub organization: String,
     #[serde(default)]
-    pub family: Option<String>,  // Can be null in API
+    pub family: Option<String>, // Can be null in API
     #[serde(default)]
     pub params: Option<f64>,
     #[serde(rename = "isMoE", default)]
     pub is_moe: bool,
     #[serde(default)]
-    pub tags: Option<String>,  // JSON string dans l'API
+    pub tags: Option<String>, // JSON string dans l'API
     #[serde(rename = "_count", default)]
     pub _count: Option<ModelCount>,
     #[serde(default)]
@@ -288,7 +314,7 @@ impl LocalMaxResponse {
     pub fn into_base(self) -> Option<LocalMaxModel> {
         self.base
     }
-    
+
     /// Returns all models including finetunes
     pub fn all_models(self) -> Vec<LocalMaxModel> {
         let mut models = self.base.into_iter().collect::<Vec<_>>();
@@ -307,28 +333,31 @@ impl LocalMaxModel {
 pub fn fetch_latest_models(limit: u32) -> Result<Vec<LocalMaxModel>> {
     let client = Client::new();
     let url = format!("{}/models?limit={}&offset=0&tree=true", BASE_URL, limit);
-    
-    let response = client.get(&url)
+
+    let response = client
+        .get(&url)
         .header("Accept", "application/json")
         .timeout(std::time::Duration::from_secs(10))
         .send()
         .map_err(|e| anyhow::anyhow!("Network error: {}", e))?;
-    
+
     if response.status().is_success() {
-        let body = response.text()
+        let body = response
+            .text()
             .map_err(|e| anyhow::anyhow!("Failed to read response body: {}", e))?;
-        
+
         // Try parsing as wrapped response {base: {...}, finetunes: [...]}
         if let Ok(responses) = serde_json::from_str::<Vec<LocalMaxResponse>>(&body) {
-            let models: Vec<LocalMaxModel> = responses.into_iter().flat_map(|r| r.all_models()).collect();
+            let models: Vec<LocalMaxModel> =
+                responses.into_iter().flat_map(|r| r.all_models()).collect();
             return Ok(models);
         }
-        
+
         // Try parsing as flat list
         if let Ok(models) = serde_json::from_str::<Vec<LocalMaxModel>>(&body) {
             return Ok(models);
         }
-        
+
         anyhow::bail!("Failed to parse models response")
     } else {
         let status = response.status();
@@ -341,67 +370,79 @@ pub fn fetch_latest_models(limit: u32) -> Result<Vec<LocalMaxModel>> {
 pub fn fetch_models_by_hardware(hardware_name: &str, limit: u32) -> Result<Vec<LocalMaxModel>> {
     let client = Client::new();
     // Use tree=true to get the correct JSON structure with {base: {...}, finetunes: [...]}
-    let url = format!("{}/models?hardwareName={}&limit={}&tree=true", BASE_URL, hardware_name, limit);
-    
-    let response = client.get(&url)
+    let url = format!(
+        "{}/models?hardwareName={}&limit={}&tree=true",
+        BASE_URL, hardware_name, limit
+    );
+
+    let response = client
+        .get(&url)
         .header("Accept", "application/json")
         .timeout(std::time::Duration::from_secs(10))
         .send()
         .map_err(|e| anyhow::anyhow!("Network error: {}", e))?;
-    
+
     if response.status().is_success() {
         // API returns [{base: {...}, finetunes: [...]}, ...]
-        let responses: Vec<LocalMaxResponse> = response.json()
+        let responses: Vec<LocalMaxResponse> = response
+            .json()
             .map_err(|e| anyhow::anyhow!("JSON parse error: {}", e))?;
         // Flatten to get all models (base + finetunes)
-        let models: Vec<LocalMaxModel> = responses.into_iter().flat_map(|r| r.all_models()).collect();
+        let models: Vec<LocalMaxModel> =
+            responses.into_iter().flat_map(|r| r.all_models()).collect();
         Ok(models)
     } else {
         let status = response.status();
         let body = response.text().unwrap_or_default();
-        anyhow::bail!("Failed to fetch models for hardware '{}': status {} - {}", hardware_name, status, body)
+        anyhow::bail!(
+            "Failed to fetch models for hardware '{}': status {} - {}",
+            hardware_name,
+            status,
+            body
+        )
     }
 }
 
 pub fn fetch_models_by_search(query: &str, limit: u32) -> Result<Vec<LocalMaxModel>> {
     use crate::core::cache;
-    
+
     // Helper to get cache directory
     fn cache_dir() -> Result<std::path::PathBuf> {
         let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Cannot find home directory"))?;
         Ok(home.join(".wzllama/cache"))
     }
-    
+
     // Try daily cache first with tree=true format
     let daily_tree_cache = cache_dir()?.join("localmax_tree.json");
     let daily_search_cache = cache_dir()?.join("localmax_search_code.json");
-    
+
     // Try to read from daily cache
     if query == "code" && daily_search_cache.exists() {
         if let Ok(data) = fs::read_to_string(&daily_search_cache) {
             if let Ok(responses) = serde_json::from_str::<Vec<LocalMaxResponse>>(&data) {
-                let models: Vec<LocalMaxModel> = responses.into_iter().flat_map(|r| r.all_models()).collect();
+                let models: Vec<LocalMaxModel> =
+                    responses.into_iter().flat_map(|r| r.all_models()).collect();
                 if !models.is_empty() {
                     return Ok(models);
                 }
             }
         }
     }
-    
+
     // Try generic tree cache for other queries
     if daily_tree_cache.exists() {
         if let Ok(data) = fs::read_to_string(&daily_tree_cache) {
             if let Ok(responses) = serde_json::from_str::<Vec<LocalMaxResponse>>(&data) {
-                let models: Vec<LocalMaxModel> = responses.into_iter().flat_map(|r| r.all_models()).collect();
+                let models: Vec<LocalMaxModel> =
+                    responses.into_iter().flat_map(|r| r.all_models()).collect();
                 // Filter by query if not empty
-                if !models.is_empty()
-                    && (query.is_empty() || query == "performance") {
-                        return Ok(models);
-                    }
+                if !models.is_empty() && (query.is_empty() || query == "performance") {
+                    return Ok(models);
+                }
             }
         }
     }
-    
+
     // Try regular cache as fallback
     let cache_key = format!("localmax_search_{}_{}", query.replace(' ', "_"), limit);
     if let Ok(Some(cached)) = cache::read_cache(&cache_key, false) {
@@ -409,25 +450,27 @@ pub fn fetch_models_by_search(query: &str, limit: u32) -> Result<Vec<LocalMaxMod
             return Ok(models);
         }
     }
-    
+
     let client = Client::new();
     let url = format!("{}/models?search={}&limit={}", BASE_URL, query, limit);
-    
-    let response = client.get(&url)
+
+    let response = client
+        .get(&url)
         .header("Accept", "application/json")
         .timeout(std::time::Duration::from_secs(10))
         .send()
         .map_err(|e| anyhow::anyhow!("Network error: {}", e))?;
-    
+
     if response.status().is_success() {
-        let body = response.text()
+        let body = response
+            .text()
             .map_err(|e| anyhow::anyhow!("Failed to read response body: {}", e))?;
-        
+
         // Check if body is empty or whitespace
         if body.trim().is_empty() {
             anyhow::bail!("Empty response from API");
         }
-        
+
         // Try parsing as flat list first
         if let Ok(models) = serde_json::from_str::<Vec<LocalMaxModel>>(&body) {
             if !models.is_empty() {
@@ -437,10 +480,11 @@ pub fn fetch_models_by_search(query: &str, limit: u32) -> Result<Vec<LocalMaxMod
                 return Ok(models);
             }
         }
-        
+
         // Try parsing as wrapped response {base: {...}, finetunes: [...]}
         if let Ok(responses) = serde_json::from_str::<Vec<LocalMaxResponse>>(&body) {
-            let models: Vec<LocalMaxModel> = responses.into_iter().flat_map(|r| r.all_models()).collect();
+            let models: Vec<LocalMaxModel> =
+                responses.into_iter().flat_map(|r| r.all_models()).collect();
             if !models.is_empty() {
                 if let Ok(json) = serde_json::to_string(&models) {
                     let _ = cache::write_cache(&cache_key, &json);
@@ -448,8 +492,11 @@ pub fn fetch_models_by_search(query: &str, limit: u32) -> Result<Vec<LocalMaxMod
                 return Ok(models);
             }
         }
-        
-        anyhow::bail!("Failed to parse API response as models. Response: {}", body.chars().take(200).collect::<String>())
+
+        anyhow::bail!(
+            "Failed to parse API response as models. Response: {}",
+            body.chars().take(200).collect::<String>()
+        )
     } else {
         let status = response.status();
         let body = response.text().unwrap_or_default();
@@ -460,11 +507,12 @@ pub fn fetch_models_by_search(query: &str, limit: u32) -> Result<Vec<LocalMaxMod
 pub fn search_models_fuzzy(q: &str) -> Result<Vec<SearchResult>> {
     let client = Client::new();
     let url = format!("{}/models/search?q={}&limit=10", BASE_URL, q);
-    
-    let response = client.get(&url)
+
+    let response = client
+        .get(&url)
         .header("Accept", "application/json")
         .send()?;
-    
+
     if response.status().is_success() {
         let results: Vec<SearchResult> = response.json()?;
         Ok(results)
@@ -489,7 +537,7 @@ impl LocalMaxModel {
             details: None,
         }
     }
-    
+
     pub fn to_ollama_name(&self) -> String {
         // If hf_id already looks like an Ollama name (contains ':'), use it directly
         if self.hf_id.contains(':') {
@@ -498,7 +546,7 @@ impl LocalMaxModel {
             hf_to_ollama_name(&self.hf_id)
         }
     }
-    
+
     /// Check if the HF model maps directly to an Ollama model of the same family
     pub fn is_direct_ollama_mapping(&self) -> bool {
         // If already an Ollama name (contains ':'), it's a direct local model
@@ -517,7 +565,7 @@ impl LocalMaxModel {
             || hf_lower.contains("mixtral")
             || hf_lower.contains("codestral")
     }
-    
+
     /// Returns the ollama name, with a suffix indicating if it's a fallback
     pub fn to_ollama_name_with_indicator(&self) -> String {
         let name = self.to_ollama_name();
@@ -527,7 +575,7 @@ impl LocalMaxModel {
             format!("{} (recommended)", name)
         }
     }
-    
+
     pub fn formatted_performance(&self) -> String {
         if let Some(stats) = &self.speed_stats {
             if let Some(toks) = stats.median_tok_s {
@@ -550,16 +598,20 @@ impl LocalMaxModel {
     pub fn hardware_compatibility(&self, hw: &crate::core::HardwareInfo) -> &'static str {
         self.hardware_compatibility_with_size(hw, None)
     }
-    
+
     /// Returns hardware compatibility indicator with optional model file size in bytes
-    pub fn hardware_compatibility_with_size(&self, hw: &crate::core::HardwareInfo, size_bytes: Option<u64>) -> &'static str {
+    pub fn hardware_compatibility_with_size(
+        &self,
+        hw: &crate::core::HardwareInfo,
+        size_bytes: Option<u64>,
+    ) -> &'static str {
         // Use params if available, otherwise estimate from hf_id using extract_size
         let params_b = if let Some(p) = self.params {
             p as u32
         } else {
             crate::core::ollama_models::extract_size(&self.hf_id)
         };
-        
+
         // Calculate VRAM needed
         // For quantized models (Q4_K_M, etc), memory needed ≈ model file size
         // For full precision (FP16), memory needed ≈ 2x params size
@@ -573,9 +625,9 @@ impl LocalMaxModel {
             // Default estimate for unknown models
             7.0 * 0.6 // Assume ~7B model
         };
-        
+
         let total_vram_gb = hw.total_vram_mb as f64 / 1024.0;
-        
+
         if total_vram_gb >= vram_needed_gb {
             "🟢" // Excellent - plenty of VRAM
         } else if total_vram_gb >= vram_needed_gb * 0.7 {

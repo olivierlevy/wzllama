@@ -1,6 +1,6 @@
-use wzllama::tools::tool_trait::{Tool, ToolStatus};
-use wzllama::config::{I18n, WzllamaState};
 use anyhow::Result;
+use wzllama::config::{I18n, WzllamaState};
+use wzllama::tools::tool_trait::{Tool, ToolStatus};
 
 // Mock tool for testing
 struct MockTool {
@@ -14,15 +14,15 @@ impl Tool for MockTool {
     fn id(&self) -> &str {
         self.id
     }
-    
+
     fn name(&self) -> &str {
         self.name
     }
-    
+
     fn description(&self, _i18n: &I18n) -> String {
         self.description.to_string()
     }
-    
+
     fn status(&self, _state: &wzllama::config::WzllamaState) -> ToolStatus {
         if self.installed {
             ToolStatus::Installed
@@ -30,18 +30,23 @@ impl Tool for MockTool {
             ToolStatus::NotInstalled
         }
     }
-    
+
     fn install(&self, _i18n: &I18n) -> Result<()> {
         if self.installed {
             anyhow::bail!("Already installed");
         }
         Ok(())
     }
-    
-    fn launch(&self, _i18n: &I18n, _state: &wzllama::config::WzllamaState, _model: Option<&str>) -> Result<()> {
+
+    fn launch(
+        &self,
+        _i18n: &I18n,
+        _state: &wzllama::config::WzllamaState,
+        _model: Option<&str>,
+    ) -> Result<()> {
         Ok(())
     }
-    
+
     fn requires_docker(&self) -> bool {
         self.id == "open_webui"
     }
@@ -60,7 +65,7 @@ fn test_tool_status_installed() {
         installed: true,
     };
     let state = create_test_state();
-    
+
     assert_eq!(tool.status(&state), ToolStatus::Installed);
 }
 
@@ -73,7 +78,7 @@ fn test_tool_status_not_installed() {
         installed: false,
     };
     let state = create_test_state();
-    
+
     assert_eq!(tool.status(&state), ToolStatus::NotInstalled);
 }
 
@@ -85,7 +90,7 @@ fn test_tool_id() {
         description: "Desc",
         installed: false,
     };
-    
+
     assert_eq!(tool.id(), "my_unique_id");
 }
 
@@ -97,7 +102,7 @@ fn test_tool_name() {
         description: "Desc",
         installed: false,
     };
-    
+
     assert_eq!(tool.name(), "My Tool Name");
 }
 
@@ -110,7 +115,7 @@ fn test_tool_description() {
         description: "Test description",
         installed: false,
     };
-    
+
     assert_eq!(tool.description(&i18n), "Test description");
 }
 
@@ -122,7 +127,7 @@ fn test_tool_status_message_installed() {
         description: "Desc",
         installed: true,
     };
-    
+
     let msg = tool.status_message(&I18n::default());
     assert!(!msg.is_empty());
 }
@@ -135,7 +140,7 @@ fn test_tool_status_message_not_installed() {
         description: "Desc",
         installed: false,
     };
-    
+
     let msg = tool.status_message(&I18n::default());
     assert!(!msg.is_empty());
 }
@@ -148,14 +153,14 @@ fn test_tool_requires_docker() {
         description: "Web UI",
         installed: false,
     };
-    
+
     let other_tool = MockTool {
         id: "other",
         name: "Other",
         description: "Other",
         installed: false,
     };
-    
+
     assert!(docker_tool.requires_docker());
     assert!(!other_tool.requires_docker());
 }
@@ -168,7 +173,7 @@ fn test_tool_supports_agentic() {
         description: "Desc",
         installed: false,
     };
-    
+
     // By default, tools don't support agentic mode
     assert!(!tool.supports_agentic());
 }
@@ -181,7 +186,7 @@ fn test_tool_install_already_installed() {
         description: "Desc",
         installed: true,
     };
-    
+
     let result = tool.install(&I18n::default());
     assert!(result.is_err());
 }
@@ -194,7 +199,7 @@ fn test_tool_install_not_installed() {
         description: "Desc",
         installed: false,
     };
-    
+
     let result = tool.install(&I18n::default());
     assert!(result.is_ok());
 }
@@ -207,7 +212,7 @@ fn test_tool_update_default() {
         description: "Desc",
         installed: false,
     };
-    
+
     // Par défaut, update doit échouer
     let result = tool.update(&I18n::default());
     assert!(result.is_err());
@@ -221,7 +226,7 @@ fn test_tool_uninstall_default() {
         description: "Desc",
         installed: false,
     };
-    
+
     // Par défaut, uninstall doit échouer
     let result = tool.uninstall(&I18n::default());
     assert!(result.is_err());

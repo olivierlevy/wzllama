@@ -2,10 +2,10 @@
 //!
 //! Migrated from wizard/menu_tools.rs to use menu_api system with ToolsEngine.
 
-use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::menu_api::{MenuTree, MenuItem, MenuMetadata, ToolsEngineRunner};
+use crate::menu_api::{MenuItem, MenuMetadata, MenuTree, ToolsEngineRunner};
+use anyhow::Result;
 
 /// Tools menu runner using ToolsEngine
 pub struct ToolsMenuRunner<'a> {
@@ -29,12 +29,26 @@ impl<'a> ToolsMenuRunner<'a> {
             .with_root(
                 MenuItem::branch("tools")
                     .add_submenu(MenuItem::leaf("↩️ Retour"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("tools.docker")).with_action("tool_docker"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("tools.ollama")).with_action("tool_ollama"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("tools.open_webui")).with_action("tool_open_webui"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("tools.openclaw")).with_action("tool_openclaw"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("tools.hermes_agent")).with_action("tool_hermes_agent"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("tools.opencode")).with_action("tool_opencode"))
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("tools.docker")).with_action("tool_docker"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("tools.ollama")).with_action("tool_ollama"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("tools.open_webui"))
+                            .with_action("tool_open_webui"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("tools.openclaw")).with_action("tool_openclaw"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("tools.hermes_agent"))
+                            .with_action("tool_hermes_agent"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("tools.opencode")).with_action("tool_opencode"),
+                    ),
             )
     }
 
@@ -57,8 +71,12 @@ pub fn build_menu_tree(i18n: &I18n) -> MenuTree {
                 .add_submenu(MenuItem::leaf("↩️ Retour"))
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.docker")).with_action("tool_docker"))
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.ollama")).with_action("tool_ollama"))
-                .add_submenu(MenuItem::leaf(&i18n.t("tools.open_webui")).with_action("tool_open_webui"))
+                .add_submenu(
+                    MenuItem::leaf(&i18n.t("tools.open_webui")).with_action("tool_open_webui"),
+                )
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.openclaw")).with_action("tool_openclaw"))
-                .add_submenu(MenuItem::leaf(&i18n.t("tools.hermes_agent")).with_action("tool_hermes_agent"))
+                .add_submenu(
+                    MenuItem::leaf(&i18n.t("tools.hermes_agent")).with_action("tool_hermes_agent"),
+                ),
         )
 }

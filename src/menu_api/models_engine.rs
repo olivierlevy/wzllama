@@ -2,11 +2,11 @@
 //!
 //! This wraps the existing wizard::menu_models logic with a menu_api interface.
 
-use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::menu_api::{MenuTree, MenuItem, MenuMetadata};
 use crate::menu_api::wizard_helpers::UseCase;
+use crate::menu_api::{MenuItem, MenuMetadata, MenuTree};
+use anyhow::Result;
 
 /// Models engine that drives model workflows
 pub struct ModelsEngine<'a> {
@@ -36,9 +36,11 @@ pub fn build_menu_tree(i18n: &I18n) -> MenuTree {
         .with_root(
             MenuItem::branch("models")
                 .add_submenu(MenuItem::leaf("↩️ Retour"))
-                .add_submenu(MenuItem::leaf(&i18n.t("models.installed")).with_action("models_installed"))
+                .add_submenu(
+                    MenuItem::leaf(&i18n.t("models.installed")).with_action("models_installed"),
+                )
                 .add_submenu(MenuItem::leaf(&i18n.t("models.by_org")).with_action("models_by_org"))
-                .add_submenu(MenuItem::leaf(&i18n.t("models.search")).with_action("models_search"))
+                .add_submenu(MenuItem::leaf(&i18n.t("models.search")).with_action("models_search")),
         )
 }
 

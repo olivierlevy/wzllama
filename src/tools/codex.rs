@@ -1,17 +1,27 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 pub struct CodexTool;
 
 impl Tool for CodexTool {
-    fn id(&self) -> &str { "codex" }
-    fn name(&self) -> &str { "Codex" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.codex.description") }
+    fn id(&self) -> &str {
+        "codex"
+    }
+    fn name(&self) -> &str {
+        "Codex"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.codex.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        if shell::is_installed_with_local_bin("codex") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("codex") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
         CodexTool::install(i18n)
@@ -25,8 +35,10 @@ impl Tool for CodexTool {
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         CodexTool::launch(i18n, state, model)
     }
-    
-    fn supports_agentic(&self) -> bool { true }
+
+    fn supports_agentic(&self) -> bool {
+        true
+    }
 }
 
 impl CodexTool {
@@ -43,7 +55,11 @@ impl CodexTool {
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.codex.uninstall_confirm")).default(false).interact()? {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.codex.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
             return Ok(());
         }
         #[cfg(unix)]
@@ -68,7 +84,8 @@ impl CodexTool {
             Some(m) => {
                 display::run(&i18n.t_with_vars("tool.codex.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch codex --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 display::comment(&i18n.t("tool.codex.no_model"));

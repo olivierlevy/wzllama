@@ -2,11 +2,11 @@
 //!
 //! This allows menu actions to be cloned and shared across the menu system.
 
-use anyhow::Result;
-use std::sync::{Arc, Mutex};
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::menu_api::{ActionContext, ActionResult, ToolAction};
+use anyhow::Result;
+use std::sync::{Arc, Mutex};
 
 /// Cloneable wrapper for wizard actions that holds Arc references
 pub struct ArcAction {
@@ -93,14 +93,14 @@ impl ArcActionRunner {
         let i18n_for_fn = Arc::clone(&self.i18n);
         let state_for_fn = Arc::clone(&self.state);
         let hw_for_fn = Arc::clone(&self.hw);
-        
+
         let action_fn = Arc::new(move || {
             let mut state_guard = state_for_fn
                 .lock()
                 .map_err(|e| anyhow::anyhow!("State mutex poisoned: {}", e))?;
             func(&i18n_for_fn, &mut state_guard, &hw_for_fn)
         });
-        
+
         // Clone again for ArcAction (these will be cloned again inside ArcAction)
         ArcAction::new(
             id,

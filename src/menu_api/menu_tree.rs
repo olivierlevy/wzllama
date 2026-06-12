@@ -57,7 +57,11 @@ impl MenuTree {
         self.find_by_path_parts(&parts, &self.root)
     }
 
-    fn find_by_path_parts<'a>(&'a self, parts: &[&str], current: &'a MenuItem) -> Option<&'a MenuItem> {
+    fn find_by_path_parts<'a>(
+        &'a self,
+        parts: &[&str],
+        current: &'a MenuItem,
+    ) -> Option<&'a MenuItem> {
         if parts.is_empty() {
             return Some(current);
         }
@@ -82,7 +86,10 @@ impl MenuTree {
         } else if item.submenus.is_empty() {
             vec![]
         } else {
-            item.submenus.iter().flat_map(|s| self.collect_leaves(s)).collect()
+            item.submenus
+                .iter()
+                .flat_map(|s| self.collect_leaves(s))
+                .collect()
         }
     }
 
@@ -91,7 +98,11 @@ impl MenuTree {
         self.collect_flat(&self.root, String::new())
     }
 
-    fn collect_flat<'a>(&'a self, item: &'a MenuItem, prefix: String) -> Vec<(String, &'a MenuItem)> {
+    fn collect_flat<'a>(
+        &'a self,
+        item: &'a MenuItem,
+        prefix: String,
+    ) -> Vec<(String, &'a MenuItem)> {
         let current_path = if prefix.is_empty() {
             item.label.clone()
         } else {
@@ -99,12 +110,12 @@ impl MenuTree {
         };
 
         let mut result = vec![(current_path, item)];
-        
+
         for submenu in &item.submenus {
             let sub_items = self.collect_flat(submenu, item.label.clone());
             result.extend(sub_items);
         }
-        
+
         result
     }
 }
@@ -131,9 +142,14 @@ pub struct MenuConfigItem {
 
 impl From<MenuConfig> for MenuTree {
     fn from(config: MenuConfig) -> Self {
-        let root = MenuItem::branch("root")
-            .add_submenus(config.items.into_iter().map(MenuItem::from_config).collect());
-        
+        let root = MenuItem::branch("root").add_submenus(
+            config
+                .items
+                .into_iter()
+                .map(MenuItem::from_config)
+                .collect(),
+        );
+
         Self {
             root,
             metadata: MenuMetadata {
@@ -154,11 +170,11 @@ impl MenuConfigItem {
         };
 
         item.action_id = self.action_id;
-        
+
         if let Some(children) = self.children {
             item = item.add_submenus(children.into_iter().map(MenuItem::from_config).collect());
         }
-        
+
         item
     }
 }

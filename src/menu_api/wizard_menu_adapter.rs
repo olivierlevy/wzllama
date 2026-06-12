@@ -2,11 +2,11 @@
 //!
 //! Migrated from wizard/menu_wizard.rs to use menu_api system with WizardEngine.
 
-use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::menu_api::{MenuTree, MenuItem, MenuMetadata, WizardEngineRunner};
 use crate::menu_api::wizard_helpers::UseCase;
+use crate::menu_api::{MenuItem, MenuMetadata, MenuTree, WizardEngineRunner};
+use anyhow::Result;
 
 /// Wizard menu runner using WizardEngine
 pub struct WizardMenuRunner<'a> {
@@ -25,7 +25,8 @@ impl<'a> WizardMenuRunner<'a> {
         let use_cases = UseCase::all();
         let mut items = vec![MenuItem::leaf("↩️ Retour")];
         items.extend(use_cases.iter().map(|uc| {
-            MenuItem::leaf(&uc.display_name(self.i18n)).with_action(&format!("wizard_usecase_{}", uc.as_str()))
+            MenuItem::leaf(&uc.display_name(self.i18n))
+                .with_action(&format!("wizard_usecase_{}", uc.as_str()))
         }));
 
         MenuTree::new("wizard")
@@ -48,7 +49,8 @@ pub fn build_menu_tree() -> MenuTree {
     let use_cases = UseCase::all();
     let mut items = vec![MenuItem::leaf("↩️ Retour")];
     items.extend(use_cases.iter().map(|uc| {
-        MenuItem::leaf(&uc.display_name(&crate::config::I18n::default())).with_action(&format!("usecase_{}", uc.as_str()))
+        MenuItem::leaf(&uc.display_name(&crate::config::I18n::default()))
+            .with_action(&format!("usecase_{}", uc.as_str()))
     }));
 
     MenuTree::new("wizard")

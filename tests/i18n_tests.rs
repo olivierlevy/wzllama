@@ -20,10 +20,10 @@ fn test_i18n_t_missing_key() {
 fn test_i18n_t_with_vars() {
     // Test avec une clé manquante
     let i18n = I18n::default();
-    
+
     // Test sans variables dans la chaîne
     assert_eq!(i18n.t_with_vars("missing", &[]), "missing");
-    
+
     // Test avec variable mais clé manquante - les {} sont remplacés
     // "missing.{name}" devient "missing.World" car le pattern {name} est remplacé
     let result = i18n.t_with_vars("missing.{name}", &[("name", "World")]);
@@ -34,7 +34,7 @@ fn test_i18n_t_with_vars() {
 fn test_i18n_t_with_vars_multiple() {
     // Test le comportement de t_with_vars avec une clé existante
     let i18n = I18n::default();
-    
+
     // La clé n'existe pas, donc retourne la clé telle quelle
     let result = i18n.t_with_vars("greeting", &[("name", "World")]);
     assert_eq!(result, "greeting");
@@ -48,7 +48,7 @@ fn test_language_meta_creation() {
         name_en: Some("French".into()),
         direction: "ltr".into(),
     };
-    
+
     assert_eq!(lang.code, "fr");
     assert_eq!(lang.name, "Français");
     assert_eq!(lang.name_en, Some("French".into()));
@@ -90,7 +90,7 @@ fn test_get_available_languages() {
     let langs = i18n::get_available_languages();
     // Doit toujours retourner au moins une langue
     assert!(!langs.is_empty());
-    
+
     // Vérifie que les langues ont les champs requis
     for lang in &langs {
         assert!(!lang.code.is_empty());

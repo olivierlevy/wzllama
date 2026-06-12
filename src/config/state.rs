@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
+use crate::config::paths;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use crate::config::paths;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct InstalledTools {
@@ -118,7 +118,7 @@ pub fn load_language() -> String {
     if let Ok(lang) = std::env::var("WZLLAMA_LANG") {
         return lang;
     }
-    
+
     let state = load();
     state.language.unwrap_or_else(|| "fr".into())
 }
@@ -127,20 +127,20 @@ impl WzllamaState {
     pub fn load() -> Self {
         load()
     }
-    
+
     #[allow(dead_code)]
     pub fn save(&self) -> Result<()> {
         save(self)
     }
-    
+
     pub fn set_last_model(&mut self, model: &str) {
         set_last_model(model, self);
     }
-    
+
     pub fn set_last_usage(&mut self, usage: &str) {
         set_last_usage(usage, self);
     }
-    
+
     pub fn set_last_tool(&mut self, tool: &str) {
         set_last_tool(tool, self);
     }

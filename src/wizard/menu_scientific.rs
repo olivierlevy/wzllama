@@ -1,14 +1,14 @@
 //! Scientific Agent Skills menu
 //! Integrates with K-Dense-AI/scientific-agent-skills for local AI scientist capabilities
 
-use anyhow::Result;
-use colored::*;
-use dialoguer::Select;
+use super::menu_header;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
 use crate::display;
-use crate::menu_api::{MenuTree, MenuItem};
-use super::menu_header;
+use crate::menu_api::{MenuItem, MenuTree};
+use anyhow::Result;
+use colored::*;
+use dialoguer::Select;
 
 /// Create the scientific menu tree structure
 pub fn build_menu_tree() -> MenuTree {
@@ -20,8 +20,10 @@ pub fn build_menu_tree() -> MenuTree {
         .add_submenu(MenuItem::leaf("🏥 Clinical").with_action("scientific_clinical"))
         .add_submenu(MenuItem::leaf("🧬 Genomics").with_action("scientific_genomics"))
         .add_submenu(MenuItem::leaf("🤖 Machine Learning").with_action("scientific_ml"))
-        .add_submenu(MenuItem::leaf("🤖 Agentic Tools Info").with_action("scientific_agentic_info"));
-    
+        .add_submenu(
+            MenuItem::leaf("🤖 Agentic Tools Info").with_action("scientific_agentic_info"),
+        );
+
     MenuTree::new("scientific").with_root(root)
 }
 
@@ -75,7 +77,14 @@ impl ScientificCategory {
         vec![
             ScientificCategory {
                 name_key: "scientific.bioinformatics",
-                skills: &["biopython", "bioservices", "gget", "scanpy", "anndata", "cellxgene-census"],
+                skills: &[
+                    "biopython",
+                    "bioservices",
+                    "gget",
+                    "scanpy",
+                    "anndata",
+                    "cellxgene-census",
+                ],
             },
             ScientificCategory {
                 name_key: "scientific.cheminformatics",
@@ -95,7 +104,13 @@ impl ScientificCategory {
             },
             ScientificCategory {
                 name_key: "scientific.ml",
-                skills: &["scikit-learn", "pytorch-lightning", "pennylane", "qiskit", "cirq"],
+                skills: &[
+                    "scikit-learn",
+                    "pytorch-lightning",
+                    "pennylane",
+                    "qiskit",
+                    "cirq",
+                ],
             },
         ]
     }
@@ -111,29 +126,27 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             true,
             state.last_model.as_deref(),
             hw.ram_gb,
-            hw.total_vram_mb as f64 / 1024.0
+            hw.total_vram_mb as f64 / 1024.0,
         );
-        
+
         let categories = ScientificCategory::all();
         let agentic_tools = AgenticToolInfo::all();
-        let display_names: Vec<String> = categories.iter()
-            .map(|c| i18n.t(c.name_key))
-            .collect();
-        
+        let display_names: Vec<String> = categories.iter().map(|c| i18n.t(c.name_key)).collect();
+
         // Retour en premier item (selon TODO.md ligne 72)
         let back_option = i18n.t("menu.back");
         let mut all_items = vec![back_option];
         all_items.extend(display_names.clone());
         all_items.push(i18n.t("scientific.agentic_tools"));
-        
+
         let sel = Select::new()
             .with_prompt("")
             .items(&all_items)
             .default(0)
             .interact_opt()?;
-        
+
         match sel {
-            Some(0) => return Ok(()),  // Retour en position 0
+            Some(0) => return Ok(()), // Retour en position 0
             Some(s) if s <= categories.len() => {
                 // s-1 car Retour est en position 0, puis les catégories commencent à 1
                 handle_category(i18n, state, hw, &categories[s - 1])?;
@@ -147,7 +160,12 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 }
 
 /// Handle category selection
-fn handle_category(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, category: &ScientificCategory) -> Result<()> {
+fn handle_category(
+    i18n: &I18n,
+    state: &mut WzllamaState,
+    hw: &HardwareInfo,
+    category: &ScientificCategory,
+) -> Result<()> {
     // Show available skills in this category
     display::info(&i18n.t("scientific.category_skills"));
     for skill in category.skills {
@@ -155,27 +173,29 @@ fn handle_category(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, cat
         let status = if installed { "✅" } else { "📄" };
         println!("  {} {}", status, skill);
     }
-    
+
     // Offer to install missing skills
-    let missing: Vec<&str> = category.skills.iter()
+    let missing: Vec<&str> = category
+        .skills
+        .iter()
         .filter(|s| !is_skill_installed(s))
         .copied()
         .collect();
-    
+
     if !missing.is_empty() {
         let install = dialoguer::Confirm::new()
             .with_prompt(i18n.t("scientific.install_missing"))
             .default(true)
             .interact()?;
-        
+
         if install {
             install_scientific_skills(i18n, &missing)?;
         }
     }
-    
+
     // Launch the scientific agent
     launch_scientific_agent(i18n, state, hw, category)?;
-    
+
     Ok(())
 }
 
@@ -189,19 +209,24 @@ fn is_skill_installed(skill: &str) -> bool {
 
 /// Install scientific skills
 fn install_scientific_skills(i18n: &I18n, skills: &[&str]) -> Result<()> {
-    display::info(&format!("{} {} {}", i18n.t("scientific.downloading"), skills.len(), i18n.t("scientific.skills")));
-    
+    display::info(&format!(
+        "{} {} {}",
+        i18n.t("scientific.downloading"),
+        skills.len(),
+        i18n.t("scientific.skills")
+    ));
+
     let home = crate::core::shell::get_home_dir();
     let base_path = format!("{}/.wzllama/scientific-skills", home);
-    
+
     // Create directory
     std::fs::create_dir_all(&base_path)?;
-    
+
     // Download skills from GitHub
     for skill in skills {
         let url = format!("https://raw.githubusercontent.com/K-Dense-AI/scientific-agent-skills/main/scientific-skills/{}/SKILL.md", skill);
         let dest = format!("{}/{}/SKILL.md", base_path, skill);
-        
+
         if let Ok(content) = reqwest::blocking::get(&url) {
             if let Ok(text) = content.text() {
                 let skill_dir = format!("{}/{}", base_path, skill);
@@ -211,43 +236,52 @@ fn install_scientific_skills(i18n: &I18n, skills: &[&str]) -> Result<()> {
             }
         }
     }
-    
+
     display::success(&i18n.t("scientific.skills_installed"));
     Ok(())
 }
 
 /// Launch scientific agent with appropriate model
-fn launch_scientific_agent(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, category: &ScientificCategory) -> Result<()> {
+fn launch_scientific_agent(
+    i18n: &I18n,
+    state: &mut WzllamaState,
+    hw: &HardwareInfo,
+    category: &ScientificCategory,
+) -> Result<()> {
     // Recommend model based on category
     let model = recommend_model_for_category(category);
-    
+
     display::info(&i18n.t_with_vars("scientific.recommended_model", &[("model", model)]));
-    
+
     // Check if model is installed
     let local_models = crate::core::ollama_api::get_models();
     let has_model = local_models.iter().any(|m| m.name == model);
-    
+
     if !has_model {
         let install = dialoguer::Confirm::new()
             .with_prompt(i18n.t_with_vars("scientific.download_model", &[("model", model)]))
             .default(true)
             .interact()?;
-        
+
         if install {
             if let Err(e) = crate::core::ollama_api::pull_model(model) {
-                display::warning(&format!("{}: {}", i18n.t("models.localmaxxing_download_error"), e));
+                display::warning(&format!(
+                    "{}: {}",
+                    i18n.t("models.localmaxxing_download_error"),
+                    e
+                ));
                 return Ok(());
             }
         }
     }
-    
+
     // Save model for display in header
     state.last_model = Some(model.to_string());
     crate::config::state::save(state)?;
-    
+
     // Show agentic launcher menu
     run_agentic_launcher_menu(i18n, state, hw, category)?;
-    
+
     Ok(())
 }
 
@@ -258,11 +292,18 @@ fn recommend_model_for_category(_category: &ScientificCategory) -> &'static str 
 }
 
 /// Run agentic launcher submenu for scientific skills
-fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, category: &ScientificCategory) -> Result<()> {
+fn run_agentic_launcher_menu(
+    i18n: &I18n,
+    state: &mut WzllamaState,
+    hw: &HardwareInfo,
+    category: &ScientificCategory,
+) -> Result<()> {
     let agentic_tools = AgenticToolInfo::all();
-    let skills_path = format!("{}/.wzllama/scientific-skills", 
-        crate::core::shell::get_home_dir());
-    
+    let skills_path = format!(
+        "{}/.wzllama/scientific-skills",
+        crate::core::shell::get_home_dir()
+    );
+
     loop {
         // Affiche le header avec ressources
         menu_header::render(
@@ -271,9 +312,9 @@ fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
             true,
             state.last_model.as_deref(),
             hw.ram_gb,
-            hw.total_vram_mb as f64 / 1024.0
+            hw.total_vram_mb as f64 / 1024.0,
         );
-        
+
         // Show available skills
         display::info(&i18n.t("scientific.available_skills"));
         for skill in category.skills {
@@ -282,7 +323,7 @@ fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
             println!("  {} {}", status, skill);
         }
         println!();
-        
+
         // Build tools menu
         let mut items = vec![i18n.t("scientific.launcher_back")];
         for tool in &agentic_tools {
@@ -296,13 +337,13 @@ fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
             let icon = if installed { "🤖" } else { "📦" };
             items.push(format!("{} {}", icon, tool.name));
         }
-        
+
         let sel = Select::new()
             .with_prompt(i18n.t("scientific.launcher_prompt"))
             .items(&items)
             .default(0)
             .interact_opt()?;
-        
+
         match sel {
             Some(0) | None => return Ok(()), // Back (index 0 or Escape)
             Some(idx) if idx <= agentic_tools.len() => {
@@ -315,16 +356,25 @@ fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &Hardwar
 }
 
 /// Show launch instructions for a specific tool with scientific skills
-fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_path: &str, state: &mut WzllamaState) -> Result<()> {
+fn show_tool_launch_instructions(
+    i18n: &I18n,
+    tool: &AgenticToolInfo,
+    skills_path: &str,
+    state: &mut WzllamaState,
+) -> Result<()> {
     display::clear_screen();
-    display::section(&format!("{} {}", tool.name, i18n.t("scientific.launcher_instructions")));
-    
+    display::section(&format!(
+        "{} {}",
+        tool.name,
+        i18n.t("scientific.launcher_instructions")
+    ));
+
     // Create symlinks for tool-specific skills directories
     let symlinks_created = create_skill_symlinks(tool, skills_path)?;
     if symlinks_created {
         display::success(&i18n.t("scientific.skills_linked"));
     }
-    
+
     // Tool-specific instructions
     match tool.id {
         "claude_code" => {
@@ -380,9 +430,9 @@ fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_pat
             println!("Instructions coming soon for {}", tool.name);
         }
     }
-    
+
     println!();
-    
+
     // Check if tool is installed
     let is_installed = match tool.id {
         "claude_code" => crate::core::shell::is_installed_with_local_bin("claude"),
@@ -391,21 +441,21 @@ fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_pat
         "codex" => crate::core::shell::is_installed_with_local_bin("codex"),
         _ => false,
     };
-    
+
     let primary_option = if is_installed {
         format!("🚀 {}", i18n.t("scientific.launch_tool"))
     } else {
         format!("📦 {}", i18n.t("scientific.install_tool"))
     };
     let back_option = i18n.t("scientific.launcher_back");
-    
+
     let options = [primary_option.as_str(), back_option.as_str()];
     let sel = Select::new()
         .with_prompt(i18n.t("scientific.launcher_action"))
         .items(options)
         .default(1)
         .interact_opt()?;
-    
+
     // Handle selection - None means Escape was pressed (treat as back)
     if let Some(0) = sel {
         if let Some(tool_instance) = crate::tools::get_tool(tool.id) {
@@ -419,7 +469,7 @@ fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_pat
         }
     }
     // None (Escape) falls through to return naturally
-    
+
     Ok(())
 }
 
@@ -433,22 +483,22 @@ fn create_skill_symlinks(tool: &AgenticToolInfo, skills_path: &str) -> Result<bo
         "codex" => format!("{}/.codex/knowledge", home),
         _ => return Ok(false),
     };
-    
+
     // Check if source directory exists and has skills
     let source_path = std::path::Path::new(skills_path);
     if !source_path.exists() {
         return Ok(false);
     }
-    
+
     // Create target directory if needed
     let target_dir = std::path::Path::new(&tool_skills_path);
     if let Some(parent) = target_dir.parent() {
         std::fs::create_dir_all(parent).ok();
     }
-    
+
     // Create symlink (remove existing first)
     let _ = std::fs::remove_file(target_dir);
-    
+
     #[cfg(unix)]
     {
         match std::os::unix::fs::symlink(source_path, target_dir) {
@@ -456,7 +506,7 @@ fn create_skill_symlinks(tool: &AgenticToolInfo, skills_path: &str) -> Result<bo
             Err(_) => Ok(false),
         }
     }
-    
+
     #[cfg(not(unix))]
     {
         // On Windows, symlink requires admin privileges, so we skip it
@@ -468,11 +518,15 @@ fn create_skill_symlinks(tool: &AgenticToolInfo, skills_path: &str) -> Result<bo
 /// Show agentic tools information for scientific workflows
 fn show_agentic_tools_info(i18n: &I18n, tools: &[AgenticToolInfo]) -> Result<()> {
     display::section(&i18n.t("scientific.agentic_tools"));
-    
+
     for tool in tools {
         display::info(&format!("{} - {}", tool.name, i18n.t(tool.description_key)));
-        println!("  {} {}", "🎯".dimmed(), i18n.t_with_vars("scientific.agentic_best_for", &[("use", tool.best_for)]));
-        
+        println!(
+            "  {} {}",
+            "🎯".dimmed(),
+            i18n.t_with_vars("scientific.agentic_best_for", &[("use", tool.best_for)])
+        );
+
         // Show installation status
         let is_installed = match tool.id {
             "claude_code" => crate::core::shell::is_installed_with_local_bin("claude"),
@@ -482,11 +536,15 @@ fn show_agentic_tools_info(i18n: &I18n, tools: &[AgenticToolInfo]) -> Result<()>
             _ => false,
         };
         if !is_installed {
-            display::warning(&format!("{}: {}", i18n.t("tool.not_installed"), get_install_cmd(tool.id)));
+            display::warning(&format!(
+                "{}: {}",
+                i18n.t("tool.not_installed"),
+                get_install_cmd(tool.id)
+            ));
         }
         println!();
     }
-    
+
     display::info(&i18n.t("scientific.agentic_hint"));
     display::info(&i18n.t("scientific.press_enter_to_continue"));
     let mut input = String::new();

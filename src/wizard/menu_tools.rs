@@ -1,13 +1,13 @@
+use super::menu_header;
+use crate::config::{I18n, WzllamaState};
+use crate::core::shell;
+use crate::core::HardwareInfo;
+use crate::display;
+use crate::menu_api::{MenuItem, MenuTree};
+use crate::tools::{self, docker, open_webui::OpenWebUITool, tool_trait::ToolStatus};
 use anyhow::Result;
 use colored::*;
 use dialoguer::Select;
-use crate::config::{I18n, WzllamaState};
-use crate::core::HardwareInfo;
-use crate::core::shell;
-use crate::tools::{self, docker, tool_trait::ToolStatus, open_webui::OpenWebUITool};
-use crate::display;
-use crate::menu_api::{MenuTree, MenuItem};
-use super::menu_header;
 
 /// Create the tools menu tree structure
 pub fn build_menu_tree() -> MenuTree {
@@ -25,7 +25,7 @@ pub fn build_menu_tree() -> MenuTree {
         .add_submenu(MenuItem::leaf("π Pi").with_action("tool_pi"))
         .add_submenu(MenuItem::leaf("🌊 Pool").with_action("tool_pool"))
         .add_submenu(MenuItem::leaf("📚 Obsidian").with_action("tool_obsidian"));
-    
+
     MenuTree::new("tools").with_root(root)
 }
 
@@ -41,7 +41,7 @@ fn sync_tools_state(state: &mut WzllamaState) {
     state.installed.droid = shell::is_installed_quiet("droid");
     state.installed.pi = shell::is_installed_with_local_bin("pi");
     state.installed.pool = shell::is_installed_quiet("pool");
-    
+
     // Obsidian - check flatpak first, then binary
     state.installed.obsidian = if shell::run("flatpak --version").is_ok() {
         shell::run_quiet("flatpak info md.obsidian.Obsidian").is_ok()
@@ -54,27 +54,46 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
     // Synchroniser l'état réel des outils avec Docker
     sync_tools_state(state);
     crate::config::state::save(state)?;
-    
+
     loop {
         // Affiche le header avec ressources comme le menu principal
         menu_header::render(
-            i18n, 
-            "menu.main.tools", 
+            i18n,
+            "menu.main.tools",
             true,
             state.last_model.as_deref(),
-            hw.ram_gb, 
-            hw.total_vram_mb as f64 / 1024.0
+            hw.ram_gb,
+            hw.total_vram_mb as f64 / 1024.0,
         );
-        
+
         let tools = tools::get_available_tools(state, i18n);
         // Retour en premier item (selon TODO.md ligne 72)
         let mut items: Vec<String> = vec![i18n.t("menu.back")];
         items.extend(tools.iter().map(|t| {
             let tool_dyn = tools::get_tool(&t.id);
-            let supports_agentic = tool_dyn.as_ref().map(|x| x.supports_agentic()).unwrap_or(false);
-            let icon = if supports_agentic { "🤖" } else if t.installed { "✅" } else { "📦" };
-            let agentic_tag = if supports_agentic { " [agentic]".to_string() } else { String::new() };
-            format!("{} {} - {}{}", icon, t.name, t.description.dimmed(), agentic_tag)
+            let supports_agentic = tool_dyn
+                .as_ref()
+                .map(|x| x.supports_agentic())
+                .unwrap_or(false);
+            let icon = if supports_agentic {
+                "🤖"
+            } else if t.installed {
+                "✅"
+            } else {
+                "📦"
+            };
+            let agentic_tag = if supports_agentic {
+                " [agentic]".to_string()
+            } else {
+                String::new()
+            };
+            format!(
+                "{} {} - {}{}",
+                icon,
+                t.name,
+                t.description.dimmed(),
+                agentic_tag
+            )
         }));
 
         let max_items = display::menu_max_items(items.len(), 10);
@@ -94,9 +113,11 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
             }
         };
 
-        if sel == 0 { return Ok(()); }  // Retour en position 0
+        if sel == 0 {
+            return Ok(());
+        } // Retour en position 0
 
-        let tool_info = &tools[sel - 1];  // -1 car Retour est en position 0
+        let tool_info = &tools[sel - 1]; // -1 car Retour est en position 0
         let tool = match tools::get_tool(&tool_info.id) {
             Some(t) => t,
             None => continue,
@@ -116,24 +137,21 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
                 continue;
             }
         }
-        
+
         if tool_info.installed {
             // Pour Open WebUI, proposer mise à jour
             if tool_info.id == "open_webui" {
-                let items = vec![
-                    i18n.t("menu.tools.launch"),
-                    i18n.t("tool.openwebui.update"),
-                ];
+                let items = vec![i18n.t("menu.tools.launch"), i18n.t("tool.openwebui.update")];
                 let sel = Select::new()
                     .with_prompt(i18n.t("menu.tools.choose"))
                     .items(&items)
                     .default(0)
                     .interact_opt()?;
-                
+
                 match sel {
                     Some(0) => {
                         state.set_last_tool(&tool_info.id); // Avant launch!
-                        crate::config::state::save(state)?;  // Sauvegarder avant l'exec
+                        crate::config::state::save(state)?; // Sauvegarder avant l'exec
                         let model = state.last_model.as_deref();
                         tool.launch(i18n, state, model)?;
                     }
@@ -147,7 +165,7 @@ pub fn run(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo) -> Result<(
 
             // Sauvegarder l'outil AVANT launch (car exec remplace le processus)
             state.set_last_tool(&tool_info.id);
-            crate::config::state::save(state)?;  // Sauvegarder avant l'exec
+            crate::config::state::save(state)?; // Sauvegarder avant l'exec
             let model = state.last_model.as_deref();
             tool.launch(i18n, state, model)?;
         } else {

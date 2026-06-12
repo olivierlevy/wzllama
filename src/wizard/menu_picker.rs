@@ -1,13 +1,13 @@
 //! Model picker utility for selecting Ollama models
 //! Used by tool launchers when no default model is set
 
-use anyhow::Result;
-use dialoguer::Select;
 use crate::config::I18n;
 use crate::core::ollama_api;
+use anyhow::Result;
+use dialoguer::Select;
 
 /// Pick a model from locally available models via dialog menu
-/// 
+///
 /// # Returns
 /// * `Some(String)` - The selected model name
 /// * `None` - User cancelled or no models available
@@ -21,7 +21,7 @@ pub fn pick_model(i18n: &I18n) -> Result<Option<String>> {
                 .items(&names)
                 .default(0)
                 .interact_opt()?;
-            
+
             if let Some(idx) = sel {
                 return Ok(Some(names[idx].to_string()));
             }

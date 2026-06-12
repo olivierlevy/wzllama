@@ -2,10 +2,10 @@
 //!
 //! Migrated from wizard/menu_models.rs to use menu_api system with ModelsEngine.
 
-use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::menu_api::{MenuTree, MenuItem, MenuMetadata, ModelsEngineRunner};
+use crate::menu_api::{MenuItem, MenuMetadata, MenuTree, ModelsEngineRunner};
+use anyhow::Result;
 
 /// Models menu runner using ModelsEngine
 pub struct ModelsMenuRunner<'a> {
@@ -29,9 +29,16 @@ impl<'a> ModelsMenuRunner<'a> {
             .with_root(
                 MenuItem::branch("models")
                     .add_submenu(MenuItem::leaf("↩️ Retour"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("models.installed")).with_action("models_installed"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("models.by_org")).with_action("models_by_org"))
-                    .add_submenu(MenuItem::leaf(&self.i18n.t("models.search")).with_action("models_search"))
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("models.installed"))
+                            .with_action("models_installed"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("models.by_org")).with_action("models_by_org"),
+                    )
+                    .add_submenu(
+                        MenuItem::leaf(&self.i18n.t("models.search")).with_action("models_search"),
+                    ),
             )
     }
 
@@ -52,8 +59,10 @@ pub fn build_menu_tree(i18n: &I18n) -> MenuTree {
         .with_root(
             MenuItem::branch("models")
                 .add_submenu(MenuItem::leaf("↩️ Retour"))
-                .add_submenu(MenuItem::leaf(&i18n.t("models.installed")).with_action("models_installed"))
+                .add_submenu(
+                    MenuItem::leaf(&i18n.t("models.installed")).with_action("models_installed"),
+                )
                 .add_submenu(MenuItem::leaf(&i18n.t("models.by_org")).with_action("models_by_org"))
-                .add_submenu(MenuItem::leaf(&i18n.t("models.search")).with_action("models_search"))
+                .add_submenu(MenuItem::leaf(&i18n.t("models.search")).with_action("models_search")),
         )
 }

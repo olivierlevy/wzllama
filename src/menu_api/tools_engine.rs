@@ -2,10 +2,10 @@
 //!
 //! This wraps the existing wizard::menu_tools logic with a menu_api interface.
 
-use anyhow::Result;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
-use crate::menu_api::{MenuTree, MenuItem, MenuMetadata};
+use crate::menu_api::{MenuItem, MenuMetadata, MenuTree};
+use anyhow::Result;
 
 /// Tools engine that drives tool workflows
 pub struct ToolsEngine<'a> {
@@ -37,12 +37,16 @@ pub fn build_menu_tree(i18n: &I18n) -> MenuTree {
                 .add_submenu(MenuItem::leaf("↩️ Retour"))
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.docker")).with_action("tool_docker"))
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.ollama")).with_action("tool_ollama"))
-                .add_submenu(MenuItem::leaf(&i18n.t("tools.open_webui")).with_action("tool_open_webui"))
+                .add_submenu(
+                    MenuItem::leaf(&i18n.t("tools.open_webui")).with_action("tool_open_webui"),
+                )
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.openclaw")).with_action("tool_openclaw"))
-                .add_submenu(MenuItem::leaf(&i18n.t("tools.hermes_agent")).with_action("tool_hermes_agent"))
+                .add_submenu(
+                    MenuItem::leaf(&i18n.t("tools.hermes_agent")).with_action("tool_hermes_agent"),
+                )
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.opencode")).with_action("tool_opencode"))
                 .add_submenu(MenuItem::leaf(&i18n.t("tools.codex")).with_action("tool_codex"))
-                .add_submenu(MenuItem::leaf(&i18n.t("tools.droid")).with_action("tool_droid"))
+                .add_submenu(MenuItem::leaf(&i18n.t("tools.droid")).with_action("tool_droid")),
         )
 }
 

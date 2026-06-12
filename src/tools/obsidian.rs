@@ -1,22 +1,34 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::flatpak::FlatpakTool;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct ObsidianTool;
 
 impl Tool for ObsidianTool {
-    fn id(&self) -> &str { "obsidian" }
-    fn name(&self) -> &str { "Obsidian" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.obsidian.description") }
-    fn status(&self, state: &WzllamaState) -> ToolStatus { ObsidianTool::get_status(state) }
-    fn install(&self, i18n: &I18n) -> Result<()> { ObsidianTool::install(i18n) }
-    fn uninstall(&self, i18n: &I18n) -> Result<()> { ObsidianTool::uninstall(i18n) }
-    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> { 
-        ObsidianTool::launch(i18n) 
+    fn id(&self) -> &str {
+        "obsidian"
+    }
+    fn name(&self) -> &str {
+        "Obsidian"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.obsidian.description")
+    }
+    fn status(&self, state: &WzllamaState) -> ToolStatus {
+        ObsidianTool::get_status(state)
+    }
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        ObsidianTool::install(i18n)
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        ObsidianTool::uninstall(i18n)
+    }
+    fn launch(&self, i18n: &I18n, _state: &WzllamaState, _model: Option<&str>) -> Result<()> {
+        ObsidianTool::launch(i18n)
     }
 }
 
@@ -32,15 +44,15 @@ impl ObsidianTool {
             {
                 return ToolStatus::Installed;
             }
-            
+
             // Vérifier les autres méthodes d'installation
-            let currently_installed = shell::run("which obsidian").is_ok() 
+            let currently_installed = shell::run("which obsidian").is_ok()
                 || std::path::Path::new("/app/bin/obsidian").exists();
             ToolStatus::from_installed(currently_installed)
         }
         #[cfg(target_os = "macos")]
         {
-            let currently_installed = shell::run("which obsidian").is_ok() 
+            let currently_installed = shell::run("which obsidian").is_ok()
                 || std::path::Path::new("/Applications/Obsidian.app").exists();
             ToolStatus::from_installed(currently_installed)
         }
@@ -49,16 +61,16 @@ impl ObsidianTool {
             ToolStatus::NotInstalled
         }
     }
-    
+
     /// Check if nomic-embed-text is available
     pub fn check_embedding_model() -> bool {
         shell::run("ollama list | grep nomic-embed-text").is_ok()
     }
-    
+
     /// Install Obsidian automatically
     pub fn install(i18n: &I18n) -> Result<()> {
         display::info(&i18n.t("tool.obsidian.install_info"));
-        
+
         #[cfg(target_os = "linux")]
         {
             // Ensure Flatpak is installed first, return error if cannot install
@@ -66,23 +78,25 @@ impl ObsidianTool {
                 display::info("Flatpak not found. Attempting to install...");
                 FlatpakTool::install().map_err(|e| {
                     display::warning(&format!("Could not install Flatpak: {}", e));
-                    anyhow::anyhow!("Flatpak is required to install Obsidian. Install it manually first.")
+                    anyhow::anyhow!(
+                        "Flatpak is required to install Obsidian. Install it manually first."
+                    )
                 })?;
             }
-            
+
             // Install Obsidian via Flatpak
             display::info("Installing Obsidian via Flatpak...");
             FlatpakTool::install_app("md.obsidian.Obsidian")?;
         }
-        
+
         #[cfg(target_os = "macos")]
         {
             display::warning("Please download Obsidian from https://obsidian.md/download and install it manually.");
         }
-        
+
         Ok(())
     }
-    
+
     pub fn uninstall(i18n: &I18n) -> Result<()> {
         if !Confirm::new()
             .with_prompt(i18n.t("tool.obsidian.uninstall_confirm"))
@@ -91,7 +105,7 @@ impl ObsidianTool {
         {
             return Ok(());
         }
-        
+
         #[cfg(target_os = "linux")]
         {
             // Try apt first
@@ -105,7 +119,7 @@ impl ObsidianTool {
                 shell::run_live("flatpak uninstall md.obsidian.Obsidian -y")?;
             }
         }
-        
+
         #[cfg(target_os = "macos")]
         {
             if std::path::Path::new("/Applications/Obsidian.app").exists() {
@@ -113,11 +127,11 @@ impl ObsidianTool {
                 shell::run("rm -rf /Applications/Obsidian.app")?;
             }
         }
-        
+
         display::success(&i18n.t("tool.obsidian.uninstalled"));
         Ok(())
     }
-    
+
     pub fn launch(i18n: &I18n) -> Result<()> {
         // Vérifier que Ollama est installé
         if shell::run("which ollama").is_err() {
@@ -125,7 +139,7 @@ impl ObsidianTool {
             display::info(&i18n.t("ollama.install_now"));
             anyhow::bail!("Ollama is required for Obsidian AI features");
         }
-        
+
         display::info("📝 Obsidian is a local-first knowledge base");
         println!();
         display::info(&i18n.t("tool.obsidian.llm_setup"));
@@ -136,28 +150,28 @@ impl ObsidianTool {
         display::info(&i18n.t("tool.obsidian.llm_step5"));
         println!();
         display::info(&i18n.t("tool.obsidian.embedding_model"));
-        
+
         // Check if Ollama is running
         if shell::run("curl -s http://localhost:11434/api/tags > /dev/null 2>&1").is_ok() {
             display::success(&i18n.t("tool.obsidian.ollama_running"));
         } else {
             display::warning(&i18n.t("tool.obsidian.ollama_not_running"));
         }
-        
+
         // Check embedding model
         if ObsidianTool::check_embedding_model() {
             display::success("✅ nomic-embed-text is available");
         } else {
             display::info("💡 Run 'ollama pull nomic-embed-text' for semantic search");
         }
-        
+
         #[cfg(target_os = "linux")]
         {
             display::info(&i18n.t("tool.obsidian.cors_hint"));
         }
-        
+
         println!();
-        
+
         #[cfg(target_os = "linux")]
         {
             if shell::run("which obsidian").is_ok() {
@@ -166,12 +180,12 @@ impl ObsidianTool {
                 shell::run("flatpak run md.obsidian.Obsidian &")?;
             }
         }
-        
+
         #[cfg(target_os = "macos")]
         {
             shell::run("open -a Obsidian")?;
         }
-        
+
         Ok(())
     }
 }

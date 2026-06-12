@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
 use anyhow::{Context, Result};
+use colored::Colorize;
 use std::io::{BufRead, BufReader};
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
-use colored::Colorize;
 
 /// Sort du mode raw du terminal si nous sommes dedans
 /// À appeler avant d'exécuter des commandes qui nécessitent un terminal propre
@@ -29,9 +29,11 @@ impl ShellContext {
     pub fn new() -> Self {
         Self { output: None }
     }
-    
+
     pub fn with_output(output: Arc<Mutex<String>>) -> Self {
-        Self { output: Some(output) }
+        Self {
+            output: Some(output),
+        }
     }
 }
 
@@ -66,20 +68,23 @@ pub fn run_with_context(cmd: &str, ctx: Option<&ShellContext>) -> Result<()> {
 pub fn run_live(cmd: &str) -> Result<()> {
     exit_raw_mode();
     println!("   ⏳ {}", cmd.dimmed());
-    
+
     // Use appropriate shell for the platform
     #[cfg(unix)]
-    let mut child = Command::new("sh").args(["-c", cmd])
-        .stdout(Stdio::piped()).stderr(Stdio::piped())
+    let mut child = Command::new("sh")
+        .args(["-c", cmd])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()?;
 
     #[cfg(not(unix))]
     let mut child = {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| {
-            std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
-        });
-        Command::new(&shell).args(["/C", cmd])
-            .stdout(Stdio::piped()).stderr(Stdio::piped())
+        let shell = std::env::var("SHELL")
+            .unwrap_or_else(|_| std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into()));
+        Command::new(&shell)
+            .args(["/C", cmd])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()?
     };
 
@@ -138,19 +143,18 @@ pub fn run_sync_with_output(cmd: &str, output: &Arc<Mutex<String>>) -> Result<()
         // Use appropriate shell for the platform
         #[cfg(unix)]
         let output_result = Command::new("sh").args(["-c", &cmd]).output();
-        
+
         #[cfg(not(unix))]
         let output_result = {
-            let shell = std::env::var("SHELL").unwrap_or_else(|_| {
-                std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
-            });
+            let shell = std::env::var("SHELL")
+                .unwrap_or_else(|_| std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into()));
             Command::new(&shell).args(["/C", &cmd]).output()
         };
 
         if let Ok(output_result) = output_result {
             let stdout = String::from_utf8_lossy(&output_result.stdout).to_string();
             let stderr = String::from_utf8_lossy(&output_result.stderr).to_string();
-            
+
             let mut out = output.lock().unwrap();
             if !stdout.is_empty() {
                 out.push_str(&stdout);
@@ -162,7 +166,7 @@ pub fn run_sync_with_output(cmd: &str, output: &Arc<Mutex<String>>) -> Result<()
             }
         }
     });
-    
+
     Ok(())
 }
 
@@ -184,9 +188,8 @@ pub fn run(cmd: &str) -> Result<(String, String)> {
 
     #[cfg(not(unix))]
     let output = {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| {
-            std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
-        });
+        let shell = std::env::var("SHELL")
+            .unwrap_or_else(|_| std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into()));
         Command::new(&shell)
             .args(["/C", cmd])
             .output()
@@ -209,23 +212,25 @@ pub fn run(cmd: &str) -> Result<(String, String)> {
 pub fn spawn(cmd: &str) -> Result<()> {
     exit_raw_mode();
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
-    
+
     // Fork pour lancer la commande avec interaction terminal
     match unsafe { libc::fork() } {
         0 => {
             // Processus enfant - lancer la commande
             // setsid pour prendre le contrôle du terminal
-            unsafe { libc::setsid(); }
+            unsafe {
+                libc::setsid();
+            }
             let _err = Command::new(&shell).args(["-i", "-c", cmd]).exec();
             std::process::exit(1);
         }
-        -1 => {
-            Err(anyhow::anyhow!("Failed to fork"))
-        }
+        -1 => Err(anyhow::anyhow!("Failed to fork")),
         _ => {
             // Processus parent - attendre
             let mut status: i32 = 0;
-            unsafe { libc::wait(&mut status); }
+            unsafe {
+                libc::wait(&mut status);
+            }
             if status == 0 {
                 Ok(())
             } else {
@@ -240,13 +245,13 @@ pub fn spawn(cmd: &str) -> Result<()> {
 pub fn spawn(cmd: &str) -> Result<()> {
     exit_raw_mode();
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "cmd.exe".into());
-    
+
     // On Windows, we use the shell with /C flag (no fork available)
     let status = Command::new(&shell)
         .args(["/C", cmd])
         .status()
         .with_context(|| "Failed to spawn command")?;
-    
+
     if status.success() {
         Ok(())
     } else {
@@ -285,10 +290,21 @@ pub fn is_installed_with_local_bin(cmd: &str) -> bool {
 
     #[cfg(not(unix))]
     let extra_paths = vec![
-        home.join("AppData").join("Local").join("Programs").join(cmd).with_extension("exe"),
-        home.join("AppData").join("Roaming").join("npm").join(cmd).with_extension("cmd"),
+        home.join("AppData")
+            .join("Local")
+            .join("Programs")
+            .join(cmd)
+            .with_extension("exe"),
+        home.join("AppData")
+            .join("Roaming")
+            .join("npm")
+            .join(cmd)
+            .with_extension("cmd"),
         home.join("AppData").join("Roaming").join("npm").join(cmd),
-        home.join(".local").join("bin").join(cmd).with_extension("exe"),
+        home.join(".local")
+            .join("bin")
+            .join(cmd)
+            .with_extension("exe"),
     ];
 
     extra_paths.iter().any(|p| p.exists())
@@ -306,9 +322,8 @@ pub fn run_quiet(cmd: &str) -> Result<(String, String)> {
 
     #[cfg(not(unix))]
     let output = {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| {
-            std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
-        });
+        let shell = std::env::var("SHELL")
+            .unwrap_or_else(|_| std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into()));
         Command::new(&shell)
             .args(["/C", cmd])
             .output()
@@ -328,16 +343,26 @@ pub fn run_quiet(cmd: &str) -> Result<(String, String)> {
 #[allow(dead_code)]
 pub fn detect_shell() -> String {
     if let Ok(shell) = std::env::var("SHELL") {
-        if shell.contains("fish") { return "fish".into(); }
-        if shell.contains("zsh") { return "zsh".into(); }
-        if shell.contains("bash") { return "bash".into(); }
+        if shell.contains("fish") {
+            return "fish".into();
+        }
+        if shell.contains("zsh") {
+            return "zsh".into();
+        }
+        if shell.contains("bash") {
+            return "bash".into();
+        }
     }
     // On Windows, check for common shells
     #[cfg(windows)]
     {
         if let Ok(shell) = std::env::var("COMSPEC") {
-            if shell.contains("powershell") { return "powershell".into(); }
-            if shell.contains("cmd") { return "cmd".into(); }
+            if shell.contains("powershell") {
+                return "powershell".into();
+            }
+            if shell.contains("cmd") {
+                return "cmd".into();
+            }
         }
     }
     "unknown".into()
@@ -351,9 +376,8 @@ pub fn get_home_dir() -> String {
     }
     #[cfg(not(unix))]
     {
-        std::env::var("USERPROFILE").unwrap_or_else(|_| {
-            std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
-        })
+        std::env::var("USERPROFILE")
+            .unwrap_or_else(|_| std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
     }
 }
 
@@ -363,7 +387,7 @@ pub fn get_home_dir() -> String {
 pub fn exec(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal avant l'exec
     reset_terminal();
-    
+
     // Si la commande est bash, zsh, ou sh, on lance le shell directement (interactif)
     if cmd == "bash" || cmd == "zsh" || cmd == "sh" {
         if std::path::Path::new("/bin/bash").exists() {
@@ -377,7 +401,7 @@ pub fn exec(cmd: &str) -> ! {
             panic!("exec failed: {}", err);
         }
     }
-    
+
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
     let err = Command::new(&shell).arg("-c").arg(cmd).exec();
     // exec ne reruns qu'en cas d'erreur
@@ -389,25 +413,25 @@ pub fn exec(cmd: &str) -> ! {
 pub fn exec(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
-    
+
     // Sur Windows, on utilise cmd.exe /C ou powershell
     let shell = if cfg!(target_os = "windows") {
         std::env::var("SHELL").unwrap_or_else(|_| "cmd.exe".into())
     } else {
         std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into())
     };
-    
+
     // Spawn the command and exit
     let result = if cfg!(target_os = "windows") {
         Command::new(&shell).args(["/C", cmd]).spawn()
     } else {
         Command::new(&shell).args(["-c", cmd]).spawn()
     };
-    
+
     if let Ok(mut child) = result {
         let _ = child.wait();
     }
-    
+
     std::process::exit(0);
 }
 
@@ -418,7 +442,7 @@ pub fn exec(cmd: &str) -> ! {
 pub fn spawn_and_exit(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
-    
+
     // Lancer la commande dans un nouveau shell
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
     let err = Command::new(&shell).arg("-c").arg(cmd).exec();
@@ -430,7 +454,7 @@ pub fn spawn_and_exit(cmd: &str) -> ! {
 pub fn spawn_and_exit(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
-    
+
     // Sur Windows, on utilise cmd.exe /C
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "cmd.exe".into());
     let result = if cfg!(target_os = "windows") {
@@ -438,11 +462,11 @@ pub fn spawn_and_exit(cmd: &str) -> ! {
     } else {
         Command::new(&shell).args(["-c", cmd]).spawn()
     };
-    
+
     if let Ok(mut child) = result {
         let _ = child.wait();
     }
-    
+
     std::process::exit(0);
 }
 
@@ -452,7 +476,7 @@ pub fn spawn_and_exit(cmd: &str) -> ! {
 pub fn launch_interactive_shell() -> Result<()> {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
-    
+
     // Essayer de lancer bash, zsh ou sh
     let shell = if std::path::Path::new("/bin/bash").exists() {
         "/bin/bash"
@@ -461,22 +485,24 @@ pub fn launch_interactive_shell() -> Result<()> {
     } else {
         "/bin/sh"
     };
-    
+
     // Fork et exec pour lancer le shell interactif
     match unsafe { libc::fork() } {
         0 => {
             // Processus enfant - lancer le shell interactif
-            unsafe { libc::setsid(); }
+            unsafe {
+                libc::setsid();
+            }
             let _err = Command::new(shell).arg("-i").exec();
             std::process::exit(1);
         }
-        -1 => {
-            Err(anyhow::anyhow!("Failed to fork"))
-        }
+        -1 => Err(anyhow::anyhow!("Failed to fork")),
         _ => {
             // Processus parent - attendre
             let mut status: i32 = 0;
-            unsafe { libc::wait(&mut status); }
+            unsafe {
+                libc::wait(&mut status);
+            }
             Ok(())
         }
     }
@@ -487,7 +513,7 @@ pub fn launch_interactive_shell() -> Result<()> {
 pub fn launch_interactive_shell() -> Result<()> {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
-    
+
     // On Windows, utilise cmd.exe ou powershell
     let shell = if std::env::var("SHELL").is_ok() {
         std::env::var("SHELL").unwrap()
@@ -496,14 +522,14 @@ pub fn launch_interactive_shell() -> Result<()> {
     } else {
         "cmd.exe".into()
     };
-    
+
     // Spawn interactive shell
     let status = if cfg!(target_os = "windows") {
         Command::new(&shell).args(["/Q"]).status()
     } else {
         Command::new(&shell).arg("-i").status()
     };
-    
+
     match status {
         Ok(s) if s.success() => Ok(()),
         Ok(_) => Err(anyhow::anyhow!("Shell exited with error")),

@@ -3,10 +3,10 @@
 //! Centralizes all menu-related business logic that was previously scattered
 //! across api_server.rs and wizard modules.
 
-use serde_json::Value;
 use crate::config::{I18n, WzllamaState};
-use crate::tools::{self, tool_trait::ToolStatus};
 use crate::core::hardware;
+use crate::tools::{self, tool_trait::ToolStatus};
+use serde_json::Value;
 
 /// Hardware information for API
 #[derive(serde::Serialize)]
@@ -81,19 +81,32 @@ impl ApiService {
     /// List all tools with their status
     pub fn list_tools(state: &WzllamaState, i18n: &I18n) -> Vec<ToolInfo> {
         let tools_list = tools::get_available_tools(state, i18n);
-        
-        tools_list.into_iter().map(|t| {
-            let tool_dyn = tools::get_tool(&t.id);
-            ToolInfo {
-                id: t.id,
-                name: t.name,
-                description: t.description,
-                installed: t.installed,
-                status: if t.installed { "installed".to_string() } else { "not_installed".to_string() },
-                supports_agentic: tool_dyn.as_ref().map(|x| x.supports_agentic()).unwrap_or(false),
-                requires_docker: tool_dyn.as_ref().map(|x| x.requires_docker()).unwrap_or(false),
-            }
-        }).collect()
+
+        tools_list
+            .into_iter()
+            .map(|t| {
+                let tool_dyn = tools::get_tool(&t.id);
+                ToolInfo {
+                    id: t.id,
+                    name: t.name,
+                    description: t.description,
+                    installed: t.installed,
+                    status: if t.installed {
+                        "installed".to_string()
+                    } else {
+                        "not_installed".to_string()
+                    },
+                    supports_agentic: tool_dyn
+                        .as_ref()
+                        .map(|x| x.supports_agentic())
+                        .unwrap_or(false),
+                    requires_docker: tool_dyn
+                        .as_ref()
+                        .map(|x| x.requires_docker())
+                        .unwrap_or(false),
+                }
+            })
+            .collect()
     }
 
     /// Get a specific tool by ID
@@ -105,7 +118,11 @@ impl ApiService {
                 name: tool.name().to_string(),
                 description: tool.description(i18n),
                 installed,
-                status: if installed { "installed".to_string() } else { "not_installed".to_string() },
+                status: if installed {
+                    "installed".to_string()
+                } else {
+                    "not_installed".to_string()
+                },
                 supports_agentic: tool.supports_agentic(),
                 requires_docker: tool.requires_docker(),
             }
@@ -187,7 +204,11 @@ impl ApiService {
         let ollama_running = tools::ollama::OllamaTool::is_running();
         SystemStatus {
             status: "running".to_string(),
-            ollama: if ollama_running { "connected".to_string() } else { "disconnected".to_string() },
+            ollama: if ollama_running {
+                "connected".to_string()
+            } else {
+                "disconnected".to_string()
+            },
         }
     }
 
@@ -197,10 +218,14 @@ impl ApiService {
         HardwareInfo {
             ram_gb: hw.ram_gb,
             has_gpu: hw.has_gpu(),
-            gpus: hw.gpus.iter().map(|g| GpuInfo {
-                name: g.name.clone(),
-                vram_mb: g.vram_mb,
-            }).collect(),
+            gpus: hw
+                .gpus
+                .iter()
+                .map(|g| GpuInfo {
+                    name: g.name.clone(),
+                    vram_mb: g.vram_mb,
+                })
+                .collect(),
         }
     }
 
@@ -212,8 +237,7 @@ impl ApiService {
 
 /// Re-export wizard_helpers for API use
 pub use crate::menu_api::wizard_helpers::{
-    UseCase, ScientificCategory, AgenticToolInfo, LanguageInfo,
-    get_priority_tools_for_usecase, is_skill_installed, get_install_cmd,
-    is_cache_from_today, get_default_language_index, get_language_items,
-    MenuIndices, get_resume_label,
+    get_default_language_index, get_install_cmd, get_language_items,
+    get_priority_tools_for_usecase, get_resume_label, is_cache_from_today, is_skill_installed,
+    AgenticToolInfo, LanguageInfo, MenuIndices, ScientificCategory, UseCase,
 };

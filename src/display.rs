@@ -30,9 +30,24 @@ pub fn clear_screen() {
 }
 
 /// Affiche le header complet avec ressources (pour sous-menus)
-pub fn header_with_resources(title: &str, ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String], default_model: Option<&str>) {
+pub fn header_with_resources(
+    title: &str,
+    ram_total: f64,
+    ram_avail: f64,
+    vram_total: f64,
+    vram_avail: Option<f64>,
+    running: &[String],
+    default_model: Option<&str>,
+) {
     header(title);
-    resources_with_bars(ram_total, ram_avail, vram_total, vram_avail, running, default_model);
+    resources_with_bars(
+        ram_total,
+        ram_avail,
+        vram_total,
+        vram_avail,
+        running,
+        default_model,
+    );
 }
 
 pub fn success(msg: &str) {
@@ -60,7 +75,13 @@ pub fn run(msg: &str) {
 }
 
 #[allow(dead_code)]
-pub fn resources(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String]) {
+pub fn resources(
+    ram_total: f64,
+    ram_avail: f64,
+    vram_total: f64,
+    vram_avail: Option<f64>,
+    running: &[String],
+) {
     println!("   💾 RAM : {:.1} / {:.1} Go libres", ram_avail, ram_total);
     if let Some(vram) = vram_avail {
         println!("   🎮 VRAM : {:.1} / {:.1} Go libres", vram, vram_total);
@@ -71,9 +92,13 @@ pub fn resources(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Op
 }
 
 pub fn format_size(bytes: u64) -> String {
-    if bytes >= 1_073_741_824 { format!("{:.1} Go", bytes as f64 / 1_073_741_824.0) }
-    else if bytes >= 1_048_576 { format!("{:.1} Mo", bytes as f64 / 1_048_576.0) }
-    else { format!("{} o", bytes) }
+    if bytes >= 1_073_741_824 {
+        format!("{:.1} Go", bytes as f64 / 1_073_741_824.0)
+    } else if bytes >= 1_048_576 {
+        format!("{:.1} Mo", bytes as f64 / 1_048_576.0)
+    } else {
+        format!("{} o", bytes)
+    }
 }
 
 /// Formatte un nombre avec espaces tous les 3 chiffres
@@ -83,7 +108,9 @@ pub fn format_number(n: u64) -> String {
     let len = s.len();
     let mut result = String::new();
     for (i, c) in s.chars().enumerate() {
-        if i > 0 && (len - i).is_multiple_of(3) { result.push(' '); }
+        if i > 0 && (len - i).is_multiple_of(3) {
+            result.push(' ');
+        }
         result.push(c);
     }
     result
@@ -91,31 +118,60 @@ pub fn format_number(n: u64) -> String {
 
 /// Get color indicator for resource usage level
 fn usage_color(pct: f64) -> Color {
-    if pct < 70.0 { Color::Green }
-    else if pct < 90.0 { Color::Yellow }
-    else { Color::Red }
+    if pct < 70.0 {
+        Color::Green
+    } else if pct < 90.0 {
+        Color::Yellow
+    } else {
+        Color::Red
+    }
 }
 
 /// Affiche les ressources système avec barres de progression et modèle par défaut
-pub fn resources_with_bars(ram_total: f64, ram_avail: f64, vram_total: f64, vram_avail: Option<f64>, running: &[String], default_model: Option<&str>) {
+pub fn resources_with_bars(
+    ram_total: f64,
+    ram_avail: f64,
+    vram_total: f64,
+    vram_avail: Option<f64>,
+    running: &[String],
+    default_model: Option<&str>,
+) {
     let ram_used = ram_total - ram_avail;
-    let ram_pct = if ram_total > 0.0 { (ram_used / ram_total) * 100.0 } else { 0.0 };
+    let ram_pct = if ram_total > 0.0 {
+        (ram_used / ram_total) * 100.0
+    } else {
+        0.0
+    };
     let ram_color = usage_color(ram_pct);
-    
-    println!("   {} {:.0}% {:.1}/{:.1} Go {} ",
-        "💾".cyan(), ram_pct, ram_avail, ram_total,
-        progress_bar_colored(ram_used, ram_total, 20, ram_color));
-    
+
+    println!(
+        "   {} {:.0}% {:.1}/{:.1} Go {} ",
+        "💾".cyan(),
+        ram_pct,
+        ram_avail,
+        ram_total,
+        progress_bar_colored(ram_used, ram_total, 20, ram_color)
+    );
+
     if let Some(vram) = vram_avail {
         let vram_used = vram_total - vram;
-        let vram_pct = if vram_total > 0.0 { (vram_used / vram_total) * 100.0 } else { 0.0 };
+        let vram_pct = if vram_total > 0.0 {
+            (vram_used / vram_total) * 100.0
+        } else {
+            0.0
+        };
         let vram_color = usage_color(vram_pct);
-        println!("   {} {:.0}% {:.1}/{:.1} Go {} {}",
-            "🎮".cyan(), vram_pct, vram, vram_total,
+        println!(
+            "   {} {:.0}% {:.1}/{:.1} Go {} {}",
+            "🎮".cyan(),
+            vram_pct,
+            vram,
+            vram_total,
             progress_bar_colored(vram_used, vram_total, 20, vram_color),
-            running.join(", ").dimmed());
+            running.join(", ").dimmed()
+        );
     }
-    
+
     if let Some(model) = default_model {
         println!("   {} {}", "🤖".cyan(), model.bold());
     }
@@ -123,14 +179,26 @@ pub fn resources_with_bars(ram_total: f64, ram_avail: f64, vram_total: f64, vram
 
 /// Barre de progression visuelle colorée
 pub fn progress_bar_colored(used: f64, total: f64, width: usize, color: Color) -> String {
-    let ratio = if total > 0.0 { (used / total).min(1.0) } else { 0.0 };
+    let ratio = if total > 0.0 {
+        (used / total).min(1.0)
+    } else {
+        0.0
+    };
     let filled = ((ratio * width as f64) as usize).min(width);
-    format!("{}{}", "█".repeat(filled).color(color), "░".repeat(width - filled).dimmed())
+    format!(
+        "{}{}",
+        "█".repeat(filled).color(color),
+        "░".repeat(width - filled).dimmed()
+    )
 }
 
 /// Barre de progression visuelle
 pub fn progress_bar(used: f64, total: f64, width: usize) -> String {
-    let ratio = if total > 0.0 { (used / total).min(1.0) } else { 0.0 };
+    let ratio = if total > 0.0 {
+        (used / total).min(1.0)
+    } else {
+        0.0
+    };
     let filled = ((ratio * width as f64) as usize).min(width);
     format!("{}{}", "█".repeat(filled), "░".repeat(width - filled))
 }
@@ -144,5 +212,10 @@ pub fn format_model(name: &str, size: u64, score: f32, installed: bool) -> Strin
 
 /// Affiche un titre de section avec icône
 pub fn section_title(icon: &str, title: &str) {
-    println!("\n{} {}{}\n", icon.cyan(), title.bold(), "─".repeat(40 - title.len() - icon.len()).dimmed());
+    println!(
+        "\n{} {}{}\n",
+        icon.cyan(),
+        title.bold(),
+        "─".repeat(40 - title.len() - icon.len()).dimmed()
+    );
 }

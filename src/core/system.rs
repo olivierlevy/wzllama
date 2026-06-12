@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use sysinfo::System;
 
 pub fn get_available_ram_gb() -> f64 {
@@ -21,7 +21,12 @@ pub fn get_available_vram_gb() -> Option<f64> {
 }
 
 pub fn detect_package_manager() -> String {
-    for (cmd, name) in &[("pacman", "pacman"), ("apt", "apt"), ("dnf", "dnf"), ("brew", "brew")] {
+    for (cmd, name) in &[
+        ("pacman", "pacman"),
+        ("apt", "apt"),
+        ("dnf", "dnf"),
+        ("brew", "brew"),
+    ] {
         if crate::core::shell::is_installed(cmd) {
             return name.to_string();
         }
@@ -45,13 +50,13 @@ pub fn get_package_install_command(pkg: &str) -> Result<String> {
 /// Detect the Linux distribution
 pub fn detect_distro() -> &'static str {
     if crate::core::shell::run("which apt apt-get 2>/dev/null").is_ok() {
-        "debian"  // Debian, Ubuntu, Mint
+        "debian" // Debian, Ubuntu, Mint
     } else if crate::core::shell::run("which dnf 2>/dev/null").is_ok() {
-        "fedora"  // Fedora
+        "fedora" // Fedora
     } else if crate::core::shell::run("which yum 2>/dev/null").is_ok() {
-        "rhel"    // RHEL, CentOS
+        "rhel" // RHEL, CentOS
     } else if crate::core::shell::run("which pacman 2>/dev/null").is_ok() {
-        "arch"    // Arch Linux, Manjaro
+        "arch" // Arch Linux, Manjaro
     } else if crate::core::shell::run("which zypper 2>/dev/null").is_ok() {
         "opensuse"
     } else if crate::core::shell::run("which emerge 2>/dev/null").is_ok() {

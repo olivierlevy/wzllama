@@ -1,26 +1,41 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 use crate::wizard::menu_picker;
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct OllamaTool;
 
 impl Tool for OllamaTool {
-    fn id(&self) -> &str { "ollama" }
-    fn name(&self) -> &str { "Ollama" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.ollama.description") }
-
-    fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        if shell::is_installed("ollama") { ToolStatus::Installed }
-        else { ToolStatus::NotInstalled }
+    fn id(&self) -> &str {
+        "ollama"
+    }
+    fn name(&self) -> &str {
+        "Ollama"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.ollama.description")
     }
 
-    fn install(&self, i18n: &I18n) -> Result<()> { OllamaTool::install(i18n) }
-    fn update(&self, i18n: &I18n) -> Result<()> { OllamaTool::update(i18n) }
-    fn uninstall(&self, i18n: &I18n) -> Result<()> { OllamaTool::uninstall(i18n) }
+    fn status(&self, _state: &WzllamaState) -> ToolStatus {
+        if shell::is_installed("ollama") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
+    }
+
+    fn install(&self, i18n: &I18n) -> Result<()> {
+        OllamaTool::install(i18n)
+    }
+    fn update(&self, i18n: &I18n) -> Result<()> {
+        OllamaTool::update(i18n)
+    }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> {
+        OllamaTool::uninstall(i18n)
+    }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         OllamaTool::launch(i18n, state, model)
     }
@@ -63,7 +78,8 @@ impl OllamaTool {
     #[allow(dead_code)]
     #[cfg(not(unix))]
     pub fn stop() -> Result<()> {
-        shell::run_quiet("taskkill /F /IM ollama.exe").map(|_| ())
+        shell::run_quiet("taskkill /F /IM ollama.exe")
+            .map(|_| ())
             .unwrap_or(()); // best-effort
         Ok(())
     }
@@ -149,7 +165,9 @@ impl OllamaTool {
                 // Wait a moment for the server to come up
                 for _ in 0..10 {
                     std::thread::sleep(std::time::Duration::from_millis(500));
-                    if Self::is_running() { break; }
+                    if Self::is_running() {
+                        break;
+                    }
                 }
                 display::success(&i18n.t("ollama.started"));
 
@@ -187,27 +205,59 @@ impl OllamaTool {
         let config = crate::config::env::EnvConfig::load();
         let mut env_lines = vec!["[Service]".to_string()];
         env_lines.push("Environment=\"OLLAMA_MODELS=/home/ollama\"".to_string());
-        env_lines.push(format!("Environment=\"OLLAMA_ORIGINS={}\"", config.ollama.origins));
-        env_lines.push(format!("Environment=\"OLLAMA_KEEP_ALIVE={}\"", config.ollama.keep_alive));
-        env_lines.push(format!("Environment=\"OLLAMA_NUM_PARALLEL={}\"", config.ollama.num_parallel));
-        env_lines.push(format!("Environment=\"OLLAMA_MAX_LOADED_MODELS={}\"", config.ollama.max_loaded_models));
-        env_lines.push(format!("Environment=\"OLLAMA_FLASH_ATTENTION={}\"", if config.ollama.flash_attention { 1 } else { 0 }));
-        env_lines.push(format!("Environment=\"OLLAMA_KV_CACHE_TYPE={}\"", config.ollama.kv_cache_type));
-        env_lines.push(format!("Environment=\"OLLAMA_CONTEXT_LENGTH={}\"", config.ollama.context_length));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_ORIGINS={}\"",
+            config.ollama.origins
+        ));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_KEEP_ALIVE={}\"",
+            config.ollama.keep_alive
+        ));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_NUM_PARALLEL={}\"",
+            config.ollama.num_parallel
+        ));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_MAX_LOADED_MODELS={}\"",
+            config.ollama.max_loaded_models
+        ));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_FLASH_ATTENTION={}\"",
+            if config.ollama.flash_attention { 1 } else { 0 }
+        ));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_KV_CACHE_TYPE={}\"",
+            config.ollama.kv_cache_type
+        ));
+        env_lines.push(format!(
+            "Environment=\"OLLAMA_CONTEXT_LENGTH={}\"",
+            config.ollama.context_length
+        ));
         if config.ollama.max_vram > 0 {
-            env_lines.push(format!("Environment=\"OLLAMA_MAX_VRAM={}\"", config.ollama.max_vram));
+            env_lines.push(format!(
+                "Environment=\"OLLAMA_MAX_VRAM={}\"",
+                config.ollama.max_vram
+            ));
         }
         if !config.ollama.cuda_visible_devices.is_empty() {
-            env_lines.push(format!("Environment=\"CUDA_VISIBLE_DEVICES={}\"", config.ollama.cuda_visible_devices));
+            env_lines.push(format!(
+                "Environment=\"CUDA_VISIBLE_DEVICES={}\"",
+                config.ollama.cuda_visible_devices
+            ));
         }
         let override_content = env_lines.join("\\n");
-        shell::run_quiet(&format!("printf '{}' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null", override_content))?;
+        shell::run_quiet(&format!(
+            "printf '{}' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null",
+            override_content
+        ))?;
         shell::run_quiet("sudo systemctl daemon-reload")?;
         shell::run_live("sudo systemctl enable ollama")?;
         shell::run_live("sudo systemctl start ollama")?;
 
         for _ in 0..10 {
-            if crate::core::ollama_api::detect_url().is_some() { break; }
+            if crate::core::ollama_api::detect_url().is_some() {
+                break;
+            }
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
 
@@ -271,7 +321,9 @@ impl OllamaTool {
         // Wait for ollama to be available in PATH
         for _ in 0..15 {
             std::thread::sleep(std::time::Duration::from_secs(1));
-            if shell::is_installed("ollama") { break; }
+            if shell::is_installed("ollama") {
+                break;
+            }
         }
 
         let config = crate::config::env::EnvConfig::default();

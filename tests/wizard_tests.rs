@@ -27,7 +27,7 @@ fn test_usecase_equality() {
     let uc1 = UseCase::Coding;
     let uc2 = UseCase::Coding;
     let uc3 = UseCase::Chat;
-    
+
     assert_eq!(uc1, uc2);
     assert_ne!(uc1, uc3);
 }

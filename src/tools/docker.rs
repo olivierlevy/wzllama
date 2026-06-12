@@ -1,18 +1,20 @@
-use anyhow::{Result, bail};
+use crate::config::I18n;
+use crate::core::{shell, system};
+use crate::display;
+use anyhow::{bail, Result};
 use dialoguer::Confirm;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
-use crate::config::I18n;
-use crate::core::{shell, system};
-use crate::display;
 
-pub fn is_installed() -> bool { shell::is_installed("docker") }
+pub fn is_installed() -> bool {
+    shell::is_installed("docker")
+}
 
 /// Executes a docker command, without sudo first, then with sudo if needed
 pub fn run(cmd: &str) -> bool {
-    shell::run(&format!("docker {} 2>/dev/null", cmd)).is_ok() ||
-    shell::run(&format!("sudo docker {} 2>/dev/null", cmd)).is_ok()
+    shell::run(&format!("docker {} 2>/dev/null", cmd)).is_ok()
+        || shell::run(&format!("sudo docker {} 2>/dev/null", cmd)).is_ok()
 }
 
 /// Executes a docker command live (for run_live), without sudo first
@@ -24,7 +26,7 @@ pub fn run_live(cmd: &str) -> Result<()> {
     }
 }
 
-pub fn is_running() -> bool { 
+pub fn is_running() -> bool {
     // Check that Docker responds to container commands (more reliable than docker info)
     // Try without sudo first, then with sudo
     if shell::run("docker ps >/dev/null 2>&1").is_ok() {
@@ -41,8 +43,15 @@ pub fn is_running() -> bool {
     // Fallback: vérifier si the socket Docker existe
     std::path::Path::new("/var/run/docker.sock").exists()
 }
-pub fn start() -> Result<()> { shell::run("systemctl start docker 2>/dev/null || sudo systemctl start docker").map(|_| ()) }
-pub fn restart_socket() -> Result<()> { shell::run("systemctl restart docker.socket 2>/dev/null || sudo systemctl restart docker.socket").map(|_| ()) }
+pub fn start() -> Result<()> {
+    shell::run("systemctl start docker 2>/dev/null || sudo systemctl start docker").map(|_| ())
+}
+pub fn restart_socket() -> Result<()> {
+    shell::run(
+        "systemctl restart docker.socket 2>/dev/null || sudo systemctl restart docker.socket",
+    )
+    .map(|_| ())
+}
 
 pub fn install_linux() -> Result<()> {
     let install_docker = system::get_package_install_command("docker")?;
@@ -83,7 +92,7 @@ pub fn ensure_ready(i18n: &I18n) -> Result<()> {
     if ensure_ready_no_confirm().is_ok() {
         return Ok(());
     }
-    
+
     // If it fails, ask for confirmation
     if !is_installed() {
         display::warning(&i18n.t("install.docker.not_installed"));

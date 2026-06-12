@@ -1,18 +1,24 @@
 #![allow(dead_code)]
 
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
-use crate::core::{shell, llmfit_api::LLMFitClient};
+use crate::core::{llmfit_api::LLMFitClient, shell};
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct LLMFitTool;
 
 impl Tool for LLMFitTool {
-    fn id(&self) -> &str { "llmfit" }
-    fn name(&self) -> &str { "LLMFit" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.llmfit.description") }
+    fn id(&self) -> &str {
+        "llmfit"
+    }
+    fn name(&self) -> &str {
+        "LLMFit"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.llmfit.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
         // Check if llmfit is installed via which (cross-platform)
         if shell::is_installed_with_local_bin("llmfit") {
@@ -81,7 +87,7 @@ impl LLMFitTool {
         display::success("✅ LLMFit installed");
         Ok(())
     }
-    
+
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Updating LLMFit...");
@@ -89,9 +95,13 @@ impl LLMFitTool {
         display::success("✅ LLMFit updated");
         Ok(())
     }
-    
+
     pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.llmfit.uninstall_confirm")).default(false).interact()? {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.llmfit.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
             return Ok(());
         }
         let _ = shell::run_quiet("uv tool uninstall llmfit 2>/dev/null");

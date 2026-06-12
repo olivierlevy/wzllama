@@ -1,18 +1,28 @@
-use anyhow::Result;
-use dialoguer::Confirm;
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
 use crate::tools::tool_trait::{Tool, ToolStatus};
+use anyhow::Result;
+use dialoguer::Confirm;
 
 pub struct OpenClawTool;
 
 impl Tool for OpenClawTool {
-    fn id(&self) -> &str { "openclaw" }
-    fn name(&self) -> &str { "OpenClaw" }
-    fn description(&self, i18n: &I18n) -> String { i18n.t("tool.openclaw.description") }
+    fn id(&self) -> &str {
+        "openclaw"
+    }
+    fn name(&self) -> &str {
+        "OpenClaw"
+    }
+    fn description(&self, i18n: &I18n) -> String {
+        i18n.t("tool.openclaw.description")
+    }
     fn status(&self, _state: &WzllamaState) -> ToolStatus {
-        if shell::is_installed_with_local_bin("openclaw") { ToolStatus::Installed } else { ToolStatus::NotInstalled }
+        if shell::is_installed_with_local_bin("openclaw") {
+            ToolStatus::Installed
+        } else {
+            ToolStatus::NotInstalled
+        }
     }
     fn install(&self, i18n: &I18n) -> Result<()> {
         OpenClawTool::install(i18n)
@@ -34,7 +44,8 @@ impl OpenClawTool {
         match WzllamaState::load().last_model.as_deref() {
             Some(m) => {
                 let cmd: String = format!("ollama launch openclaw --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 shell::run_live("npm install -g openclaw")?;
@@ -50,7 +61,11 @@ impl OpenClawTool {
         Ok(())
     }
     pub fn uninstall(i18n: &I18n) -> Result<()> {
-        if !Confirm::new().with_prompt(i18n.t("tool.openclaw.uninstall_confirm")).default(false).interact()? {
+        if !Confirm::new()
+            .with_prompt(i18n.t("tool.openclaw.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
             return Ok(());
         }
         let _ = shell::run_quiet("openclaw uninstall --all --yes --non-interactive 2>/dev/null");
@@ -78,7 +93,8 @@ impl OpenClawTool {
                 display::comment(&format!("openclaw --profile {}", m));
                 display::run(&i18n.t_with_vars("tool.openclaw.run_model", &[("model", m)]));
                 let cmd: String = format!("ollama launch openclaw --model {}", m);
-                println!("{}", cmd); shell::exec(&cmd);
+                println!("{}", cmd);
+                shell::exec(&cmd);
             }
             None => {
                 display::comment(&i18n.t("tool.openclaw.no_model"));

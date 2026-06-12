@@ -1,13 +1,13 @@
 //! Menu handler - interactive menu navigation and execution with dynamic submenu support
 
-use anyhow::Result;
-use log::{error, warn};
-use dialoguer::{Select, Input, Confirm};
-use crate::menu_api::tool_action::{ActionContext, ActionDispatcher, ActionResult};
-use crate::menu_api::menu_tree::MenuTree;
-use crate::menu_api::menu_item::MenuItem;
 use crate::config::{I18n, WzllamaState};
 use crate::core::HardwareInfo;
+use crate::menu_api::menu_item::MenuItem;
+use crate::menu_api::menu_tree::MenuTree;
+use crate::menu_api::tool_action::{ActionContext, ActionDispatcher, ActionResult};
+use anyhow::Result;
+use dialoguer::{Confirm, Input, Select};
+use log::{error, warn};
 
 /// Navigation state tracking
 #[derive(Debug, Clone)]
@@ -44,7 +44,7 @@ pub struct MenuHandler<'a> {
 impl<'a> MenuHandler<'a> {
     /// Create a new menu handler
     pub fn new(
-        tree: MenuTree, 
+        tree: MenuTree,
         dispatcher: ActionDispatcher,
         i18n: &'a I18n,
         state: &'a mut WzllamaState,
@@ -61,15 +61,15 @@ impl<'a> MenuHandler<'a> {
             hw,
         }
     }
-    
+
     /// Run the interactive menu loop
     pub fn run(&mut self) -> Result<()> {
         use crate::wizard::menu_header;
-        
+
         loop {
             // Build dynamic submenu if needed
             self.build_dynamic_submenus();
-            
+
             // Display header with resources (like original wizard menu)
             menu_header::render(
                 self.i18n,
@@ -77,17 +77,20 @@ impl<'a> MenuHandler<'a> {
                 true,
                 self.app_state.last_model.as_deref(),
                 self.hw.ram_gb,
-                self.hw.total_vram_mb as f64 / 1024.0
+                self.hw.total_vram_mb as f64 / 1024.0,
             );
-            
-            let items: Vec<String> = self.current_menu.submenus.iter().map(|i| i.label.clone()).collect();
-            
+
+            let items: Vec<String> = self
+                .current_menu
+                .submenus
+                .iter()
+                .map(|i| i.label.clone())
+                .collect();
+
             // Check if "Retour" is already in position 0 (wizard pattern)
-            let has_back_in_items = !items.is_empty() && (
-                items[0].to_lowercase().contains("retour") || 
-                items[0].contains("↩️")
-            );
-            
+            let has_back_in_items = !items.is_empty()
+                && (items[0].to_lowercase().contains("retour") || items[0].contains("↩️"));
+
             // Menu handler adds "Retour" and "Quitter" at the end if not already present
             let has_back = self.state.history.len() > 1 && !has_back_in_items;
             let mut all_items = items.clone();
@@ -125,7 +128,7 @@ impl<'a> MenuHandler<'a> {
 
         Ok(())
     }
-    
+
     /// Build dynamic submenus for items that have dynamic generators
     fn build_dynamic_submenus(&mut self) {
         // Dynamic submenu support - items can have dynamic generators
@@ -146,13 +149,13 @@ impl<'a> MenuHandler<'a> {
             }
             return Ok(());
         }
-        
+
         let adjusted_index = if has_back_in_items {
-            index - 1  // Adjust for "Retour" in position 0
+            index - 1 // Adjust for "Retour" in position 0
         } else {
             index
         };
-        
+
         if adjusted_index >= self.current_menu.submenus.len() {
             return Ok(());
         }
@@ -179,7 +182,7 @@ impl<'a> MenuHandler<'a> {
         if self.state.history.len() > 1 {
             self.state.history.pop();
             self.state.current_index = *self.state.history.last().unwrap_or(&0);
-            
+
             // Rebuild current menu from root
             self.rebuild_current_menu();
         }
@@ -188,20 +191,20 @@ impl<'a> MenuHandler<'a> {
     /// Rebuild current menu from navigation history
     fn rebuild_current_menu(&mut self) {
         let mut current = self.tree.root.clone();
-        
+
         for &idx in &self.state.history[1..] {
             if idx < current.submenus.len() {
                 current = current.submenus[idx].clone();
             }
         }
-        
+
         self.current_menu = current;
     }
 
     /// Execute an action by ID
     fn execute_action(&self, action_id: &str) -> Result<()> {
         let ctx = ActionContext::new();
-        
+
         match self.dispatcher.execute(action_id, &ctx) {
             Ok(result) => {
                 if result.success {
@@ -216,13 +219,17 @@ impl<'a> MenuHandler<'a> {
                 error!("Action '{}' failed: {}", action_id, e);
             }
         }
-        
+
         Ok(())
     }
 
     /// Get the current prompt text
     fn get_prompt(&self) -> String {
-        self.tree.metadata.title.clone().unwrap_or_else(|| "Menu".to_string())
+        self.tree
+            .metadata
+            .title
+            .clone()
+            .unwrap_or_else(|| "Menu".to_string())
     }
 
     /// Register an action with the handler
@@ -259,7 +266,9 @@ impl MenuRunner {
 
     /// Execute action by path
     pub fn execute_path(&self, path: &str, ctx: &ActionContext) -> Result<ActionResult> {
-        let item = self.tree.find_by_path(path)
+        let item = self
+            .tree
+            .find_by_path(path)
             .ok_or_else(|| anyhow::anyhow!("Menu path '{}' not found", path))?;
 
         if let Some(ref action_id) = item.action_id {
