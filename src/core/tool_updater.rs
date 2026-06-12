@@ -24,6 +24,52 @@ impl ToolUpdater {
         if !Self::is_update_needed() {
             return;
         }
+
+        // Prefer TaskManager when available and when running inside a Tokio runtime.
+        if let Some(mgr) = crate::core::init::get_global_task_manager() {
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let state = state.clone();
+                let mgr = mgr.clone();
+                let _ = tokio::spawn(async move {
+                    let _ = mgr.spawn_named(
+                        "tool-updater",
+                        || async move {
+                            // Run the blocking update in a blocking thread
+                            let res = tokio::task::spawn_blocking(move || {
+                                // Use hot-swappable i18n during updates so messages reflect current language.
+                                let prev_lang = crate::config::i18n::get_current().meta.code.clone();
+                                let result = Self::update_all_silent(&state, &I18n::default());
+                                (prev_lang, result)
+                            })
+                            .await;
+
+                            if let Ok((prev_lang, result)) = res {
+                                match result {
+                                    Ok(summary) => {
+                                        let current_lang = crate::config::i18n::get_current().meta.code.clone();
+                                        if current_lang != prev_lang {
+                                            log::info!("Language changed to {} during background update", current_lang);
+                                        }
+                                        log::info!(
+                                            "Background update: {} updated, {} failed, {} skipped",
+                                            summary.updated.len(),
+                                            summary.failed.len(),
+                                            summary.skipped.len()
+                                        );
+                                        Self::mark_updated();
+                                    }
+                                    Err(e) => log::warn!("Background update error: {}", e),
+                                }
+                            }
+                        },
+                        crate::core::task_manager::RestartPolicy::Never,
+                    ).await;
+                });
+                return;
+            }
+        }
+
+        // Fallback to original thread if no TaskManager/runtime available
         std::thread::Builder::new()
             .name("tool-updater".into())
             .spawn(move || {
