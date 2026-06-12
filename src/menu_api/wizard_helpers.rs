@@ -399,7 +399,6 @@ pub fn ollama_to_localmax_model(
 }
 
 /// Language selection helpers from menu_main.rs
-
 /// Language info structure for selection
 pub struct LanguageInfo {
     pub code: &'static str,
