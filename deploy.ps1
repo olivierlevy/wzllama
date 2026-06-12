@@ -37,10 +37,10 @@ if (-not (Test-Path $BinSrc)) {
 }
 
 # Get user's home directory (cross-platform compatible)
-$Home = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
+$UserHome = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
 
 # Install to %USERPROFILE%\.wzllama\bin
-$BinDir = Join-Path $Home ".wzllama\bin"
+$BinDir = Join-Path $UserHome ".wzllama\bin"
 
 if (-not (Test-Path $BinDir)) {
     New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
@@ -53,7 +53,7 @@ Write-Host "   wzllama installed in $BinDir"
 # ─── 3. Configuration utilisateur ────────────────────
 Write-Host ""
 Write-Host "Step 3/4: User configuration..." 
-$WzllamaDir = Join-Path $Home ".wzllama"
+$WzllamaDir = Join-Path $UserHome ".wzllama"
 $ConfigDir = Join-Path $WzllamaDir "config"
 $I18nDir = Join-Path $WzllamaDir "i18n"
 $LogsDir = Join-Path $WzllamaDir "logs"
