@@ -2,6 +2,7 @@ mod api_server;
 mod cli;
 mod config;
 mod core;
+mod telemetry;
 mod display;
 mod error;
 mod menu_api;
