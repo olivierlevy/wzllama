@@ -29,7 +29,6 @@ impl CatalogRefresher {
                         let current_lang = crate::config::i18n::get_current().meta.code.clone();
                         if current_lang != prev_lang {
                             log::info!("Language changed to {} during catalog refresh", current_lang);
-                            prev_lang = current_lang;
                         }
                         log::info!(
                             "Catalog refreshed: {} tools found (version {})",

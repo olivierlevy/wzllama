@@ -34,7 +34,6 @@ impl ToolUpdater {
                         let current_lang = crate::config::i18n::get_current().meta.code.clone();
                         if current_lang != prev_lang {
                             log::info!("Language changed to {} during background update", current_lang);
-                            prev_lang = current_lang;
                         }
                         log::info!(
                             "Background update: {} updated, {} failed, {} skipped",
