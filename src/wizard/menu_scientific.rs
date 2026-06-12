@@ -182,7 +182,7 @@ fn handle_category(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, cat
 /// Check if a skill is installed
 fn is_skill_installed(skill: &str) -> bool {
     // Check if the skill directory exists in ~/.wzllama/scientific-skills/
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let home = crate::core::shell::get_home_dir();
     let skill_path = format!("{}/.wzllama/scientific-skills/{}/SKILL.md", home, skill);
     std::path::Path::new(&skill_path).exists()
 }
@@ -191,7 +191,7 @@ fn is_skill_installed(skill: &str) -> bool {
 fn install_scientific_skills(i18n: &I18n, skills: &[&str]) -> Result<()> {
     display::info(&format!("{} {} {}", i18n.t("scientific.downloading"), skills.len(), i18n.t("scientific.skills")));
     
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let home = crate::core::shell::get_home_dir();
     let base_path = format!("{}/.wzllama/scientific-skills", home);
     
     // Create directory
@@ -261,7 +261,7 @@ fn recommend_model_for_category(_category: &ScientificCategory) -> &'static str 
 fn run_agentic_launcher_menu(i18n: &I18n, state: &mut WzllamaState, hw: &HardwareInfo, category: &ScientificCategory) -> Result<()> {
     let agentic_tools = AgenticToolInfo::all();
     let skills_path = format!("{}/.wzllama/scientific-skills", 
-        std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
+        crate::core::shell::get_home_dir());
     
     loop {
         // Affiche le header avec ressources
@@ -425,7 +425,7 @@ fn show_tool_launch_instructions(i18n: &I18n, tool: &AgenticToolInfo, skills_pat
 
 /// Create symlinks from ~/.wzllama/scientific-skills/* to tool-specific skills directories
 fn create_skill_symlinks(tool: &AgenticToolInfo, skills_path: &str) -> Result<bool> {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let home = crate::core::shell::get_home_dir();
     let tool_skills_path = match tool.id {
         "claude_code" => format!("{}/.claude/skills", home),
         "opencode" => format!("{}/.opencode/skills", home),
@@ -448,9 +448,20 @@ fn create_skill_symlinks(tool: &AgenticToolInfo, skills_path: &str) -> Result<bo
     
     // Create symlink (remove existing first)
     let _ = std::fs::remove_file(target_dir);
-    match std::os::unix::fs::symlink(source_path, target_dir) {
-        Ok(_) => Ok(true),
-        Err(_) => Ok(false),
+    
+    #[cfg(unix)]
+    {
+        match std::os::unix::fs::symlink(source_path, target_dir) {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    }
+    
+    #[cfg(not(unix))]
+    {
+        // On Windows, symlink requires admin privileges, so we skip it
+        // and return false to indicate it wasn't created
+        Ok(false)
     }
 }
 

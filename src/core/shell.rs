@@ -5,6 +5,7 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
+#[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use colored::Colorize;
 
@@ -66,10 +67,21 @@ pub fn run_live(cmd: &str) -> Result<()> {
     exit_raw_mode();
     println!("   ⏳ {}", cmd.dimmed());
     
-    // Always use sh for heredoc compatibility across shells (fish, zsh, bash)
+    // Use appropriate shell for the platform
+    #[cfg(unix)]
     let mut child = Command::new("sh").args(["-c", cmd])
         .stdout(Stdio::piped()).stderr(Stdio::piped())
         .spawn()?;
+
+    #[cfg(not(unix))]
+    let mut child = {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| {
+            std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
+        });
+        Command::new(&shell).args(["/C", cmd])
+            .stdout(Stdio::piped()).stderr(Stdio::piped())
+            .spawn()?
+    };
 
     // Lire stdout et stderr en même temps dans des threads séparés
     let stdout_handle = if let Some(stdout) = child.stdout.take() {
@@ -123,8 +135,17 @@ pub fn run_sync_with_output(cmd: &str, output: &Arc<Mutex<String>>) -> Result<()
     let cmd = cmd.to_string();
 
     thread::spawn(move || {
-        // Always use sh for heredoc compatibility
+        // Use appropriate shell for the platform
+        #[cfg(unix)]
         let output_result = Command::new("sh").args(["-c", &cmd]).output();
+        
+        #[cfg(not(unix))]
+        let output_result = {
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| {
+                std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
+            });
+            Command::new(&shell).args(["/C", &cmd]).output()
+        };
 
         if let Ok(output_result) = output_result {
             let stdout = String::from_utf8_lossy(&output_result.stdout).to_string();
@@ -154,11 +175,23 @@ pub fn run_cmd(cmd: &str) -> Result<()> {
 
 pub fn run(cmd: &str) -> Result<(String, String)> {
     exit_raw_mode();
-    // Always use sh for heredoc compatibility across shells (fish, zsh, bash)
+    // Use appropriate shell for the platform
+    #[cfg(unix)]
     let output = Command::new("sh")
         .args(["-c", cmd])
         .output()
         .with_context(|| "Sh error")?;
+
+    #[cfg(not(unix))]
+    let output = {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| {
+            std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
+        });
+        Command::new(&shell)
+            .args(["/C", cmd])
+            .output()
+            .with_context(|| "Shell error")?
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -172,6 +205,7 @@ pub fn run(cmd: &str) -> Result<(String, String)> {
 
 /// Executes une commande en la forkant pour permettre les interactions (sudo, etc.)
 /// Le processus parent attend que la commande se termine
+#[cfg(unix)]
 pub fn spawn(cmd: &str) -> Result<()> {
     exit_raw_mode();
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into());
@@ -198,6 +232,25 @@ pub fn spawn(cmd: &str) -> Result<()> {
                 Err(anyhow::anyhow!("Commande échouée avec code {}", status))
             }
         }
+    }
+}
+
+/// Windows version: uses spawn instead of fork for interactive commands
+#[cfg(not(unix))]
+pub fn spawn(cmd: &str) -> Result<()> {
+    exit_raw_mode();
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "cmd.exe".into());
+    
+    // On Windows, we use the shell with /C flag (no fork available)
+    let status = Command::new(&shell)
+        .args(["/C", cmd])
+        .status()
+        .with_context(|| "Failed to spawn command")?;
+    
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("Commande échouée"))
     }
 }
 
@@ -238,11 +291,23 @@ pub fn is_installed_with_local_bin(cmd: &str) -> bool {
 /// Run a command without exiting raw mode (for internal use)
 /// Uses sh explicitly for compatibility across all shells (fish, zsh, bash)
 pub fn run_quiet(cmd: &str) -> Result<(String, String)> {
-    // Always use sh for heredoc compatibility
+    // Use appropriate shell for the platform
+    #[cfg(unix)]
     let output = Command::new("sh")
         .args(["-c", cmd])
         .output()
         .with_context(|| "Sh error")?;
+
+    #[cfg(not(unix))]
+    let output = {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| {
+            std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".into())
+        });
+        Command::new(&shell)
+            .args(["/C", cmd])
+            .output()
+            .with_context(|| "Shell error")?
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -261,11 +326,34 @@ pub fn detect_shell() -> String {
         if shell.contains("zsh") { return "zsh".into(); }
         if shell.contains("bash") { return "bash".into(); }
     }
+    // On Windows, check for common shells
+    #[cfg(windows)]
+    {
+        if let Ok(shell) = std::env::var("COMSPEC") {
+            if shell.contains("powershell") { return "powershell".into(); }
+            if shell.contains("cmd") { return "cmd".into(); }
+        }
+    }
     "unknown".into()
+}
+
+/// Get the home directory in a cross-platform way
+pub fn get_home_dir() -> String {
+    #[cfg(unix)]
+    {
+        std::env::var("HOME").unwrap_or_else(|_| "/home".to_string())
+    }
+    #[cfg(not(unix))]
+    {
+        std::env::var("USERPROFILE").unwrap_or_else(|_| {
+            std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
+        })
+    }
 }
 
 /// Executes une commande en remplaçant le processus courant (ne reruns jamais)
 /// Avant l'exécution, sort du mode raw et réinitialise le terminal
+#[cfg(unix)]
 pub fn exec(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal avant l'exec
     reset_terminal();
@@ -290,9 +378,37 @@ pub fn exec(cmd: &str) -> ! {
     panic!("exec failed: {}", err);
 }
 
+/// Windows version: spawns a new process and exits
+#[cfg(not(unix))]
+pub fn exec(cmd: &str) -> ! {
+    // Sortir du mode raw et réinitialiser le terminal
+    reset_terminal();
+    
+    // Sur Windows, on utilise cmd.exe /C ou powershell
+    let shell = if cfg!(target_os = "windows") {
+        std::env::var("SHELL").unwrap_or_else(|_| "cmd.exe".into())
+    } else {
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".into())
+    };
+    
+    // Spawn the command and exit
+    let result = if cfg!(target_os = "windows") {
+        Command::new(&shell).args(["/C", cmd]).spawn()
+    } else {
+        Command::new(&shell).args(["-c", cmd]).spawn()
+    };
+    
+    if let Ok(mut child) = result {
+        let _ = child.wait();
+    }
+    
+    std::process::exit(0);
+}
+
 /// Lance une application depuis le TUI en sortant proprement du mode raw
 /// Usage: depuis le TUI, appel `spawn_and_exit("ollama run qwen")`
 /// Cette fonction ne reruns jamais - après la commande, le programme se termine.
+#[cfg(unix)]
 pub fn spawn_and_exit(cmd: &str) -> ! {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
@@ -303,8 +419,30 @@ pub fn spawn_and_exit(cmd: &str) -> ! {
     panic!("spawn_and_exit failed: {}", err);
 }
 
+/// Windows version: spawns a new process and exits
+#[cfg(not(unix))]
+pub fn spawn_and_exit(cmd: &str) -> ! {
+    // Sortir du mode raw et réinitialiser le terminal
+    reset_terminal();
+    
+    // Sur Windows, on utilise cmd.exe /C
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "cmd.exe".into());
+    let result = if cfg!(target_os = "windows") {
+        Command::new(&shell).args(["/C", cmd]).spawn()
+    } else {
+        Command::new(&shell).args(["-c", cmd]).spawn()
+    };
+    
+    if let Ok(mut child) = result {
+        let _ = child.wait();
+    }
+    
+    std::process::exit(0);
+}
+
 /// Lance un shell interactif depuis le TUI
 /// Utilise fork+exec pour donner le contrôle du terminal au shell
+#[cfg(unix)]
 pub fn launch_interactive_shell() -> Result<()> {
     // Sortir du mode raw et réinitialiser le terminal
     reset_terminal();
@@ -338,19 +476,61 @@ pub fn launch_interactive_shell() -> Result<()> {
     }
 }
 
+/// Windows version: spawns an interactive shell
+#[cfg(not(unix))]
+pub fn launch_interactive_shell() -> Result<()> {
+    // Sortir du mode raw et réinitialiser le terminal
+    reset_terminal();
+    
+    // On Windows, utilise cmd.exe ou powershell
+    let shell = if std::env::var("SHELL").is_ok() {
+        std::env::var("SHELL").unwrap()
+    } else if std::env::var("COMSPEC").is_ok() {
+        std::env::var("COMSPEC").unwrap()
+    } else {
+        "cmd.exe".into()
+    };
+    
+    // Spawn interactive shell
+    let status = if cfg!(target_os = "windows") {
+        Command::new(&shell).args(["/Q"]).status()
+    } else {
+        Command::new(&shell).arg("-i").status()
+    };
+    
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(_) => Err(anyhow::anyhow!("Shell exited with error")),
+        Err(e) => Err(anyhow::anyhow!("Failed to launch shell: {}", e)),
+    }
+}
+
 /// Ouvre une URL dans le navigateur par défaut du système
 pub fn open_url(url: &str) {
-    let cmd = if cfg!(target_os = "linux") {
-        format!("xdg-open {}", url)
-    } else if cfg!(target_os = "macos") {
-        format!("open {}", url)
-    } else if cfg!(target_os = "windows") {
-        format!("start {}", url)
-    } else {
-        return;
-    };
-    let _ = std::process::Command::new("sh")
+    #[cfg(unix)]
+    let result = std::process::Command::new("sh")
         .arg("-c")
-        .arg(&cmd)
+        .arg(if cfg!(target_os = "linux") {
+            format!("xdg-open {}", url)
+        } else if cfg!(target_os = "macos") {
+            format!("open {}", url)
+        } else {
+            return;
+        })
         .spawn();
+
+    #[cfg(not(unix))]
+    let result = if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd.exe")
+            .args(["/C", "start", &url])
+            .spawn()
+    } else {
+        // Fallback for other platforms
+        std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&format!("xdg-open {}", url))
+            .spawn()
+    };
+
+    let _ = result;
 }
