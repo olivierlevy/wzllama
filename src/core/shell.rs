@@ -275,8 +275,13 @@ pub fn is_installed_with_local_bin(cmd: &str) -> bool {
         return true;
     }
 
+    // Determine home directory: prefer explicit env vars so tests can override them
+    let home = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("USERPROFILE").map(std::path::PathBuf::from))
+        .unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from(".")));
+
     // Check well-known install locations not always on PATH
-    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
 
     #[cfg(unix)]
     let extra_paths = vec![
@@ -301,10 +306,10 @@ pub fn is_installed_with_local_bin(cmd: &str) -> bool {
             .join(cmd)
             .with_extension("cmd"),
         home.join("AppData").join("Roaming").join("npm").join(cmd),
-        home.join(".local")
-            .join("bin")
-            .join(cmd)
-            .with_extension("exe"),
+        // Consider multiple possible extensions and shims created by npm on Windows
+        home.join(".local").join("bin").join(cmd).with_extension("exe"),
+        home.join(".local").join("bin").join(cmd).with_extension("cmd"),
+        home.join(".local").join("bin").join(cmd),
     ];
 
     extra_paths.iter().any(|p| p.exists())
