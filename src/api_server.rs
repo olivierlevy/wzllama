@@ -21,6 +21,7 @@ use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::config::I18n;
+use crate::telemetry;
 use crate::menu_api::api_service::ApiService;
 use crate::menu_api::ActionResponse;
 
@@ -83,6 +84,8 @@ pub fn create_router() -> Router {
         .route("/api/v1/hardware", get(get_hardware_info))
         // Health check
         .route("/health", get(health_check))
+        // Metrics endpoint
+        .route("/metrics", get(|| async move { telemetry::metrics_handler(telemetry::register_registry()).await }))
         // /api/menu/* endpoints
         .route("/api/menu/state", get(get_menu_state))
         .route("/api/menu/action", post(execute_menu_action))

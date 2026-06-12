@@ -41,6 +41,7 @@ tower-http = { version = "0.6", features = ["cors"] }
 # Shared state for API
 dashmap = "6.1"
 arc-swap = "1.6"
+prometheus = "0.14"
 
 # Unix libc for fork/exec (Unix only)
 [target.'cfg(unix)'.dependencies]
