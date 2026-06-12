@@ -255,12 +255,12 @@ pub fn spawn(cmd: &str) -> Result<()> {
 }
 
 pub fn is_installed(cmd: &str) -> bool {
-    run(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
+    which::which(cmd).is_ok()
 }
 
 /// Check if a command is installed without exiting raw mode
 pub fn is_installed_quiet(cmd: &str) -> bool {
-    run_quiet(&format!("command -v {} 2>/dev/null", cmd)).is_ok()
+    which::which(cmd).is_ok()
 }
 
 /// Check if a command is installed, including in ~/.local/bin and other common locations

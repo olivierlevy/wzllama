@@ -18,18 +18,9 @@ impl Tool for OllamaTool {
         else { ToolStatus::NotInstalled }
     }
 
-    fn install(&self, i18n: &I18n) -> Result<()> {
-        OllamaTool::install(i18n)
-    }
-
-    fn update(&self, i18n: &I18n) -> Result<()> {
-        OllamaTool::update(i18n)
-    }
-
-    fn uninstall(&self, i18n: &I18n) -> Result<()> {
-        OllamaTool::uninstall(i18n)
-    }
-
+    fn install(&self, i18n: &I18n) -> Result<()> { OllamaTool::install(i18n) }
+    fn update(&self, i18n: &I18n) -> Result<()> { OllamaTool::update(i18n) }
+    fn uninstall(&self, i18n: &I18n) -> Result<()> { OllamaTool::uninstall(i18n) }
     fn launch(&self, i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         OllamaTool::launch(i18n, state, model)
     }
@@ -42,46 +33,87 @@ impl OllamaTool {
         crate::core::ollama_api::detect_url().is_some()
     }
 
+    #[cfg(unix)]
     pub fn start() -> Result<()> {
         shell::run_live("sudo systemctl start ollama")?;
         Ok(())
     }
 
+    #[cfg(not(unix))]
+    pub fn start() -> Result<()> {
+        use std::process::{Command, Stdio};
+        // Start ollama serve as a detached background process
+        Command::new("ollama")
+            .arg("serve")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| anyhow::anyhow!("Failed to start ollama: {}", e))?;
+        Ok(())
+    }
+
     #[allow(dead_code)]
+    #[cfg(unix)]
     pub fn stop() -> Result<()> {
         shell::run_live("sudo systemctl stop ollama")?;
         Ok(())
     }
 
+    #[allow(dead_code)]
+    #[cfg(not(unix))]
+    pub fn stop() -> Result<()> {
+        shell::run_quiet("taskkill /F /IM ollama.exe").map(|_| ())
+            .unwrap_or(()); // best-effort
+        Ok(())
+    }
+
+    #[cfg(unix)]
     pub fn enable_autostart() -> Result<()> {
         shell::run_live("sudo systemctl enable ollama")?;
         Ok(())
     }
 
+    #[cfg(not(unix))]
+    pub fn enable_autostart() -> Result<()> {
+        // Ollama on Windows registers itself as a startup app during installation
+        display::info("Ollama manages its own startup on Windows.");
+        Ok(())
+    }
+
+    #[cfg(unix)]
     fn is_autostart_enabled() -> bool {
         shell::run_quiet("systemctl is-enabled ollama 2>/dev/null | grep -q enabled").is_ok()
     }
 
-    /// Setup ollama user and directory for models (called when ollama is not installed)
+    #[cfg(not(unix))]
+    fn is_autostart_enabled() -> bool {
+        true // Ollama handles this automatically on Windows
+    }
+
+    // ─── Setup (Unix-only) ──────────────────────
+
+    #[cfg(unix)]
     pub fn setup_ollama_user_dir() -> Result<()> {
-        // Create ollama user if not exists
         if shell::run("id -u ollama >/dev/null 2>&1").is_err() {
             shell::run("sudo useradd -r -s /bin/false ollama")?;
         }
-        
-        // Create home directory for ollama
         shell::run("sudo mkdir -p /home/ollama")?;
         shell::run("sudo chown ollama:ollama /home/ollama")?;
         shell::run("sudo chmod 755 /home/ollama")?;
-        
-        // Create symlink for /usr/share/ollama if it exists
         if std::path::Path::new("/usr/share/ollama").exists() {
             shell::run("sudo rm -rf /usr/share/ollama")?;
         }
         shell::run("sudo ln -sf /home/ollama /usr/share/ollama")?;
-        
         Ok(())
     }
+
+    #[cfg(not(unix))]
+    pub fn setup_ollama_user_dir() -> Result<()> {
+        Ok(()) // Not needed on Windows
+    }
+
+    // ─── ensure_running ─────────────────────────
 
     pub fn ensure_running(i18n: &I18n) -> Result<()> {
         if !shell::is_installed("ollama") {
@@ -95,15 +127,12 @@ impl OllamaTool {
                 let tool = OllamaTool;
                 tool.install(i18n)?;
                 display::success(&i18n.t("ollama.installed"));
-
-                // La config env est déjà générée par install()
                 display::success(&i18n.t("config.generated_env"));
             } else {
                 anyhow::bail!("{}", i18n.t("ollama.required_mandatory_exit"));
             }
         }
 
-        // Check la santé d'Ollama
         let fixes = crate::core::ollama_doctor::OllamaDoctor::check_and_fix()?;
         for fix in &fixes {
             display::success(fix);
@@ -117,8 +146,13 @@ impl OllamaTool {
                 .interact()?
             {
                 Self::start()?;
+                // Wait a moment for the server to come up
+                for _ in 0..10 {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    if Self::is_running() { break; }
+                }
                 display::success(&i18n.t("ollama.started"));
-                
+
                 if !Self::is_autostart_enabled()
                     && Confirm::new()
                         .with_prompt(i18n.t("ollama.enable_autostart"))
@@ -130,34 +164,26 @@ impl OllamaTool {
                 }
             }
         }
-        // Check que la config wzllama existe
+
         let env_path = crate::config::env::EnvConfig::env_path();
         if !env_path.exists() {
             let config = crate::config::env::EnvConfig::default();
             config.save()?;
             display::success(&i18n.t("config.generated_env"));
-            
-            // Installer dans les shells
             crate::config::shells::install_all_shells(i18n)?;
         }
         Ok(())
     }
 
-    // ─── Installation, Update, Launch ─────────────────
+    // ─── Installation ────────────────────────────
 
+    #[cfg(unix)]
     pub fn install(i18n: &I18n) -> Result<()> {
         let _ = i18n;
-        // Setup ollama user and directory BEFORE installation
         Self::setup_ollama_user_dir()?;
-        
-        // Install Ollama
         shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
-        
-        // Install systemd drop-in for environment variables
-        // Use bash explicitly for heredoc compatibility across all shells (fish, zsh, bash)
+
         shell::run("sudo mkdir -p /etc/systemd/system/ollama.service.d")?;
-        
-        // Build environment variables from config
         let config = crate::config::env::EnvConfig::load();
         let mut env_lines = vec!["[Service]".to_string()];
         env_lines.push("Environment=\"OLLAMA_MODELS=/home/ollama\"".to_string());
@@ -174,52 +200,91 @@ impl OllamaTool {
         if !config.ollama.cuda_visible_devices.is_empty() {
             env_lines.push(format!("Environment=\"CUDA_VISIBLE_DEVICES={}\"", config.ollama.cuda_visible_devices));
         }
-        
         let override_content = env_lines.join("\\n");
         shell::run_quiet(&format!("printf '{}' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null", override_content))?;
         shell::run_quiet("sudo systemctl daemon-reload")?;
-        
         shell::run_live("sudo systemctl enable ollama")?;
         shell::run_live("sudo systemctl start ollama")?;
-    
-        // Attendre qu'il soit prêt
+
         for _ in 0..10 {
-            if crate::core::ollama_api::detect_url().is_some() {
-                break;
-            }
+            if crate::core::ollama_api::detect_url().is_some() { break; }
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
-    
-        // Générer la configuration par défaut
+
         let config = crate::config::env::EnvConfig::default();
         config.save()?;
-        
-        // Installer dans les shells
         crate::config::shells::install_all_shells_cli()?;
-        
         Ok(())
     }
+
+    #[cfg(not(unix))]
+    pub fn install(_i18n: &I18n) -> Result<()> {
+        display::info("Installing Ollama via winget...");
+        // Try winget first (available on Windows 10/11)
+        let result = std::process::Command::new("winget")
+            .args(["install", "--id", "Ollama.Ollama", "-e", "--silent"])
+            .status();
+
+        match result {
+            Ok(s) if s.success() => {
+                display::success("Ollama installed successfully via winget.");
+            }
+            _ => {
+                // Fallback: open browser to download page
+                display::warning("winget not available or install failed.");
+                display::info("Opening Ollama download page in your browser...");
+                shell::open_url("https://ollama.com/download/windows");
+                display::info("Please install Ollama manually, then re-run wzllama.");
+                anyhow::bail!("Manual Ollama installation required. Download from https://ollama.com/download/windows");
+            }
+        }
+
+        // Wait for ollama to be available in PATH
+        for _ in 0..15 {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            if shell::is_installed("ollama") { break; }
+        }
+
+        let config = crate::config::env::EnvConfig::default();
+        config.save()?;
+        Ok(())
+    }
+
+    // ─── Update ──────────────────────────────────
 
     pub fn update(i18n: &I18n) -> Result<()> {
         let _ = i18n;
         display::info("Checking for Ollama updates...");
-        shell::run_live("ollama pull --latest 2>/dev/null || true")?;
-        display::success("✅ Ollama is up to date");
+        #[cfg(unix)]
+        shell::run_live("curl -fsSL https://ollama.com/install.sh | sh")?;
+        #[cfg(not(unix))]
+        {
+            let result = std::process::Command::new("winget")
+                .args(["upgrade", "--id", "Ollama.Ollama", "-e", "--silent"])
+                .status();
+            match result {
+                Ok(s) if s.success() => {}
+                _ => {
+                    display::info("Open https://ollama.com/download/windows to update manually.");
+                }
+            }
+        }
+        display::success("Ollama is up to date");
         Ok(())
     }
+
+    // ─── Launch ──────────────────────────────────
 
     pub fn launch(i18n: &I18n, state: &WzllamaState, model: Option<&str>) -> Result<()> {
         let model = model.or(state.last_model.as_deref());
         match model {
             Some(m) => {
                 display::run(&i18n.t_with_vars("tool.ollama.run_model", &[("model", m)]));
-                let cmd: String = format!("ollama run {}", m);
-                println!("{}", cmd);
+                let cmd = format!("ollama run {}", m);
                 shell::exec(&cmd);
             }
             None => {
                 display::info(&i18n.t("ollama.choose_model"));
-                // Use shared model picker
                 if let Some(selected) = menu_picker::pick_model(i18n)? {
                     let cmd = format!("ollama run {}", selected);
                     shell::exec(&cmd);
@@ -233,9 +298,9 @@ impl OllamaTool {
 
     // ─── Désinstallation ────────────────────────
 
+    #[cfg(unix)]
     pub fn uninstall(i18n: &I18n) -> Result<()> {
         display::warning(&i18n.t("ollama.uninstall_warning"));
-        
         if !Confirm::new()
             .with_prompt(i18n.t("ollama.uninstall_confirm"))
             .default(false)
@@ -243,20 +308,16 @@ impl OllamaTool {
         {
             return Ok(());
         }
-
         display::section(&i18n.t("ollama.uninstalling"));
 
-        // 1. Arrêter et désactiver le service
         let _ = shell::run_quiet("sudo systemctl stop ollama 2>/dev/null");
         let _ = shell::run_quiet("sudo systemctl disable ollama 2>/dev/null");
         display::success(&i18n.t("ollama.service_stopped"));
 
-        // 2. Supprimer le service systemd
         let _ = shell::run_quiet("sudo rm -f /etc/systemd/system/ollama.service 2>/dev/null");
         let _ = shell::run_quiet("sudo systemctl daemon-reload 2>/dev/null");
         display::success(&i18n.t("ollama.service_removed"));
 
-        // 3. Supprimer le binaire et fichiers d'installation
         if let Ok((stdout, _)) = shell::run_quiet("which ollama 2>/dev/null") {
             let bin = stdout.trim();
             if !bin.is_empty() {
@@ -266,34 +327,54 @@ impl OllamaTool {
         }
         let _ = shell::run_quiet("sudo rm -rf /usr/local/lib/ollama 2>/dev/null");
         let _ = shell::run_quiet("sudo rm -rf /lib/ollama 2>/dev/null");
-
-        // 4. Supprimer les données
         let _ = shell::run_quiet("sudo rm -rf /usr/share/ollama 2>/dev/null");
         let _ = shell::run_quiet("sudo rm -rf /usr/lib/ollama 2>/dev/null");
         let _ = shell::run_quiet("sudo rm -rf ~/.ollama 2>/dev/null");
-        let _ = shell::run_quiet("sudo rm -rf /home/ollama 2>/dev/null");  // Custom models dir
+        let _ = shell::run_quiet("sudo rm -rf /home/ollama 2>/dev/null");
         display::success(&i18n.t("ollama.data_removed"));
 
-        // 5. Supprimer l'utilisateur et le groupe système
         if shell::run_quiet("id -u ollama >/dev/null 2>&1").is_ok() {
             let _ = shell::run_quiet("sudo userdel ollama 2>/dev/null");
         }
         if shell::run_quiet("getent group ollama >/dev/null 2>&1").is_ok() {
             let _ = shell::run_quiet("sudo groupdel ollama 2>/dev/null");
         }
-        // Remove systemd drop-in
         let _ = shell::run_quiet("sudo rm -rf /etc/systemd/system/ollama.service.d 2>/dev/null");
         display::success(&i18n.t("ollama.user_removed"));
 
-        // 6. Vérification finale
-        display::info("Verifying uninstallation...");
-        if shell::run("command -v ollama >/dev/null 2>&1").is_ok() {
+        if shell::is_installed("ollama") {
             display::warning("ollama binary still found - manual cleanup may be needed");
         } else {
             display::success("ollama binary not found - uninstallation complete");
         }
-
         display::success(&i18n.t("ollama.uninstalled"));
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    pub fn uninstall(i18n: &I18n) -> Result<()> {
+        display::warning(&i18n.t("ollama.uninstall_warning"));
+        if !Confirm::new()
+            .with_prompt(i18n.t("ollama.uninstall_confirm"))
+            .default(false)
+            .interact()?
+        {
+            return Ok(());
+        }
+        display::section(&i18n.t("ollama.uninstalling"));
+
+        let result = std::process::Command::new("winget")
+            .args(["uninstall", "--id", "Ollama.Ollama", "-e", "--silent"])
+            .status();
+
+        match result {
+            Ok(s) if s.success() => {
+                display::success(&i18n.t("ollama.uninstalled"));
+            }
+            _ => {
+                display::warning("winget uninstall failed. Use Windows Settings > Apps to remove Ollama manually.");
+            }
+        }
         Ok(())
     }
 }
