@@ -239,6 +239,35 @@ impl OllamaTool {
             }
         }
 
+        // Add Ollama to user PATH (standard install location)
+        let ollama_dir = dirs::home_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("AppData")
+            .join("Local")
+            .join("Programs")
+            .join("Ollama");
+
+        if ollama_dir.exists() {
+            let ollama_dir_str = ollama_dir.to_string_lossy().to_string();
+            let user_path = std::env::var("PATH").unwrap_or_default();
+            if !user_path.contains(&ollama_dir_str) {
+                let _ = std::process::Command::new("powershell")
+                    .args([
+                        "-Command",
+                        &format!(
+                            "[Environment]::SetEnvironmentVariable('PATH', \
+                             ([Environment]::GetEnvironmentVariable('PATH','User') + ';{}'), 'User')",
+                            ollama_dir_str
+                        ),
+                    ])
+                    .status();
+                // Also update current process PATH immediately
+                let new_path = format!("{};{}", user_path, ollama_dir_str);
+                std::env::set_var("PATH", &new_path);
+                display::success(&format!("Added {} to PATH", ollama_dir_str));
+            }
+        }
+
         // Wait for ollama to be available in PATH
         for _ in 0..15 {
             std::thread::sleep(std::time::Duration::from_secs(1));
