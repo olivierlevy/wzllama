@@ -106,12 +106,10 @@ Write-Host "Step 4/4: Verification..."
 $UserPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 if ($UserPath -notlike "*$BinDir*") {
     [Environment]::SetEnvironmentVariable("PATH", "$UserPath;$BinDir", "User")
-    Write-Host "   User PATH updated" 
-    Write-Host "   Note: Restart your terminal or run:" 
-    Write-Host "      `$env:PATH += ';$BinDir'" 
+    Write-Host "   User PATH updated (permanent)" 
 }
 
-# Refresh PATH for current session
+# Refresh PATH for current session (works when dot-sourced: . .\deploy.ps1)
 $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
 
 if (Get-Command wzllama -ErrorAction SilentlyContinue) {
@@ -128,6 +126,12 @@ if (Get-Command wzllama -ErrorAction SilentlyContinue) {
     Write-Host "    wzllama --dry-run    - Dry run mode" 
     Write-Host "    wzllama --help       - Help" 
     Write-Host "    wzllama uninstall    - Uninstall" 
+    Write-Host "==============================================" 
+    Write-Host ""
+    Write-Host "  💡 To use wzllama in THIS terminal now:" 
+    Write-Host "     `$env:PATH += ';$BinDir'" 
+    Write-Host "  💡 Or next time, dot-source the script:" 
+    Write-Host "     . .\deploy.ps1" 
     Write-Host "==============================================" 
 } else {
     Write-Host "   WARNING: wzllama not found in PATH." 
