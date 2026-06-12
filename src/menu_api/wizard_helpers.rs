@@ -166,9 +166,14 @@ impl AgenticToolInfo {
 
 /// Check if a scientific skill is installed
 pub fn is_skill_installed(skill: &str) -> bool {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    let skill_path = format!("{}/.wzllama/scientific-skills/{}/SKILL.md", home, skill);
-    std::path::Path::new(&skill_path).exists()
+    let home = dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let skill_path = home
+        .join(".wzllama")
+        .join("scientific-skills")
+        .join(skill)
+        .join("SKILL.md");
+    skill_path.exists()
 }
 
 /// Get install command for a tool

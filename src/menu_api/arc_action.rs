@@ -95,7 +95,9 @@ impl ArcActionRunner {
         let hw_for_fn = Arc::clone(&self.hw);
         
         let action_fn = Arc::new(move || {
-            let mut state_guard = state_for_fn.lock().unwrap();
+            let mut state_guard = state_for_fn
+                .lock()
+                .map_err(|e| anyhow::anyhow!("State mutex poisoned: {}", e))?;
             func(&i18n_for_fn, &mut state_guard, &hw_for_fn)
         });
         

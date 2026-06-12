@@ -19,27 +19,34 @@ static API_STARTED: OnceLock<bool> = OnceLock::new();
 /// Start the API server in background (once per session)
 fn start_api_server_background() {
     API_STARTED.get_or_init(|| {
-        // Check if already running on port 1133
-        if std::process::Command::new("sh")
-            .arg("-c")
-            .arg("curl -s http://localhost:1133/health > /dev/null 2>&1")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
-        {
-            println!("📡 API server already running on port 1133");
+        // Cross-platform health check via reqwest instead of sh+curl
+        let already_running = reqwest::blocking::get("http://localhost:1133/health")
+            .map(|r| r.status().is_success())
+            .unwrap_or(false);
+
+        if already_running {
+            log::info!("API server already running on port 1133");
             return true;
         }
 
-        // Start in background thread
-        std::thread::spawn(|| {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 1133));
-                crate::api_server::start_server(addr).await;
+        // Start in background thread with proper error logging
+        let handle = std::thread::Builder::new()
+            .name("api-server".to_string())
+            .spawn(|| {
+                match tokio::runtime::Runtime::new() {
+                    Ok(rt) => rt.block_on(async {
+                        let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 1133));
+                        crate::api_server::start_server(addr).await;
+                    }),
+                    Err(e) => log::error!("Failed to create Tokio runtime for API server: {}", e),
+                }
             });
-        });
-        println!("🚀 API server starting on http://localhost:1133");
+
+        if let Err(e) = handle {
+            log::error!("Failed to spawn API server thread: {}", e);
+        } else {
+            log::info!("API server starting on http://localhost:1133");
+        }
         true
     });
 }

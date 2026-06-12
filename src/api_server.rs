@@ -15,7 +15,8 @@ use axum::{
     Router,
     Json,
     extract::Path,
-    response::Html,
+    http::StatusCode,
+    response::{Html, IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
 use tower_http::cors::{CorsLayer, Any};
@@ -44,6 +45,12 @@ pub struct MenuTreeResponse {
     pub label: String,
     pub action_id: Option<String>,
     pub children: Vec<MenuTreeResponse>,
+}
+
+/// Request body for POST /api/menu/action
+#[derive(Deserialize)]
+pub struct MenuActionRequest {
+    pub action_id: String,
 }
 
 /// Create the API router
@@ -79,6 +86,11 @@ pub fn create_router() -> Router {
         
         // Health check
         .route("/health", get(health_check))
+        
+        // /api/menu/* endpoints
+        .route("/api/menu/state", get(get_menu_state))
+        .route("/api/menu/action", post(execute_menu_action))
+        .route("/api/menu/i18n", get(get_i18n_map))
         
         .layer(
             CorsLayer::new()
@@ -221,7 +233,7 @@ async fn list_tools() -> Json<Value> {
 
 async fn get_tool(
     Path(id): Path<String>,
-) -> Json<Value> {
+) -> Response {
     let state = ApiService::get_state();
     let i18n = I18n::default();
     
@@ -234,17 +246,15 @@ async fn get_tool(
             "status": tool_info.status,
             "supports_agentic": tool_info.supports_agentic,
             "requires_docker": tool_info.requires_docker,
-        }))
+        })).into_response()
     } else {
-        Json(serde_json::json!({
-            "id": id,
-            "name": "Unknown",
-            "description": "Tool not found",
-            "installed": false,
-            "status": "not_found",
-            "supports_agentic": false,
-            "requires_docker": false,
-        }))
+        (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "not_found",
+                "message": format!("Tool '{}' not found", id),
+            })),
+        ).into_response()
     }
 }
 
@@ -293,12 +303,18 @@ async fn get_tool_status(
 
 async fn launch_tool(
     Path(id): Path<String>,
-) -> Json<ActionResponse> {
-    // Launch is interactive in CLI mode - in API mode we return info
-    Json(ActionResponse {
-        success: true,
-        message: format!("To launch {} interactively, use wzllama wizard or wzllama tools menu", id),
-    })
+) -> (StatusCode, Json<ActionResponse>) {
+    // Interactive launch is not possible in API mode
+    (
+        StatusCode::NOT_IMPLEMENTED,
+        Json(ActionResponse {
+            success: false,
+            message: format!(
+                "Tool '{}' cannot be launched via API (requires interactive terminal). Use: wzllama wizard",
+                id
+            ),
+        }),
+    )
 }
 
 async fn list_models() -> Json<Value> {
@@ -310,22 +326,27 @@ async fn list_models() -> Json<Value> {
 
 async fn pull_model(
     Path(name): Path<String>,
-) -> Json<ActionResponse> {
-    // Pull is interactive - return info
-    Json(ActionResponse {
-        success: true,
-        message: format!("To pull model {}, run: ollama pull {}", name, name),
-    })
+) -> (StatusCode, Json<ActionResponse>) {
+    // Model pull is a long-running interactive operation not suited for HTTP API
+    (
+        StatusCode::NOT_IMPLEMENTED,
+        Json(ActionResponse {
+            success: false,
+            message: format!("Model pull cannot be executed via API. Run: ollama pull {}", name),
+        }),
+    )
 }
 
 async fn delete_model(
     Path(name): Path<String>,
-) -> Json<ActionResponse> {
-    // Delete is interactive - return info
-    Json(ActionResponse {
-        success: true,
-        message: format!("To delete model {}, run: ollama rm {}", name, name),
-    })
+) -> (StatusCode, Json<ActionResponse>) {
+    (
+        StatusCode::NOT_IMPLEMENTED,
+        Json(ActionResponse {
+            success: false,
+            message: format!("Model deletion cannot be executed via API. Run: ollama rm {}", name),
+        }),
+    )
 }
 
 async fn get_system_status() -> Json<Value> {
@@ -349,6 +370,43 @@ async fn get_hardware_info() -> Json<Value> {
 }
 
 /// Serve the web UI HTML page
+async fn get_menu_state() -> Json<Value> {
+    let state = ApiService::get_state();
+    Json(serde_json::to_value(&state).unwrap_or_else(|_| serde_json::json!({})))
+}
+
+async fn execute_menu_action(
+    Json(payload): Json<MenuActionRequest>,
+) -> (StatusCode, Json<ActionResponse>) {
+    let action_id = &payload.action_id;
+    
+    // Dispatch known stateless actions
+    let response = match action_id.as_str() {
+        id if id.starts_with("install_") => {
+            let tool_id = id.strip_prefix("install_").unwrap_or(id);
+            let i18n = I18n::default();
+            ApiService::install_tool(tool_id, &i18n).unwrap_or(ActionResponse {
+                success: false,
+                message: format!("Failed to install '{}'", tool_id),
+            })
+        }
+        _ => ActionResponse {
+            success: false,
+            message: format!("Action '{}' is not executable via API or does not exist", action_id),
+        },
+    };
+    
+    let status = if response.success { StatusCode::OK } else { StatusCode::UNPROCESSABLE_ENTITY };
+    (status, Json(response))
+}
+
+async fn get_i18n_map() -> Json<Value> {
+    let state = ApiService::get_state();
+    let lang = state.language.as_deref().unwrap_or("en");
+    let i18n = ApiService::get_i18n(Some(lang));
+    Json(serde_json::to_value(&i18n.map).unwrap_or_else(|_| serde_json::json!({})))
+}
+
 async fn serve_web_ui() -> Html<String> {
     Html(r#"<!DOCTYPE html>
 <html lang="en">
