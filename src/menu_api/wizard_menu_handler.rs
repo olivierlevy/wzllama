@@ -8,7 +8,7 @@ use crate::core::{llmfit_api, localmax_models, ollama_api, HardwareInfo};
 use crate::display;
 use crate::menu_api::wizard_helpers::get_priority_tools_for_usecase;
 use crate::menu_api::wizard_helpers::UseCase;
-use crate::tools::{self, get_tool, tool_trait::ToolStatus};
+use crate::tools::{get_tool, tool_trait::ToolStatus};
 use anyhow::Result;
 use dialoguer::Select;
 use std::collections::HashSet;

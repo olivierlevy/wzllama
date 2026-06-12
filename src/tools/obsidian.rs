@@ -1,6 +1,7 @@
 use crate::config::{I18n, WzllamaState};
 use crate::core::shell;
 use crate::display;
+#[cfg(target_os = "linux")]
 use crate::tools::flatpak::FlatpakTool;
 use crate::tools::tool_trait::{Tool, ToolStatus};
 use anyhow::Result;
