@@ -121,7 +121,7 @@ pub async fn start_server(addr: SocketAddr) {
     
     match tokio::net::TcpListener::bind(addr).await {
         Ok(listener) => {
-            println!("🚀 wzllama API server listening on http://{}", addr);
+            log::info!("wzllama API server listening on http://{}", addr);
             
             // Create shutdown signal
             let shutdown_flag = get_shutdown_flag();
@@ -136,14 +136,11 @@ pub async fn start_server(addr: SocketAddr) {
                 .await
                 .ok();
                 
-            println!("👋 API server shutdown gracefully");
+            log::info!("API server shutdown gracefully");
         }
         Err(e) => {
-            eprintln!("❌ Failed to bind to {}: {}", addr, e);
-            eprintln!("💡 Try killing any existing process on port 1133:");
-            eprintln!("   sudo lsof -ti:1133 | xargs kill -9");
-            eprintln!("💡 Or use a different port:");
-            eprintln!("   wzllama serve --port 1134");
+            log::error!("Failed to bind to {}: {}", addr, e);
+            log::error!("Try killing any existing process on port 1133, or use a different port with: wzllama serve --port 1134");
             std::process::exit(1);
         }
     }
