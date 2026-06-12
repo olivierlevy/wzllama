@@ -84,6 +84,8 @@ pub fn create_router() -> Router {
         .route("/api/v1/hardware", get(get_hardware_info))
         // Health check
         .route("/health", get(health_check))
+        // Readiness endpoint
+        .route("/ready", get(ready_check))
         // Metrics endpoint
         .route("/metrics", get(|| async move { telemetry::metrics_handler(telemetry::register_registry()).await }))
         // /api/menu/* endpoints
@@ -147,10 +149,49 @@ pub async fn start_server(addr: SocketAddr) {
     }
 }
 
+/// Start a test API server bound to the given address but return the actual bound address.
+/// This helper is intended for integration tests: it binds to the requested addr (port 0
+/// allowed), returns the resolved local address, and leaves the server running in background.
+pub async fn start_test_server(addr: SocketAddr) -> SocketAddr {
+    let app = create_router();
+    let (bound_tx, bound_rx) = tokio::sync::oneshot::channel::<SocketAddr>();
+
+    tokio::spawn(async move {
+        let listener = match tokio::net::TcpListener::bind(addr).await {
+            Ok(l) => l,
+            Err(e) => {
+                error!("Failed to bind test API server socket: {}", e);
+                return;
+            }
+        };
+        let local = listener.local_addr().expect("listener local_addr");
+        let _ = bound_tx.send(local);
+
+        let server = axum::Server::from_tcp(listener)
+            .expect("failed to create axum server")
+            .serve(app.into_make_service());
+
+        if let Err(e) = server.await {
+            error!("Test API server error: {}", e);
+        }
+    });
+
+    bound_rx.await.expect("failed to receive bound address")
+}
+
 // ============ Handler implementations ============
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+async fn ready_check() -> (StatusCode, &'static str) {
+    // Ready if TaskManager exists (basic readiness). More nuanced checks can be added.
+    if crate::core::init::get_global_task_manager().is_some() {
+        (StatusCode::OK, "OK")
+    } else {
+        (StatusCode::SERVICE_UNAVAILABLE, "not_ready")
+    }
 }
 
 async fn get_menu_tree() -> Json<Value> {
