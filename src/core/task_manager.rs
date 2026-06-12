@@ -36,7 +36,7 @@ impl TaskManager {
     {
         let f = std::sync::Arc::new(f);
         let name_s = name.to_string();
-        let (tx, rx) = oneshot::channel::<()>();
+        let (tx, mut rx) = oneshot::channel::<()>();
 
         let join = tokio::spawn(async move {
             let mut ticker = tokio::time::interval(interval);
