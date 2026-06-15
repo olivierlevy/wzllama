@@ -1,6 +1,7 @@
 use crate::core::ollama_api;
 use crate::display;
 use anyhow::Result;
+use std::path::PathBuf;
 
 pub struct OllamaDoctor;
 

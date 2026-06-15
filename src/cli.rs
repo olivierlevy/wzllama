@@ -66,7 +66,7 @@ impl Cli {
                 let mut state = crate::config::WzllamaState::load();
                 let i18n = wizard::select_language(&mut state)?;
                 let hardware = crate::core::hardware::detect();
-                wizard::run(&i18n, &mut state, &hardware)
+                crate::menu_api::MainMenuRunner::new(&i18n, &mut state, &hardware).run()
             }
             Command::Validate => config::templates::validate_all(),
             Command::Bench => ollama_api::run_benchmark(),
